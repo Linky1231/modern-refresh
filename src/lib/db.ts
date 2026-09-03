@@ -670,6 +670,7 @@ export async function togglePostLike(userId: string, postId: string) {
     // Add like
     await supabase.from("likes").insert({ user_id: userId, post_id: postId });
     await supabase.rpc("increment_post_likes", { post_id: postId });
+    void notifyPostOwner(userId, postId, "like");
     return true;
   }
 }
@@ -698,6 +699,7 @@ export async function togglePostFavorite(userId: string, postId: string) {
       .from("favorites")
       .insert({ user_id: userId, post_id: postId });
     await supabase.rpc("increment_post_favorites", { post_id: postId });
+    void notifyPostOwner(userId, postId, "favorite");
     return true;
   }
 }
@@ -808,6 +810,40 @@ export async function createComment(
     .single();
 
   if (error) throw error;
+
+  // Notify the post author (comment) or the parent comment author (reply)
+  if (parentCommentId) {
+    const { data: parent } = await supabase
+      .from("comments")
+      .select("author_id")
+      .eq("id", parentCommentId)
+      .single();
+    if (parent) {
+      await createNotification({
+        userId: parent.author_id,
+        actorId: authorId,
+        type: "reply",
+        postId,
+        commentId: data.id,
+      });
+    }
+  } else {
+    const { data: post } = await supabase
+      .from("posts")
+      .select("author_id")
+      .eq("id", postId)
+      .single();
+    if (post) {
+      await createNotification({
+        userId: post.author_id,
+        actorId: authorId,
+        type: "comment",
+        postId,
+        commentId: data.id,
+      });
+    }
+  }
+
   return data;
 }
 
@@ -901,6 +937,11 @@ export async function toggleFollow(followerId: string, followingId: string) {
     await supabase
       .from("follows")
       .insert({ follower_id: followerId, following_id: followingId });
+    await createNotification({
+      userId: followingId,
+      actorId: followerId,
+      type: "follow",
+    });
     return true;
   }
 }
@@ -1053,4 +1094,131 @@ export function generateFilePath(
   const random = Math.random().toString(36).substring(2, 8);
   const ext = fileName.split(".").pop();
   return `${folder}/${userId}/${timestamp}-${random}.${ext}`;
+}
+
+// ========================================
+// NOTIFICATION FUNCTIONS
+// ========================================
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  actor_id: string;
+  type: "like" | "favorite" | "comment" | "reply" | "follow";
+  post_id: string | null;
+  comment_id: string | null;
+  read: boolean;
+  created_at: string;
+  actorName?: string;
+  actorImageUrl?: string;
+}
+
+/**
+ * Insert a notification. Silently ignores self-actions and logs
+ * errors so a notification failure never breaks the main action.
+ */
+async function createNotification(input: {
+  userId: string;
+  actorId: string;
+  type: "like" | "favorite" | "comment" | "reply" | "follow";
+  postId?: string;
+  commentId?: string;
+}) {
+  if (input.userId === input.actorId) return;
+  const { error } = await supabase.from("notifications").insert({
+    user_id: input.userId,
+    actor_id: input.actorId,
+    type: input.type,
+    post_id: input.postId ?? null,
+    comment_id: input.commentId ?? null,
+  });
+  if (error) console.error("Error creating notification:", error);
+}
+
+/** Notify the owner of a post when it receives a like or favorite. */
+async function notifyPostOwner(
+  actorId: string,
+  postId: string,
+  type: "like" | "favorite"
+) {
+  try {
+    const { data: post } = await supabase
+      .from("posts")
+      .select("author_id")
+      .eq("id", postId)
+      .single();
+    if (post) {
+      await createNotification({ userId: post.author_id, actorId, type, postId });
+    }
+  } catch (error) {
+    console.error("Error creating notification:", error);
+  }
+}
+
+/**
+ * Get notifications for a user (newest first), with actor info.
+ */
+export async function getNotifications(
+  userId: string,
+  limit = 60
+): Promise<NotificationItem[]> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  const actorIds = [...new Set((data || []).map((n) => n.actor_id))];
+  let actorMap = new Map<string, { name: string | null; image: string | null }>();
+  if (actorIds.length > 0) {
+    const { data: actors } = await supabase
+      .from("users")
+      .select("id, name, image")
+      .in("id", actorIds);
+    actorMap = new Map(
+      (actors || []).map((a) => [a.id, { name: a.name, image: a.image }])
+    );
+  }
+
+  return (data || []).map((n) => {
+    const actor = actorMap.get(n.actor_id);
+    return {
+      ...n,
+      type: n.type as NotificationItem["type"],
+      actorName: actor?.name || "Alguien",
+      actorImageUrl: actor?.image
+        ? getStorageUrl("avatars", actor.image)
+        : undefined,
+    };
+  });
+}
+
+/**
+ * Count unread notifications for a user.
+ */
+export async function getUnreadNotificationsCount(userId: string) {
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("read", false);
+
+  if (error) throw error;
+  return count || 0;
+}
+
+/**
+ * Mark all notifications as read for a user.
+ */
+export async function markNotificationsRead(userId: string) {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("user_id", userId)
+    .eq("read", false);
+
+  if (error) console.error("Error marking notifications read:", error);
 }

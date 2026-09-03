@@ -21,6 +21,9 @@ import {
   getUserProfile,
   uploadFile,
   generateFilePath,
+  getNotifications,
+  getUnreadNotificationsCount,
+  markNotificationsRead,
 } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -48,10 +51,12 @@ import {
   User,
   ArrowLeft,
   Newspaper,
-  Heading,
+  Bell,
+  UserPlus,
 } from "lucide-react";
 import { useNavigate } from "@/lib/router-compat";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,6 +208,15 @@ function sanitizePostHtml(html: string): string {
           node.classList.add("mention");
           node.style.color = "var(--primary)";
           node.style.fontWeight = "600";
+        }
+        Array.from(node.childNodes).forEach(walk);
+        return;
+      }
+      // Keep structural heading/paragraph tags so text sizes persist,
+      // but strip all their attributes (no styling leaks through).
+      if (["H1", "H2", "H3", "P", "DIV"].includes(node.tagName)) {
+        for (const attr of Array.from(node.attributes)) {
+          node.removeAttribute(attr.name);
         }
         Array.from(node.childNodes).forEach(walk);
         return;
@@ -921,6 +935,23 @@ function FormatToolbar() {
 
 
 
+        {/* Text size (H1 / H2 / H3 / Normal) */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={`gap-1.5 px-3 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
+          onClick={() => {
+            if (showSizes) { setShowSizes(false); return; }
+            if (hasSelection()) saveSelection();
+            setShowSizes(true);
+          }}
+          title="Tamaño del texto"
+        >
+          <span className="text-sm font-extrabold leading-none">H</span>
+          <span className="text-xs font-medium whitespace-nowrap">Tamaño</span>
+        </Button>
+
         {/* Bold */}
         <Button
           type="button"
@@ -949,23 +980,6 @@ function FormatToolbar() {
           title="Subrayado"
         >
           <span className="text-sm font-medium underline leading-none">S</span>
-        </Button>
-
-        {/* Text size (H1 / H2 / H3 / Normal) */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={`gap-1.5 px-3 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
-          onClick={() => {
-            if (showSizes) { setShowSizes(false); return; }
-            if (hasSelection()) saveSelection();
-            setShowSizes(true);
-          }}
-          title="Tamaño del texto"
-        >
-          <Heading className="h-4 w-4 shrink-0" />
-          <span className="text-xs font-medium whitespace-nowrap">Tamaño</span>
         </Button>
 
       </div>
@@ -1045,9 +1059,9 @@ function FormatToolbar() {
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tamaño</span>
               <div className="flex flex-wrap gap-1.5">
                 {([
-                  { tag: "h1", label: "H1", cls: "text-base font-extrabold" },
-                  { tag: "h2", label: "H2", cls: "text-[15px] font-bold" },
-                  { tag: "h3", label: "H3", cls: "text-sm font-semibold" },
+                  { tag: "h1", label: "H1", cls: "text-base font-normal" },
+                  { tag: "h2", label: "H2", cls: "text-[15px] font-normal" },
+                  { tag: "h3", label: "H3", cls: "text-sm font-normal" },
                   { tag: "p", label: "Normal", cls: "text-xs font-medium" },
                 ] as const).map((s) => (
                   <button
@@ -1524,6 +1538,7 @@ function PostCard({
             whileTap={{ scale: 0.88 }}
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 300, damping: 24 }}
+            onClick={() => toast("Esta función estará disponible próximamente")}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Share2 className="h-4 w-4" />
@@ -1997,6 +2012,140 @@ const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════
+// Notifications panel
+// ═══════════════════════════════════════════════════════════════════
+const NOTIFICATION_GROUPS: { type: string; label: string; icon: any }[] = [
+  { type: "like", label: "Me gusta", icon: Heart },
+  { type: "favorite", label: "Favoritos", icon: Star },
+  { type: "comment", label: "Comentarios", icon: MessageCircle },
+  { type: "reply", label: "Respuestas", icon: Reply },
+  { type: "follow", label: "Nuevos seguidores", icon: UserPlus },
+];
+
+function notificationMessage(n: any): string {
+  switch (n.type) {
+    case "like":
+      return `${n.actorName} le dio me gusta a tu publicación`;
+    case "favorite":
+      return `${n.actorName} guardó tu publicación en favoritos`;
+    case "comment":
+      return `${n.actorName} comentó tu publicación`;
+    case "reply":
+      return `${n.actorName} respondió a tu comentario`;
+    case "follow":
+      return `${n.actorName} comenzó a seguirte`;
+    default:
+      return `${n.actorName} interactuó contigo`;
+  }
+}
+
+function NotificationsPanel({
+  notifications,
+  loading,
+  onClose,
+}: {
+  notifications: any[];
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const groups = NOTIFICATION_GROUPS.map((group) => ({
+    ...group,
+    items: notifications.filter((n) => n.type === group.type),
+  })).filter((group) => group.items.length > 0);
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-40 bg-black/10"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+        className="fixed right-3 top-14 z-50 flex max-h-[70vh] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lift"
+      >
+        <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
+          <h3 className="text-sm font-bold text-card-foreground">Notificaciones</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {loading && notifications.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Bell className="h-7 w-7 text-muted-foreground/30" />
+              <p className="mt-3 text-xs text-muted-foreground">
+                No tienes notificaciones todavía.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {groups.map((group, gi) => (
+                <div key={group.type}>
+                  {gi > 0 && <div className="h-px bg-border/40" />}
+                  <div className="flex items-center gap-1.5 px-4 pt-3 pb-1">
+                    <group.icon className="h-3 w-3 text-primary" />
+                    <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {group.label}
+                    </h4>
+                    <span className="ml-auto text-[10px] text-muted-foreground/60 tabular-nums">
+                      {group.items.length}
+                    </span>
+                  </div>
+                  <div className="px-2 pb-2">
+                    {group.items.map((n) => (
+                      <div
+                        key={n.id}
+                        className="flex items-start gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-muted/40"
+                      >
+                        <Avatar className="h-8 w-8 shrink-0 border border-border/50">
+                          {n.actorImageUrl && (
+                            <AvatarImage
+                              src={n.actorImageUrl}
+                              alt={n.actorName ?? ""}
+                              className="object-cover"
+                            />
+                          )}
+                          <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
+                            {getInitials(n.actorName ?? "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs leading-relaxed text-card-foreground">
+                            {notificationMessage(n)}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-muted-foreground">
+                            {formatTime(new Date(n.created_at).getTime())}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // User Profile View (viewing another user's profile)
 // ═══════════════════════════════════════════════════════════════════
 function UserProfileView({ userId, onBack }: { userId: string; onBack: () => void }) {
@@ -2053,7 +2202,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem
-                  onClick={() => { /* Compartir perfil — funcionalidad pendiente */ }}
+                  onClick={() => toast("Esta función estará disponible próximamente")}
                   className="gap-2 text-sm"
                 >
                   <Share2 className="h-3.5 w-3.5" />
@@ -2256,6 +2405,49 @@ export default function Dashboard() {
     node: Node;
     offset: number;
   } | null>(null);
+
+  // ── Notifications ────────────────────────────────────────────
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  const loadNotifications = useCallback(async () => {
+    if (!user?._id) return;
+    setNotifLoading(true);
+    try {
+      const data = await getNotifications(user._id);
+      setNotifications(data);
+      setUnreadCount(0);
+      await markNotificationsRead(user._id);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setNotifLoading(false);
+    }
+  }, [user?._id]);
+
+  const refreshUnread = useCallback(async () => {
+    if (!user?._id) return;
+    try {
+      setUnreadCount(await getUnreadNotificationsCount(user._id));
+    } catch (error) {
+      console.error("Error fetching unread notifications:", error);
+    }
+  }, [user?._id]);
+
+  useEffect(() => {
+    void refreshUnread();
+    const interval = setInterval(() => void refreshUnread(), 20000);
+    return () => clearInterval(interval);
+  }, [refreshUnread]);
+
+  const handleBellClick = useCallback(() => {
+    setNotifOpen((open) => {
+      if (!open) void loadNotifications();
+      return !open;
+    });
+  }, [loadNotifications]);
 
   // ── File handling ──────────────────────────────────────────────
   const addFiles = useCallback(
@@ -2609,6 +2801,22 @@ export default function Dashboard() {
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {user?.name ?? "Jugador"}
             </span>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleBellClick}
+                title="Notificaciones"
+              >
+                <Bell className="h-4 w-4" />
+              </Button>
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -2621,6 +2829,17 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
+
+      {/* Notifications panel */}
+      <AnimatePresence>
+        {notifOpen && (
+          <NotificationsPanel
+            notifications={notifications}
+            loading={notifLoading}
+            onClose={() => setNotifOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 pt-6 pb-20 sm:pt-10 sm:pb-24">

@@ -178,8 +178,7 @@ export default function Landing() {
           <motion.div
             className="text-center"
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
+            animate="visible"
             variants={fadeUp}
             custom={0}
           >
@@ -196,8 +195,7 @@ export default function Landing() {
               <motion.div
                 key={f.title}
                 initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-60px" }}
+                animate="visible"
                 variants={scaleIn}
                 custom={i}
                 whileHover={{ y: -3 }}

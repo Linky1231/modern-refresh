@@ -315,3 +315,36 @@ CREATE POLICY "Documents are publicly accessible"
 CREATE POLICY "Anyone can upload documents"
   ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'documents');
+
+-- ========================================
+-- NOTIFICATIONS TABLE
+-- ========================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  actor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('like', 'favorite', 'comment', 'reply', 'follow')),
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+  read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see and mark their own notifications
+CREATE POLICY "Users can view own notifications"
+  ON notifications FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own notifications"
+  ON notifications FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- The acting user (actor) is who creates the notification
+CREATE POLICY "Authenticated users can create notifications"
+  ON notifications FOR INSERT
+  WITH CHECK (auth.uid() = actor_id);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_time ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_actor ON notifications(actor_id);
