@@ -1,14 +1,14 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "Asternal Engine",
+  "short_name": "Asternal",
+  "description": "Plataforma de desarrollo de videojuegos y comunidad GameDev",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/assets/67385.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"

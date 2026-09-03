@@ -11,7 +11,7 @@ import {
 import logo from "@/assets/logo.svg";
 import { useAuth } from "@/hooks/use-auth";
 import { Home, LogOut } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "@/lib/router-compat";
 
 export function LogoDropdown() {
   const { isAuthenticated, signOut } = useAuth();
