@@ -132,7 +132,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           >
             <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/8">
               <img
-                src="/assets/67385.png"
+                src="/logo.png"
                 alt="Asternal"
                 className="h-14 w-14 rounded-2xl object-contain"
               />

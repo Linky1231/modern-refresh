@@ -70,7 +70,7 @@ export default function Landing() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <img
-              src="/assets/67385.png"
+              src="/logo.png"
               alt="Asternal"
               className="h-9 w-9 rounded-xl object-contain"
             />
@@ -222,7 +222,7 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <img
-              src="/assets/67385.png"
+              src="/logo.png"
               alt="Asternal"
               className="h-4 w-4 rounded object-contain"
             />

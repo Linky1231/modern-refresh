@@ -2602,7 +2602,7 @@ export default function Dashboard() {
         className="sticky top-0 z-50 border-b border-border/50 bg-background">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
-            <img src="/assets/67385.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
+            <img src="/logo.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
             <span className="text-lg font-extrabold tracking-tight text-primary">Asternal</span>
           </div>
           <div className="flex items-center gap-2">
