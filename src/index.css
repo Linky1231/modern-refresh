@@ -18,8 +18,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
 
-  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fredoka", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --color-background: var(--background);
@@ -66,7 +66,7 @@
 }
 
 :root {
-  --radius: 0.875rem;
+  --radius: 1rem;
   --background: oklch(0.984 0.002 262);
   --foreground: oklch(0.17 0.006 262);
   --card: oklch(0.995 0.001 262);
@@ -167,7 +167,7 @@
   h4,
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.015em;
   }
 
   h1 {
@@ -184,10 +184,21 @@
   }
 }
 
-/* ── Rich-text editor caret & selection ─────────────────────── */
+/* ── Caret & selection (forms + rich-text editor) ───────────── */
+input,
+textarea,
+select,
 [contenteditable] {
-  caret-color: var(--foreground);
+  caret-color: var(--primary);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Keep form fields comfortable: readable sizes and a slim, consistent caret */
+input,
+textarea,
+select {
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 /* ── Rich-text editor placeholder ───────────────────────────── */
