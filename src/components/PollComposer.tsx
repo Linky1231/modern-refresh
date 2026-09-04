@@ -66,22 +66,20 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.97, y: -6 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97, y: -6 }}
-      transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-      className="poll-bubble mx-auto max-w-md rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-4 sm:px-5"
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+      className="rounded-2xl border border-border/50 bg-card px-4 py-4 sm:px-5"
     >
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-            <BarChart3 className="h-3.5 w-3.5 text-primary" />
-          </div>
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="text-sm font-semibold text-card-foreground">
             Encuesta
           </span>
-          <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
             Anónima
           </span>
         </div>
@@ -89,7 +87,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           type="button"
           onClick={onRemove}
           title="Quitar encuesta"
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -120,7 +118,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
               transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
               className="flex items-center gap-2.5"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary tabular-nums">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground tabular-nums">
                 {i + 1}
               </span>
               <input
@@ -136,7 +134,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
                   type="button"
                   onClick={() => removeOption(i)}
                   title="Quitar opción"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -152,13 +150,11 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           type="button"
           onClick={addOption}
           disabled={options.length >= MAX_OPTIONS}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 disabled:pointer-events-none disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Añadir opción</span>
-          <span className="text-muted-foreground tabular-nums">
-            ({options.length}/{MAX_OPTIONS})
-          </span>
+          <span className="tabular-nums">({options.length}/{MAX_OPTIONS})</span>
         </button>
         {!isValid && (
           <p className="text-right text-[10px] leading-tight text-muted-foreground/50">
