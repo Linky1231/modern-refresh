@@ -71,6 +71,17 @@ export interface Follow {
   created_at: string;
 }
 
+export interface PollOption {
+  id: string;
+  text: string;
+}
+
+export interface PollData {
+  id: string;
+  question: string;
+  options: PollOption[];
+}
+
 export interface NotificationItem {
   id: string;
   user_id: string;
@@ -108,6 +119,7 @@ interface LocalPostRow {
   media: Post["media"];
   documents: Post["documents"];
   mentions: Post["mentions"];
+  poll?: PollData | null;
   hashtags: string[];
   created_at: string;
 }
@@ -130,6 +142,7 @@ interface LocalDB {
   commentLikes: Array<{ user_id: string; comment_id: string }>;
   follows: Array<{ follower_id: string; following_id: string }>;
   notifications: NotificationItem[];
+  pollVotes: Array<{ user_id: string; poll_id: string; option_id: string }>;
   /** Archivos subidos en el dispositivo: ruta -> data URL */
   files: Record<string, string>;
 }
@@ -144,6 +157,7 @@ function emptyDB(): LocalDB {
     commentLikes: [],
     follows: [],
     notifications: [],
+    pollVotes: [],
     files: {},
   };
 }
@@ -284,6 +298,7 @@ function toPostView(
     authorImageUrl: author?.image
       ? resolveFileUrl(author.image)
       : undefined,
+    poll: post.poll ? { ...post.poll, votes: countPollVotes(post.poll.id) } : undefined,
     likedByMe,
     favoritedByMe,
     mentions: post.mentions || [],
@@ -492,6 +507,41 @@ export async function getUserProfile(userId: string, currentUserId?: string) {
 }
 
 // ========================================
+// POLL HELPERS (locales — ▶ [LOVABLE CLOUD]: votos con el backend)
+// ========================================
+
+/** Cuenta votos de una encuesta. Anónimo: solo se guarda el recuento por opción. */
+function countPollVotes(pollId: string): Record<string, number> {
+  const db = getDB();
+  const counts: Record<string, number> = {};
+  for (const v of db.pollVotes) {
+    if (v.poll_id === pollId) {
+      counts[v.option_id] = (counts[v.option_id] || 0) + 1;
+    }
+  }
+  return counts;
+}
+
+/** Construye la encuesta (entre 2 y 5 opciones). Devuelve null si no es válida. */
+function buildPoll(
+  input?: { question?: string; options?: string[] },
+): PollData | null {
+  if (!input) return null;
+  const question = (input.question || "").trim().slice(0, 200);
+  const seen = new Set<string>();
+  const options: PollOption[] = [];
+  for (const raw of input.options || []) {
+    const text = (raw || "").trim().slice(0, 100);
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    options.push({ id: uid(), text });
+    if (options.length >= 5) break;
+  }
+  if (!question || options.length < 2) return null;
+  return { id: uid(), question, options };
+}
+
+// ========================================
 // POST FUNCTIONS
 // ========================================
 
@@ -581,12 +631,14 @@ export async function createPost(
       mime?: string;
     }>;
     mentions?: Array<{ userId: string; name: string }>;
+    poll?: { question: string; options: string[] };
   },
 ) {
   if (
     content.trim().length === 0 &&
     (!options?.media || options.media.length === 0) &&
-    (!options?.documents || options.documents.length === 0)
+    (!options?.documents || options.documents.length === 0) &&
+    !options?.poll
   ) {
     throw new Error("La publicación no puede estar vacía");
   }
@@ -602,6 +654,7 @@ export async function createPost(
     media: options?.media || [],
     documents: options?.documents || [],
     mentions: options?.mentions || [],
+    poll: buildPoll(options?.poll) ?? null,
     hashtags: extractHashtags(content),
     created_at: new Date().toISOString(),
   };
@@ -620,6 +673,7 @@ export async function createPost(
     media: row.media,
     documents: row.documents,
     mentions: row.mentions,
+    poll: row.poll,
     hashtags: row.hashtags,
     created_at: row.created_at,
   };
@@ -641,6 +695,12 @@ export async function deletePostAsAdmin(postId: string) {
 
 function removePostWithRelations(postId: string) {
   const db = getDB();
+  const targetPost = db.posts.find((p) => p.id === postId);
+  if (targetPost?.poll) {
+    db.pollVotes = db.pollVotes.filter(
+      (v) => v.poll_id !== targetPost.poll!.id,
+    );
+  }
   const commentIds = db.comments
     .filter((c) => c.post_id === postId)
     .map((c) => c.id);
@@ -1131,4 +1191,50 @@ export async function markNotificationsRead(userId: string) {
     }
   }
   if (changed) saveDB();
+}
+
+// ========================================
+// POLL VOTE FUNCTIONS (locales — ▶ [LOVABLE CLOUD]: reconectar)
+// ========================================
+
+/**
+ * Votos actuales de una encuesta (solo recuento por opción, anónimo).
+ */
+export async function getPollVotes(pollId: string) {
+  return countPollVotes(pollId);
+}
+
+/**
+ * Opción por la que ya votó el usuario en esta encuesta (o null).
+ */
+export async function getMyPollVote(userId: string, pollId: string) {
+  const vote = getDB().pollVotes.find(
+    (v) => v.user_id === userId && v.poll_id === pollId,
+  );
+  return vote?.option_id ?? null;
+}
+
+/**
+ * Vota (o cambia el voto) en una encuesta. El voto queda anónimo:
+ * solo se suma al recuento de la opción, nunca se expone quién votó.
+ */
+export async function voteOnPoll(
+  userId: string,
+  pollId: string,
+  optionId: string,
+) {
+  const db = getDB();
+  const poll = db.posts
+    .map((p) => p.poll)
+    .find((p) => p?.id === pollId);
+  if (!poll) throw new Error("Encuesta no encontrada");
+  if (!poll.options.some((o) => o.id === optionId)) {
+    throw new Error("Opción no válida");
+  }
+  db.pollVotes = db.pollVotes.filter(
+    (v) => !(v.user_id === userId && v.poll_id === pollId),
+  );
+  db.pollVotes.push({ user_id: userId, poll_id: pollId, option_id: optionId });
+  saveDB();
+  return { optionId, counts: countPollVotes(pollId) };
 }

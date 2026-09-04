@@ -1431,7 +1431,7 @@ function PostCard({
                       : "border-primary/30 text-primary hover:bg-primary/5"
                   }`}
                 >
-                  {isFollowingUser ? "Siguiendo" : "Seguir"}
+                  {isFollowingUser ? "Siguiendo" : "Seguir"} {/* PROBE_A */}
                 </motion.button>
               )}
             </div>

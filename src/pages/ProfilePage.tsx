@@ -99,7 +99,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEnterEdit = () => {
-    setEditName(user?.name ?? "");
+    setEditName((currentUser as any)?.name ?? user?.name ?? "");
     setEditTitle((currentUser as any)?.title ?? "");
     setEditBio((currentUser as any)?.bio ?? "");
     setEditing(true);
@@ -113,10 +113,12 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   };
 
   const handleSaveName = async () => {
-    if (!editName.trim() || editName.trim() === (user?.name ?? "") || savingName) return;
+    const currentName = (currentUser as any)?.name || user?.name || "";
+    if (!editName.trim() || editName.trim() === currentName || savingName) return;
     setSavingName(true);
     try {
       await updateProfile(user?._id || '', { name: editName.trim() });
+      setCurrentUser((prev: any) => ({ ...(prev || {}), name: editName.trim() }));
       setSavedName(true);
       setTimeout(() => setSavedName(false), 2000);
     } catch (err) {
@@ -132,6 +134,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     setSavingTitle(true);
     try {
       await updateProfile(user?._id || '', { title: editTitle.trim() || undefined });
+      setCurrentUser((prev: any) => ({ ...(prev || {}), title: editTitle.trim() }));
       setSavedTitle(true);
       setTimeout(() => setSavedTitle(false), 2000);
     } catch (err) {
@@ -147,6 +150,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     setSavingBio(true);
     try {
       await updateProfile(user?._id || '', { bio: editBio.trim() || undefined });
+      setCurrentUser((prev: any) => ({ ...(prev || {}), bio: editBio.trim() }));
       setSavedBio(true);
       setTimeout(() => setSavedBio(false), 2000);
     } catch (err) {
@@ -167,6 +171,11 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         const path = generateFilePath(user?._id || '', file.name, 'avatars');
         await uploadFile('avatars', file, path);
         await updateProfile(user?._id || '', { image: path });
+        setCurrentUser((prev: any) => ({
+          ...(prev || {}),
+          image: path,
+          avatarUrl: getStorageUrl('avatars', path),
+        }));
       } catch (err) {
         console.error("Error al subir avatar:", err);
       } finally {
@@ -179,6 +188,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
   const currentTitle = (currentUser as any)?.title ?? "";
   const currentBio = (currentUser as any)?.bio ?? "";
+  const displayName = (currentUser as any)?.name || user?.name || "Sin nombre";
 
   const [followStats, setFollowStats] = useState<{ followers: number; following: number } | undefined>(undefined);
   useEffect(() => {
@@ -204,7 +214,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   return (
     <div className="pb-8">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -259,9 +269,9 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           {/* Avatar */}
           <div className="relative">
             <Avatar className="h-24 w-24 border-2 border-border/50">
-              {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={user?.name ?? ""} />}
+              {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={displayName} />}
               <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
-                {user?.name ? getInitials(user.name) : <User className="h-10 w-10" />}
+                {displayName !== "Sin nombre" ? getInitials(displayName) : <User className="h-10 w-10" />}
               </AvatarFallback>
             </Avatar>
             {editing && (
@@ -283,14 +293,14 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
           {/* Name */}
           {editing ? (
-            <div className="flex w-full max-w-xs items-center gap-2">
+            <div className="flex h-10 w-full max-w-sm items-center gap-2.5">
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 maxLength={40}
                 placeholder="Tu nombre"
-                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                className="h-10 flex-1 rounded-xl border border-border/60 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               />
               <button
                 type="button"
@@ -306,19 +316,21 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               </button>
             </div>
           ) : (
-            <p className="text-xl font-extrabold tracking-tight text-card-foreground">{user?.name ?? "Sin nombre"}</p>
+            <div className="flex h-10 w-full max-w-sm items-center justify-center">
+              <p className="truncate text-xl font-extrabold tracking-tight text-card-foreground">{displayName}</p>
+            </div>
           )}
 
           {/* Title */}
           {editing ? (
-            <div className="flex w-full max-w-xs items-center gap-2">
+            <div className="flex h-10 w-full max-w-sm items-center gap-2.5">
               <input
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 maxLength={60}
                 placeholder="Título (opcional)"
-                className="flex-1 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                className="h-10 flex-1 rounded-xl border border-border/60 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               />
               <button
                 type="button"
@@ -334,7 +346,11 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               </button>
             </div>
           ) : (
-            currentTitle && <p className="text-sm font-medium italic text-primary/80">{currentTitle}</p>
+            <div className="flex h-10 w-full max-w-sm items-center justify-center">
+              {currentTitle ? (
+                <p className="truncate text-sm font-medium italic text-primary/80">{currentTitle}</p>
+              ) : null}
+            </div>
           )}
 
           {/* Separator */}
