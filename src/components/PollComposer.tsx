@@ -1,14 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────
 // PARTE 2 · ENCUESTAS: editor de la encuesta dentro del compositor.
-// ▶ [MIGRACIÓN LOVABLE CLOUD] Este panel se mantiene igual al migrar:
-// solo cambia dónde se guarda la encuesta al publicar (createPost en
-// @/lib/db). Votos: anónimos, solo recuento por opción.
 // ─────────────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { BarChart3, Plus, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-/** Encuesta válida lista para publicar (2–5 opciones únicas). */
 export interface PollDraft {
   question: string;
   options: string[];
@@ -70,28 +66,30 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.97, y: -4 }}
+      initial={{ opacity: 0, scale: 0.97, y: -6 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97, y: -4 }}
-      transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-      className="poll-bubble rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-4 sm:px-5 sm:py-4.5"
+      exit={{ opacity: 0, scale: 0.97, y: -6 }}
+      transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+      className="poll-bubble mx-auto max-w-md rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-4 sm:px-5"
     >
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <BarChart3 className="h-3.5 w-3.5 text-primary" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <BarChart3 className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <span className="text-sm font-semibold text-card-foreground">
+            Encuesta
+          </span>
+          <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary">
+            Anónima
+          </span>
         </div>
-        <span className="text-sm font-semibold text-card-foreground">
-          Encuesta
-        </span>
-        <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary">
-          Anónima
-        </span>
         <button
           type="button"
           onClick={onRemove}
           title="Quitar encuesta"
-          className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -148,7 +146,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
         </AnimatePresence>
       </div>
 
-      {/* ── Pie: añadir opción + estado ─────────────────────── */}
+      {/* ── Footer ─────────────────────────────────────────── */}
       <div className="mt-3 border-t border-border/30 pt-3 flex items-center justify-between gap-3">
         <button
           type="button"
@@ -163,7 +161,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           </span>
         </button>
         {!isValid && (
-          <p className="text-right text-[10px] leading-tight text-muted-foreground/50 max-w-[140px]">
+          <p className="text-right text-[10px] leading-tight text-muted-foreground/50">
             Mín. 2 opciones y una pregunta
           </p>
         )}

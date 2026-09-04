@@ -385,8 +385,8 @@ button:not([data-framer-motion]):active {
 /* ── Poll bubble widget ────────────────────────────────── */
 .poll-bubble {
   box-shadow:
-    0 1px 2px oklch(0.55 0.16 262 / 0.04),
-    0 4px 12px -4px oklch(0.55 0.16 262 / 0.06);
+    0 1px 3px oklch(0.55 0.16 262 / 0.08),
+    0 6px 16px -4px oklch(0.55 0.16 262 / 0.10);
 }
 
 /* ── Poll vote button hover ──────────────────────────────── */

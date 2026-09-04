@@ -64,7 +64,7 @@ export function PostPoll({ poll, userId }: PostPollProps) {
     totalVotes === 0 ? 0 : Math.round(((votes[optionId] || 0) / totalVotes) * 100);
 
   return (
-    <div className="poll-bubble rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-3.5 sm:px-5">
+    <div className="poll-bubble rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3.5 sm:px-5">
       {/* ── Header with question ────────────────────────────── */}
       <div className="flex items-center gap-2.5">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
