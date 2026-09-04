@@ -15,9 +15,7 @@ export interface PollDraft {
 }
 
 interface PollComposerProps {
-  /** Se avisa en cada cambio: el borrador válido o null si aún no lo es. */
   onChange: (draft: PollDraft | null) => void;
-  /** Quita la encuesta del borrador (cierra el editor). */
   onRemove: () => void;
 }
 
@@ -72,18 +70,21 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
+      initial={{ opacity: 0, scale: 0.97, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97, y: -4 }}
       transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+      className="poll-bubble rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-4 sm:px-5 sm:py-4.5"
     >
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-3">
-        <BarChart3 className="h-4 w-4 shrink-0 text-primary" />
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <BarChart3 className="h-3.5 w-3.5 text-primary" />
+        </div>
         <span className="text-sm font-semibold text-card-foreground">
           Encuesta
         </span>
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+        <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary">
           Anónima
         </span>
         <button
@@ -97,18 +98,20 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       </div>
 
       {/* ── Pregunta ────────────────────────────────────────── */}
-      <input
-        ref={questionRef}
-        type="text"
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        maxLength={MAX_QUESTION}
-        placeholder="Escribe tu pregunta…"
-        className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-      />
+      <div className="mt-3">
+        <input
+          ref={questionRef}
+          type="text"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          maxLength={MAX_QUESTION}
+          placeholder="Escribe tu pregunta…"
+          className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+        />
+      </div>
 
       {/* ── Opciones ────────────────────────────────────────── */}
-      <div className="mt-2.5 flex flex-col gap-2">
+      <div className="mt-3 flex flex-col gap-2">
         <AnimatePresence initial={false}>
           {options.map((opt, i) => (
             <motion.div
@@ -146,7 +149,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       </div>
 
       {/* ── Pie: añadir opción + estado ─────────────────────── */}
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-3 border-t border-border/30 pt-3 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={addOption}

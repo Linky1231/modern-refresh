@@ -64,10 +64,12 @@ export function PostPoll({ poll, userId }: PostPollProps) {
     totalVotes === 0 ? 0 : Math.round(((votes[optionId] || 0) / totalVotes) * 100);
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card/50 px-4 py-3.5 sm:px-5">
+    <div className="poll-bubble rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-3.5 sm:px-5">
       {/* ── Header with question ────────────────────────────── */}
       <div className="flex items-center gap-2.5">
-        <BarChart3 className="h-4 w-4 shrink-0 text-primary" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <BarChart3 className="h-3.5 w-3.5 text-primary" />
+        </div>
         <p className="text-sm font-semibold text-card-foreground min-w-0">
           {poll.question || "Encuesta"}
         </p>

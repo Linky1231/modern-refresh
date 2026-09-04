@@ -382,6 +382,13 @@ button:not([data-framer-motion]):active {
   transform: scale(0.98);
 }
 
+/* ── Poll bubble widget ────────────────────────────────── */
+.poll-bubble {
+  box-shadow:
+    0 1px 2px oklch(0.55 0.16 262 / 0.04),
+    0 4px 12px -4px oklch(0.55 0.16 262 / 0.06);
+}
+
 /* ── Poll vote button hover ──────────────────────────────── */
 .poll-vote-btn {
   transition:
@@ -395,11 +402,6 @@ button:not([data-framer-motion]):active {
 }
 .poll-vote-btn:active {
   transform: scale(0.98);
-}
-
-/* Poll progress bar shimmer */
-@keyframes poll-bar-fill {
-  from { width: 0; }
 }
 
 /* Thin, unobtrusive scrollbars */
