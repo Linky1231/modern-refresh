@@ -327,31 +327,35 @@ export async function getUserProfile(userId: string, currentUserId?: string) {
     .order("created_at", { ascending: false })
     .limit(30);
 
+  // Batch the like/favorite lookups into two total queries instead of
+  // running two queries per post (N+1), which made feeds load slowly.
+  let likedMap = new Map<string, boolean>();
+  let favoritedMap = new Map<string, boolean>();
+  if (currentUserId && (posts || []).length > 0) {
+    const postIds = (posts || []).map((p) => p.id);
+    const [likeRes, favRes] = await Promise.all([
+      supabase
+        .from("likes")
+        .select("post_id")
+        .eq("user_id", currentUserId)
+        .in("post_id", postIds),
+      supabase
+        .from("favorites")
+        .select("post_id")
+        .eq("user_id", currentUserId)
+        .in("post_id", postIds),
+    ]);
+    likedMap = new Map((likeRes.data || []).map((r) => [r.post_id, true]));
+    favoritedMap = new Map(
+      (favRes.data || []).map((r) => [r.post_id, true]),
+    );
+  }
+
   // Process posts with likes/favorites status
   const postsWithStatus = await Promise.all(
     (posts || []).map(async (post) => {
-      let likedByMe = false;
-      let favoritedByMe = false;
-
-      if (currentUserId) {
-        const { data: likeData } = await supabase
-          .from("likes")
-          .select("id")
-          .eq("user_id", currentUserId)
-          .eq("post_id", post.id)
-          .single();
-
-        likedByMe = !!likeData;
-
-        const { data: favData } = await supabase
-          .from("favorites")
-          .select("id")
-          .eq("user_id", currentUserId)
-          .eq("post_id", post.id)
-          .single();
-
-        favoritedByMe = !!favData;
-      }
+      const likedByMe = !!likedMap.get(post.id);
+      const favoritedByMe = !!favoritedMap.get(post.id);
 
       return {
         _id: post.id,
@@ -453,34 +457,36 @@ export async function getPosts(
     ])
   );
 
+  // Batch the like/favorite lookups into two total queries instead of
+  // running two queries per post (N+1), which made feeds load slowly.
+  let likedMap = new Map<string, boolean>();
+  let favoritedMap = new Map<string, boolean>();
+  if (currentUserId && (posts || []).length > 0) {
+    const postIds = (posts || []).map((p) => p.id);
+    const [likeRes, favRes] = await Promise.all([
+      supabase
+        .from("likes")
+        .select("post_id")
+        .eq("user_id", currentUserId)
+        .in("post_id", postIds),
+      supabase
+        .from("favorites")
+        .select("post_id")
+        .eq("user_id", currentUserId)
+        .in("post_id", postIds),
+    ]);
+    likedMap = new Map((likeRes.data || []).map((r) => [r.post_id, true]));
+    favoritedMap = new Map(
+      (favRes.data || []).map((r) => [r.post_id, true]),
+    );
+  }
+
   // Process posts
   const processedPosts = await Promise.all(
     (posts || []).map(async (post) => {
       const author = authorMap.get(post.author_id);
-
-      // Check if current user liked/favorited
-      let likedByMe = false;
-      let favoritedByMe = false;
-
-      if (currentUserId) {
-        const { data: likeData } = await supabase
-          .from("likes")
-          .select("id")
-          .eq("user_id", currentUserId)
-          .eq("post_id", post.id)
-          .single();
-
-        likedByMe = !!likeData;
-
-        const { data: favData } = await supabase
-          .from("favorites")
-          .select("id")
-          .eq("user_id", currentUserId)
-          .eq("post_id", post.id)
-          .single();
-
-        favoritedByMe = !!favData;
-      }
+      const likedByMe = !!likedMap.get(post.id);
+      const favoritedByMe = !!favoritedMap.get(post.id);
 
       return {
         _id: post.id,
@@ -738,22 +744,26 @@ export async function getComments(postId: string, currentUserId?: string) {
     ])
   );
 
+  // Batch the comment-like lookup into a single query instead of one
+  // query per comment (N+1).
+  let commentLikedMap = new Map<string, boolean>();
+  if (currentUserId && (comments || []).length > 0) {
+    const commentIds = (comments || []).map((c) => c.id);
+    const { data: likes } = await supabase
+      .from("comment_likes")
+      .select("comment_id")
+      .eq("user_id", currentUserId)
+      .in("comment_id", commentIds);
+    commentLikedMap = new Map(
+      (likes || []).map((r) => [r.comment_id, true]),
+    );
+  }
+
   // Process comments
   return await Promise.all(
     (comments || []).map(async (comment) => {
       const author = authorMap.get(comment.author_id);
-
-      let likedByMe = false;
-      if (currentUserId) {
-        const { data } = await supabase
-          .from("comment_likes")
-          .select("id")
-          .eq("user_id", currentUserId)
-          .eq("comment_id", comment.id)
-          .single();
-
-        likedByMe = !!data;
-      }
+      const likedByMe = !!commentLikedMap.get(comment.id);
 
       return {
         ...comment,
