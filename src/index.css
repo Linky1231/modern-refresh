@@ -382,6 +382,26 @@ button:not([data-framer-motion]):active {
   transform: scale(0.98);
 }
 
+/* ── Poll vote button hover ──────────────────────────────── */
+.poll-vote-btn {
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    transform 100ms ease;
+}
+.poll-vote-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  background-color: color-mix(in srgb, var(--primary) 4%, var(--background));
+}
+.poll-vote-btn:active {
+  transform: scale(0.98);
+}
+
+/* Poll progress bar shimmer */
+@keyframes poll-bar-fill {
+  from { width: 0; }
+}
+
 /* Thin, unobtrusive scrollbars */
 * {
   scrollbar-width: thin;

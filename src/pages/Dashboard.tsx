@@ -3036,6 +3036,7 @@ export default function Dashboard() {
 
               {/* PARTE 4 · ENCUESTAS: editor de encuesta del compositor.
                   Se abre con el botón «Encuesta» de la fila de acciones. */}
+              <AnimatePresence>
               {showPollComposer && (
                 <div className="mt-4">
                   <PollComposer
@@ -3047,6 +3048,7 @@ export default function Dashboard() {
                   />
                 </div>
               )}
+              </AnimatePresence>
 
               {/* Separator */}
               <div className="mt-5 border-t border-border/40" />
