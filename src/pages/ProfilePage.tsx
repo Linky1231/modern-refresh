@@ -1,3 +1,6 @@
+// ▶ [MIGRACIÓN LOVABLE CLOUD] Esta página usa @/lib/db, que ahora
+// funciona 100% en el dispositivo, sin sincronización remota.
+// Al migrar a Lovable Cloud, @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
   updateProfile,

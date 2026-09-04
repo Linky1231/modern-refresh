@@ -1,3 +1,7 @@
+// ▶ [MIGRACIÓN LOVABLE CLOUD] Esta página ya NO sincroniza con un
+// backend: todas las llamadas a @/lib/db (feed, me gusta, comentarios,
+// seguidores, notificaciones…) funcionan 100% en el dispositivo.
+// Al migrar la app a Lovable Cloud, la capa @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
 import ProfilePage from "./ProfilePage";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,6 +21,8 @@ import {
   getFollowers,
   getFollowing,
   getUserProfile,
+  getFollowStats,
+  isFollowing,
   uploadFile,
   generateFilePath,
   getStorageUrl,
@@ -77,6 +83,11 @@ const MAX_DOC_MB = 25;
 const MAX_FILES = 10;
 const MAX_IMAGE_MB = 10;
 const MAX_VIDEO_MB = 50;
+
+// ▶ [MODO LOCAL / DISPOSITIVO] La subida de archivos del compositor
+// aún apunta al endpoint de la plataforma y NO funciona en modo local.
+// Las imágenes se podrán adjuntar de nuevo al migrar a Lovable Cloud.
+// (El avatar de perfil sí se guarda en el dispositivo vía @/lib/db).
 
 const TEXT_COLORS = [
   { label: "Predeterminado", value: "" },
@@ -1146,10 +1157,10 @@ function CommentItem({
 }) {
   const pid = postId as any;
   const toggleCommentLikeHandler = async (commentId: string) => {
-    // Will be passed as prop or use direct Supabase call
+    // (llamada de datos local vía @/lib/db)
   };
   const removeCommentHandler = async (commentId: string) => {
-    // Will be passed as prop or use direct Supabase call
+    // (llamada de datos local vía @/lib/db)
   };
   const [confirmDelete, setConfirmDelete] = useState(false);
 

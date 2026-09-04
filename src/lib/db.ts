@@ -1,7 +1,25 @@
-import { supabase } from "./supabase";
+// ═══════════════════════════════════════════════════════════════════
+// CAPA DE DATOS — MODO LOCAL / SOLO DISPOSITIVO
+//
+// Toda la sincronización remota (auth, publicaciones, likes,
+// comentarios, seguidores, notificaciones y archivos) fue ELIMINADA.
+// Los datos viven únicamente en el navegador del dispositivo
+// (localStorage): sin red, sin servidor, sin base de datos remota.
+//
+// ▶ [MIGRACIÓN LOVABLE CLOUD] Cuando migres la app a Lovable Cloud,
+//   cada función de este archivo debe reconectarse al backend que
+//   provea Lovable (auth, base de datos y storage). Las firmas y los
+//   contratos de datos se conservan intactos para que el resto del
+//   código (páginas y componentes) no tenga que cambiar.
+//   Busca el marcador "▶ [LOVABLE CLOUD]" para ver cada punto de
+//   reconexión.
+// ═══════════════════════════════════════════════════════════════════
+
+export const AUTH_STORAGE_KEY = "asternal_auth";
+const DB_KEY = "asternal_local_db_v1";
 
 // ========================================
-// TYPES
+// TYPES (contratos de datos conservados tal cual estaban)
 // ========================================
 
 export interface User {
@@ -53,19 +71,246 @@ export interface Follow {
   created_at: string;
 }
 
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  actor_id: string;
+  type: "like" | "favorite" | "comment" | "reply" | "follow";
+  post_id: string | null;
+  comment_id: string | null;
+  read: boolean;
+  created_at: string;
+  actorName?: string;
+  actorImageUrl?: string;
+}
+
 // ========================================
-// AUTH FUNCTIONS
+// ALMACENAMIENTO LOCAL DEL DISPOSITIVO
+// ========================================
+
+interface LocalUserRow {
+  id: string;
+  username: string;
+  name: string;
+  email: string | null;
+  image: string | null; // ruta de avatar (se resuelve vía files) o data URL
+  bio: string;
+  title: string;
+  role: string;
+  created_at: string;
+}
+
+interface LocalPostRow {
+  id: string;
+  author_id: string;
+  title: string | null;
+  content: string;
+  media: Post["media"];
+  documents: Post["documents"];
+  mentions: Post["mentions"];
+  hashtags: string[];
+  created_at: string;
+}
+
+interface LocalCommentRow {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  parent_comment_id: string | null;
+  created_at: string;
+}
+
+interface LocalDB {
+  users: LocalUserRow[];
+  posts: LocalPostRow[];
+  comments: LocalCommentRow[];
+  likes: Array<{ user_id: string; post_id: string }>;
+  favorites: Array<{ user_id: string; post_id: string }>;
+  commentLikes: Array<{ user_id: string; comment_id: string }>;
+  follows: Array<{ follower_id: string; following_id: string }>;
+  notifications: NotificationItem[];
+  /** Archivos subidos en el dispositivo: ruta -> data URL */
+  files: Record<string, string>;
+}
+
+function emptyDB(): LocalDB {
+  return {
+    users: [],
+    posts: [],
+    comments: [],
+    likes: [],
+    favorites: [],
+    commentLikes: [],
+    follows: [],
+    notifications: [],
+    files: {},
+  };
+}
+
+function uid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+let memory: LocalDB | null = null;
+
+function getDB(): LocalDB {
+  if (memory) return memory;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = window.localStorage.getItem(DB_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<LocalDB>;
+        memory = { ...emptyDB(), ...parsed };
+        return memory;
+      }
+    } catch (e) {
+      console.error("No se pudo leer la base local:", e);
+    }
+  }
+  memory = emptyDB();
+  return memory;
+}
+
+/** Guarda el estado local. Lanza error claro si el dispositivo está lleno. */
+function saveDB() {
+  const db = getDB();
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DB_KEY, JSON.stringify(db));
+  } catch (e) {
+    throw new Error(
+      "El almacenamiento local del dispositivo está lleno. Elimina publicaciones con imágenes para liberar espacio.",
+    );
+  }
+}
+
+// ── Helpers de consulta local ──────────────────────────────────────
+
+function findUser(id: string): LocalUserRow | null {
+  return getDB().users.find((u) => u.id === id) ?? null;
+}
+
+function findUserByUsername(username: string): LocalUserRow | null {
+  const clean = username.trim().toLowerCase();
+  return getDB().users.find((u) => u.username.toLowerCase() === clean) ?? null;
+}
+
+function ensureUser(id: string, fallback?: Partial<LocalUserRow>): LocalUserRow {
+  const existing = findUser(id);
+  if (existing) return existing;
+  const row: LocalUserRow = {
+    id,
+    username: fallback?.username ?? `usuario-${id.slice(0, 6)}`,
+    name: fallback?.name ?? "Anónimo",
+    email: fallback?.email ?? null,
+    image: fallback?.image ?? null,
+    bio: fallback?.bio ?? "",
+    title: fallback?.title ?? "",
+    role: fallback?.role ?? "user",
+    created_at: fallback?.created_at ?? new Date().toISOString(),
+  };
+  getDB().users.push(row);
+  return row;
+}
+
+/** Resuelve un identificador de archivo a una URL usable en el dispositivo. */
+function resolveFileUrl(storageId: string | null | undefined): string {
+  if (!storageId) return "";
+  if (storageId.startsWith("data:")) return storageId;
+  const file = getDB().files[storageId];
+  return file ?? "";
+}
+
+function getAuthorMap(userIds: string[]) {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  const map = new Map<string, LocalUserRow>();
+  for (const id of ids) {
+    const u = findUser(id);
+    if (u) map.set(id, u);
+  }
+  return map;
+}
+
+function likesMapFor<K extends "post_id" | "comment_id">(
+  rows: Array<{ user_id: string } & { [P in K]: string }>,
+  key: K,
+  userId: string | undefined,
+  targetIds: string[],
+) {
+  const set = new Map<string, boolean>();
+  if (!userId) return set;
+  const targets = new Set(targetIds);
+  for (const row of rows) {
+    if (row.user_id === userId && targets.has(row[key])) {
+      set.set(row[key], true);
+    }
+  }
+  return set;
+}
+
+/** Convierte una publicación local a la vista que consume la interfaz. */
+function toPostView(
+  post: LocalPostRow,
+  author: LocalUserRow,
+  likedByMe: boolean,
+  favoritedByMe: boolean,
+) {
+  return {
+    _id: post.id,
+    authorId: post.author_id,
+    title: post.title,
+    content: post.content,
+    createdAt: new Date(post.created_at).getTime(),
+    likes: getDB().likes.filter((l) => l.post_id === post.id).length,
+    favorites: getDB().favorites.filter((f) => f.post_id === post.id).length,
+    shares: 0,
+    mediaUrls: (post.media || []).map((m) => ({
+      url: resolveFileUrl(m.storageId),
+      type: m.type,
+      mime: m.mime,
+    })),
+    documentUrls: (post.documents || []).map((d) => ({
+      url: resolveFileUrl(d.storageId),
+      name: d.name,
+      size: d.size,
+      mime: d.mime,
+    })),
+    authorName: author?.name || "Anónimo",
+    authorImage: author?.image ?? null,
+    authorImageUrl: author?.image
+      ? resolveFileUrl(author.image)
+      : undefined,
+    likedByMe,
+    favoritedByMe,
+    mentions: post.mentions || [],
+    hashtags: post.hashtags || [],
+  };
+}
+
+function extractHashtags(html: string): string[] {
+  const text = html.replace(/<[^>]*>/g, "");
+  const matches = text.match(/#[\w\u00C0-\u024F]+/g);
+  return matches ? [...new Set(matches.map((h) => h.toLowerCase()))] : [];
+}
+
+// ========================================
+// AUTH FUNCTIONS (LOCALES — ▶ [LOVABLE CLOUD]: reconectar a auth de Lovable)
 // ========================================
 
 /**
- * Register a new user with username and password
+ * Registra un usuario nuevo. En modo local la contraseña no se
+ * guarda en el dispositivo (no se valida al iniciar sesión).
+ * ▶ [LOVABLE CLOUD] Al migrar, volcar a registro real con el backend.
  */
 export async function registerUser(
   username: string,
   password: string,
-  name?: string
+  name?: string,
 ) {
-  // Validate username
   const cleanUsername = username.trim().toLowerCase();
   if (cleanUsername.length < 3) {
     throw new Error("El nombre de usuario debe tener al menos 3 caracteres");
@@ -75,159 +320,85 @@ export async function registerUser(
   }
   if (!/^[a-z0-9_]+$/.test(cleanUsername)) {
     throw new Error(
-      "El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos"
+      "El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos",
     );
   }
   if (password.length < 4) {
     throw new Error("La contraseña debe tener al menos 4 caracteres");
   }
-
-  // Check if username is taken
-  const { data: existing } = await supabase
-    .from("users")
-    .select("id")
-    .eq("username", cleanUsername)
-    .maybeSingle();
-
-  if (existing) {
+  if (findUserByUsername(cleanUsername)) {
     throw new Error("Este nombre de usuario ya está en uso");
   }
 
-  // Create auth user with Supabase Auth
-  // The database trigger (handle_new_user) auto-creates the user profile
   const displayName = name?.trim() || cleanUsername;
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: `${cleanUsername}@asternal.local`,
-    password: password,
-    options: {
-      data: {
-        username: cleanUsername,
-        name: displayName,
-      },
-    },
-  });
-
-  if (authError) throw authError;
-  if (!authData.user) throw new Error("Error al crear el usuario");
-
-  // The trigger auto-creates the profile, but wait briefly then fetch it
-  // If the trigger hasn't finished yet, insert manually as fallback
-  await new Promise((r) => setTimeout(r, 500));
-
-  const { data: existingProfile } = await supabase
-    .from("users")
-    .select("id")
-    .eq("id", authData.user.id)
-    .single();
-
-  if (!existingProfile) {
-    // Trigger didn't fire yet — insert manually
-    await supabase.from("users").insert({
-      id: authData.user.id,
-      username: cleanUsername,
-      name: displayName,
-      email: `${cleanUsername}@asternal.local`,
-      role: "user",
-    });
-  }
-
-  // Auto sign-in (Supabase may not auto-sign-in depending on email confirmation settings)
-  // Try to establish a session
-  if (!authData.session) {
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: `${cleanUsername}@asternal.local`,
-      password: password,
-    });
-    // Ignore signInError — user may need to confirm email
-  }
-
-  return {
-    _id: authData.user.id,
-    name: displayName,
+  const row: LocalUserRow = {
+    id: uid(),
     username: cleanUsername,
+    name: displayName,
+    email: `${cleanUsername}@local.asternal`,
+    image: null,
+    bio: "",
+    title: "",
+    role: "user",
+    created_at: new Date().toISOString(),
   };
+  getDB().users.push(row);
+  saveDB();
+
+  return { _id: row.id, name: displayName, username: cleanUsername };
 }
 
 /**
- * Login with username and password
+ * Inicia sesión. En modo local solo se comprueba que el usuario
+ * exista en este dispositivo (la contraseña no se almacena).
+ * ▶ [LOVABLE CLOUD] Al migrar, validar credenciales con el backend.
  */
-export async function loginUser(username: string, password: string) {
+export async function loginUser(username: string, _password: string) {
   const cleanUsername = username.trim().toLowerCase();
-
-  // Sign in first: reading the users table before having a session can be
-  // blocked by row level security, which made valid logins fail.
-  const { data: authData, error: authError } =
-    await supabase.auth.signInWithPassword({
-      email: `${cleanUsername}@asternal.local`,
-      password: password,
-    });
-
-  if (authError) {
-    const message = /invalid login credentials/i.test(authError.message)
-      ? "Usuario o contraseña incorrectos"
-      : authError.message;
-    throw new Error(message);
+  const user = findUserByUsername(cleanUsername);
+  if (!user) {
+    throw new Error("Usuario o contraseña incorrectos");
   }
-  if (!authData.user) throw new Error("No se pudo iniciar sesión");
-
-  // Now load (or lazily create) the profile with the authenticated session.
-  const profile = await getCurrentUser();
-
   return {
-    _id: profile?.id ?? authData.user.id,
-    name: profile?.name || cleanUsername,
-    username: profile?.username || cleanUsername,
-    email: profile?.email ?? authData.user.email,
-    image: profile?.image,
-    role: profile?.role || "user",
+    _id: user.id,
+    name: user.name || cleanUsername,
+    username: user.username || cleanUsername,
+    email: user.email ?? null,
+    image: user.image,
+    role: user.role || "user",
   };
 }
 
 /**
- * Logout current user
+ * Cierra la sesión local (limpia la sesión guardada del dispositivo).
+ * ▶ [LOVABLE CLOUD] Al migrar, cerrar la sesión real del backend.
  */
 export async function logoutUser() {
-  await supabase.auth.signOut();
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch {
+      // sin ventana o almacenamiento no disponible
+    }
+  }
 }
 
 /**
- * Get current user from Supabase
+ * Devuelve el perfil local del usuario con sesión activa (si existe).
+ * ▶ [LOVABLE CLOUD] Al migrar, leer el usuario autenticado del backend.
  */
 export async function getCurrentUser() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  // If profile doesn't exist yet (trigger race condition), create it
-  if (!profile) {
-    const username = user.user_metadata?.username || user.email?.split("@")[0] || "user";
-    const name = user.user_metadata?.name || username;
-    const { error: insertError } = await supabase.from("users").insert({
-      id: user.id,
-      username,
-      name,
-      email: user.email,
-      role: "user",
-    });
-    if (!insertError) {
-      const { data: newProfile } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
-      return newProfile;
-    }
+  if (typeof window === "undefined") return null;
+  let cached: { _id?: string } | null = null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    cached = raw ? (JSON.parse(raw) as { _id?: string }) : null;
+  } catch {
+    return null;
   }
-
-  return profile;
+  if (!cached?._id) return null;
+  const row = findUser(cached._id);
+  return row;
 }
 
 // ========================================
@@ -235,172 +406,88 @@ export async function getCurrentUser() {
 // ========================================
 
 /**
- * Search users by name for @mentions
+ * Busca usuarios por nombre o usuario para @menciones.
+ * ▶ [LOVABLE CLOUD] Conectar a búsqueda de usuarios del backend.
  */
 export async function searchUsers(query: string, currentUserId?: string) {
   const searchTerm = query.trim().toLowerCase();
-
-  let queryBuilder = supabase.from("users").select("id, name, image").limit(20);
-
-  if (searchTerm.length > 0) {
-    queryBuilder = queryBuilder.ilike("name", `%${searchTerm}%`);
-  }
-
-  if (currentUserId) {
-    queryBuilder = queryBuilder.neq("id", currentUserId);
-  }
-
-  const { data, error } = await queryBuilder;
-
-  if (error) throw error;
-
-  return (data || []).map((u) => ({
-    _id: u.id,
-    name: u.name || "Anónimo",
-    image: u.image,
-  }));
+  return getDB()
+    .users.filter((u) => {
+      if (currentUserId && u.id === currentUserId) return false;
+      if (!searchTerm) return true;
+      return (
+        u.name.toLowerCase().includes(searchTerm) ||
+        u.username.toLowerCase().includes(searchTerm)
+      );
+    })
+    .slice(0, 20)
+    .map((u) => ({
+      _id: u.id,
+      name: u.name || "Anónimo",
+      image: u.image,
+    }));
 }
 
 /**
- * Update user profile
+ * Actualiza el perfil del usuario en el dispositivo.
+ * ▶ [LOVABLE CLOUD] Conectar a actualización de perfil del backend.
  */
 export async function updateProfile(
   userId: string,
-  updates: { name?: string; bio?: string; title?: string; image?: string }
+  updates: { name?: string; bio?: string; title?: string; image?: string },
 ) {
-  const { error } = await supabase
-    .from("users")
-    .update({
-      ...(updates.name !== undefined && { name: updates.name.trim() }),
-      ...(updates.bio !== undefined && { bio: updates.bio.slice(0, 200) }),
-      ...(updates.title !== undefined && { title: updates.title.slice(0, 60) }),
-      ...(updates.image !== undefined && { image: updates.image }),
-    })
-    .eq("id", userId);
-
-  if (error) throw error;
+  const user = ensureUser(userId);
+  if (updates.name !== undefined) user.name = updates.name.trim();
+  if (updates.bio !== undefined) user.bio = updates.bio.slice(0, 200);
+  if (updates.title !== undefined) user.title = updates.title.slice(0, 60);
+  if (updates.image !== undefined) user.image = updates.image;
+  saveDB();
 }
 
 /**
- * Get user profile with follow stats and posts
+ * Perfil de un usuario con sus estadísticas y publicaciones.
+ * ▶ [LOVABLE CLOUD] Conectar a consulta de perfil del backend.
  */
 export async function getUserProfile(userId: string, currentUserId?: string) {
-  // Get user
-  const { data: user, error: userError } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", userId)
-    .single();
+  const user = findUser(userId);
+  if (!user) return null;
 
-  if (userError || !user) return null;
-
-  // Get follower count
-  const { count: followerCount } = await supabase
-    .from("follows")
-    .select("*", { count: "exact", head: true })
-    .eq("following_id", userId);
-
-  // Get following count
-  const { count: followingCount } = await supabase
-    .from("follows")
-    .select("*", { count: "exact", head: true })
-    .eq("follower_id", userId);
-
-  // Check if current user follows this user
-  let isFollowing = false;
-  if (currentUserId && currentUserId !== userId) {
-    const { data } = await supabase
-      .from("follows")
-      .select("id")
-      .eq("follower_id", currentUserId)
-      .eq("following_id", userId)
-      .single();
-
-    isFollowing = !!data;
-  }
-
-  // Get user's posts
-  const { data: posts } = await supabase
-    .from("posts")
-    .select("*")
-    .eq("author_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(30);
-
-  // Batch the like/favorite lookups into two total queries instead of
-  // running two queries per post (N+1), which made feeds load slowly.
-  let likedMap = new Map<string, boolean>();
-  let favoritedMap = new Map<string, boolean>();
-  if (currentUserId && (posts || []).length > 0) {
-    const postIds = (posts || []).map((p) => p.id);
-    const [likeRes, favRes] = await Promise.all([
-      supabase
-        .from("likes")
-        .select("post_id")
-        .eq("user_id", currentUserId)
-        .in("post_id", postIds),
-      supabase
-        .from("favorites")
-        .select("post_id")
-        .eq("user_id", currentUserId)
-        .in("post_id", postIds),
-    ]);
-    likedMap = new Map((likeRes.data || []).map((r) => [r.post_id, true]));
-    favoritedMap = new Map(
-      (favRes.data || []).map((r) => [r.post_id, true]),
+  const db = getDB();
+  const followers = db.follows.filter((f) => f.following_id === userId).length;
+  const following = db.follows.filter((f) => f.follower_id === userId).length;
+  const isFollowing =
+    !!currentUserId &&
+    currentUserId !== userId &&
+    db.follows.some(
+      (f) => f.follower_id === currentUserId && f.following_id === userId,
     );
-  }
 
-  // Process posts with likes/favorites status
-  const postsWithStatus = await Promise.all(
-    (posts || []).map(async (post) => {
-      const likedByMe = !!likedMap.get(post.id);
-      const favoritedByMe = !!favoritedMap.get(post.id);
-
-      return {
-        _id: post.id,
-        authorId: post.author_id,
-        title: post.title,
-        content: post.content,
-        createdAt: new Date(post.created_at).getTime(),
-        likes: post.likes,
-        favorites: post.favorites,
-        shares: post.shares,
-        mediaUrls: (post.media || []).map((m: any) => ({
-          url: getStorageUrl("media", m.storageId),
-          type: m.type,
-          mime: m.mime,
-        })),
-        documentUrls: (post.documents || []).map((d: any) => ({
-          url: getStorageUrl("documents", d.storageId),
-          name: d.name,
-          size: d.size,
-          mime: d.mime,
-        })),
-        authorName: user.name || "Anónimo",
-        authorImageUrl: user.image
-          ? getStorageUrl("avatars", user.image)
-          : undefined,
-        likedByMe,
-        favoritedByMe,
-        mentions: post.mentions || [],
-        hashtags: post.hashtags || [],
-      };
-    })
-  );
+  const posts = db.posts
+    .filter((p) => p.author_id === userId)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .slice(0, 30)
+    .map((post) => {
+      const likedByMe = db.likes.some(
+        (l) => l.post_id === post.id && l.user_id === currentUserId,
+      );
+      const favoritedByMe = db.favorites.some(
+        (f) => f.post_id === post.id && f.user_id === currentUserId,
+      );
+      return toPostView(post, user, likedByMe, favoritedByMe);
+    });
 
   return {
     _id: user.id,
     name: user.name || "Anónimo",
     email: user.email,
     image: user.image,
-    avatarUrl: user.image ? getStorageUrl("avatars", user.image) : undefined,
+    avatarUrl: user.image ? resolveFileUrl(user.image) : undefined,
     bio: user.bio || "",
     title: user.title || "",
-    followers: followerCount || 0,
-    following: followingCount || 0,
+    followers,
+    following,
     isFollowing,
-    posts: postsWithStatus,
+    posts,
   };
 }
 
@@ -409,155 +496,77 @@ export async function getUserProfile(userId: string, currentUserId?: string) {
 // ========================================
 
 /**
- * Get posts with sorting algorithm
+ * Publicaciones con ordenación (para ti / siguiendo / populares).
+ * ▶ [LOVABLE CLOUD] Conectar a feed del backend.
  */
 export async function getPosts(
   sortBy: "forYou" | "following" | "popular" = "forYou",
-  currentUserId?: string
+  currentUserId?: string,
 ) {
-  let queryBuilder = supabase
-    .from("posts")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const db = getDB();
 
-  // For "following" sort, we need to get followed user IDs first
+  let posts = [...db.posts].sort((a, b) =>
+    a.created_at < b.created_at ? 1 : -1,
+  );
+
   if (sortBy === "following" && currentUserId) {
-    const { data: follows } = await supabase
-      .from("follows")
-      .select("following_id")
-      .eq("follower_id", currentUserId);
-
-    const followedIds = (follows || []).map((f) => f.following_id);
-
-    if (followedIds.length === 0) {
-      return [];
-    }
-
-    queryBuilder = queryBuilder.in("author_id", followedIds);
-  }
-
-  const { data: posts, error } = await queryBuilder;
-
-  if (error) throw error;
-
-  // Get all unique author IDs
-  const authorIds = [...new Set((posts || []).map((p) => p.author_id))];
-
-  // Fetch all authors in one query
-  const { data: authors } = await supabase
-    .from("users")
-    .select("id, name, image")
-    .in("id", authorIds);
-
-  const authorMap = new Map(
-    (authors || []).map((a) => [
-      a.id,
-      { name: a.name || "Anónimo", image: a.image },
-    ])
-  );
-
-  // Batch the like/favorite lookups into two total queries instead of
-  // running two queries per post (N+1), which made feeds load slowly.
-  let likedMap = new Map<string, boolean>();
-  let favoritedMap = new Map<string, boolean>();
-  if (currentUserId && (posts || []).length > 0) {
-    const postIds = (posts || []).map((p) => p.id);
-    const [likeRes, favRes] = await Promise.all([
-      supabase
-        .from("likes")
-        .select("post_id")
-        .eq("user_id", currentUserId)
-        .in("post_id", postIds),
-      supabase
-        .from("favorites")
-        .select("post_id")
-        .eq("user_id", currentUserId)
-        .in("post_id", postIds),
-    ]);
-    likedMap = new Map((likeRes.data || []).map((r) => [r.post_id, true]));
-    favoritedMap = new Map(
-      (favRes.data || []).map((r) => [r.post_id, true]),
+    const followedIds = new Set(
+      db.follows
+        .filter((f) => f.follower_id === currentUserId)
+        .map((f) => f.following_id),
     );
+    if (followedIds.size === 0) return [];
+    posts = posts.filter((p) => followedIds.has(p.author_id));
   }
 
-  // Process posts
-  const processedPosts = await Promise.all(
-    (posts || []).map(async (post) => {
-      const author = authorMap.get(post.author_id);
-      const likedByMe = !!likedMap.get(post.id);
-      const favoritedByMe = !!favoritedMap.get(post.id);
-
-      return {
-        _id: post.id,
-        authorId: post.author_id,
-        title: post.title,
-        content: post.content,
-        createdAt: new Date(post.created_at).getTime(),
-        likes: post.likes,
-        favorites: post.favorites,
-        shares: post.shares,
-        mediaUrls: (post.media || []).map((m: any) => ({
-          url: getStorageUrl("media", m.storageId),
-          type: m.type,
-          mime: m.mime,
-        })),
-        documentUrls: (post.documents || []).map((d: any) => ({
-          url: getStorageUrl("documents", d.storageId),
-          name: d.name,
-          size: d.size,
-          mime: d.mime,
-        })),
-        authorName: author?.name || "Anónimo",
-        authorImage: author?.image,
-        authorImageUrl: author?.image
-          ? getStorageUrl("avatars", author.image)
-          : undefined,
-        likedByMe,
-        favoritedByMe,
-        mentions: post.mentions || [],
-        hashtags: post.hashtags || [],
-      };
-    })
+  posts = posts.slice(0, 200);
+  const authorMap = getAuthorMap(posts.map((p) => p.author_id));
+  const likedMap = likesMapFor(
+    db.likes,
+    "post_id",
+    currentUserId,
+    posts.map((p) => p.id),
+  );
+  const favoritedMap = likesMapFor(
+    db.favorites,
+    "post_id",
+    currentUserId,
+    posts.map((p) => p.id),
   );
 
-  // Apply scoring algorithm
+  const processed = posts.map((post) =>
+    toPostView(
+      post,
+      authorMap.get(post.author_id) ?? ensureUser(post.author_id),
+      likedMap.get(post.id) ?? false,
+      favoritedMap.get(post.id) ?? false,
+    ),
+  );
+
+  const now = Date.now();
+  const score = (p: (typeof processed)[number]) =>
+    p.likes * 2 + (p.shares || 0) * 4 + (p.favorites || 0) * 3;
+
   if (sortBy === "popular") {
-    processedPosts.sort((a, b) => {
-      const scoreA =
-        a.likes * 2 + (a.shares || 0) * 4 + (a.favorites || 0) * 3;
-      const scoreB =
-        b.likes * 2 + (b.shares || 0) * 4 + (b.favorites || 0) * 3;
-      if (scoreB !== scoreA) return scoreB - scoreA;
-      return b.createdAt - a.createdAt;
-    });
+    processed.sort(
+      (a, b) => score(b) - score(a) || b.createdAt - a.createdAt,
+    );
   } else if (sortBy === "forYou") {
-    const now = Date.now();
-    processedPosts.sort((a, b) => {
-      const baseScoreA =
-        a.likes * 2 + (a.shares || 0) * 4 + (a.favorites || 0) * 3;
-      const baseScoreB =
-        b.likes * 2 + (b.shares || 0) * 4 + (b.favorites || 0) * 3;
-
-      const ageHoursA = (now - a.createdAt) / (1000 * 60 * 60);
-      const ageHoursB = (now - b.createdAt) / (1000 * 60 * 60);
-
-      const recencyA = ageHoursA < 24 ? 1.5 : ageHoursA < 72 ? 1.2 : 1.0;
-      const recencyB = ageHoursB < 24 ? 1.5 : ageHoursB < 72 ? 1.2 : 1.0;
-
-      const scoreA = baseScoreA * recencyA;
-      const scoreB = baseScoreB * recencyB;
-
-      return scoreB - scoreA;
+    processed.sort((a, b) => {
+      const recency = (p: (typeof processed)[number]) => {
+        const ageHours = (now - p.createdAt) / (1000 * 60 * 60);
+        return ageHours < 24 ? 1.5 : ageHours < 72 ? 1.2 : 1.0;
+      };
+      return score(b) * recency(b) - score(a) * recency(a);
     });
   }
-  // "following" is already sorted by created_at desc
 
-  return processedPosts.slice(0, 50);
+  return processed.slice(0, 50);
 }
 
 /**
- * Create a new post
+ * Crea una publicación guardándola solo en el dispositivo.
+ * ▶ [LOVABLE CLOUD] Conectar a creación de publicación del backend.
  */
 export async function createPost(
   authorId: string,
@@ -572,7 +581,7 @@ export async function createPost(
       mime?: string;
     }>;
     mentions?: Array<{ userId: string; name: string }>;
-  }
+  },
 ) {
   if (
     content.trim().length === 0 &&
@@ -581,524 +590,432 @@ export async function createPost(
   ) {
     throw new Error("La publicación no puede estar vacía");
   }
-
   if (content.length > 2000) {
     throw new Error("El contenido es demasiado largo (máximo 2000 caracteres)");
   }
 
-  // Extract hashtags
-  const textContent = content.replace(/<[^>]*>/g, "");
-  const hashtagMatches = textContent.match(/#[\w\u00C0-\u024F]+/g);
-  const hashtags = hashtagMatches
-    ? [...new Set(hashtagMatches.map((h) => h.toLowerCase()))]
-    : [];
+  const row: LocalPostRow = {
+    id: uid(),
+    author_id: authorId,
+    title: options?.title?.trim() || null,
+    content: content.trim(),
+    media: options?.media || [],
+    documents: options?.documents || [],
+    mentions: options?.mentions || [],
+    hashtags: extractHashtags(content),
+    created_at: new Date().toISOString(),
+  };
+  getDB().posts.push(row);
+  ensureUser(authorId);
+  saveDB();
 
-  const { data, error } = await supabase
-    .from("posts")
-    .insert({
-      author_id: authorId,
-      title: options?.title?.trim() || null,
-      content: content.trim(),
-      media: options?.media || [],
-      documents: options?.documents || [],
-      mentions: options?.mentions || [],
-      hashtags,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  return {
+    id: row.id,
+    author_id: row.author_id,
+    title: row.title,
+    content: row.content,
+    likes: 0,
+    favorites: 0,
+    shares: 0,
+    media: row.media,
+    documents: row.documents,
+    mentions: row.mentions,
+    hashtags: row.hashtags,
+    created_at: row.created_at,
+  };
 }
 
-/**
- * Delete a post
- */
+/** Elimina una publicación (solo dueño). ▶ [LOVABLE CLOUD] reconectar. */
 export async function deletePost(postId: string, userId: string) {
-  // Verify ownership
-  const { data: post, error: postError } = await supabase
-    .from("posts")
-    .select("author_id")
-    .eq("id", postId)
-    .single();
-
-  if (postError || !post) throw new Error("Publicación no encontrada");
+  const db = getDB();
+  const post = db.posts.find((p) => p.id === postId);
+  if (!post) throw new Error("Publicación no encontrada");
   if (post.author_id !== userId) throw new Error("No autorizado");
-
-  // Delete associated data
-  await supabase.from("likes").delete().eq("post_id", postId);
-  await supabase.from("favorites").delete().eq("post_id", postId);
-  await supabase.from("comments").delete().eq("post_id", postId);
-
-  // Delete the post
-  const { error } = await supabase.from("posts").delete().eq("id", postId);
-
-  if (error) throw error;
+  removePostWithRelations(postId);
 }
 
-/**
- * Delete post as admin
- */
+/** Elimina una publicación como admin. ▶ [LOVABLE CLOUD] reconectar. */
 export async function deletePostAsAdmin(postId: string) {
-  // Delete associated data
-  await supabase.from("likes").delete().eq("post_id", postId);
-  await supabase.from("favorites").delete().eq("post_id", postId);
-  await supabase.from("comments").delete().eq("post_id", postId);
+  removePostWithRelations(postId);
+}
 
-  // Delete the post
-  const { error } = await supabase.from("posts").delete().eq("id", postId);
-
-  if (error) throw error;
+function removePostWithRelations(postId: string) {
+  const db = getDB();
+  const commentIds = db.comments
+    .filter((c) => c.post_id === postId)
+    .map((c) => c.id);
+  db.comments = db.comments.filter((c) => c.post_id !== postId);
+  db.likes = db.likes.filter((l) => l.post_id !== postId);
+  db.favorites = db.favorites.filter((f) => f.post_id !== postId);
+  db.commentLikes = db.commentLikes.filter(
+    (cl) => !commentIds.includes(cl.comment_id),
+  );
+  db.notifications = db.notifications.filter(
+    (n) => n.post_id !== postId && !commentIds.includes(n.comment_id ?? ""),
+  );
+  db.posts = db.posts.filter((p) => p.id !== postId);
+  saveDB();
 }
 
 // ========================================
-// LIKE FUNCTIONS
+// LIKE / FAVORITE FUNCTIONS (locales)
 // ========================================
 
 /**
- * Toggle like on a post
+ * Me gusta / quitar me gusta de una publicación.
+ * ▶ [LOVABLE CLOUD] Reconectar a likes del backend.
  */
 export async function togglePostLike(userId: string, postId: string) {
-  // Check if already liked
-  const { data: existing } = await supabase
-    .from("likes")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("post_id", postId)
-    .single();
+  const db = getDB();
+  const post = db.posts.find((p) => p.id === postId);
+  if (!post) throw new Error("Publicación no encontrada");
 
-  if (existing) {
-    // Remove like
-    await supabase.from("likes").delete().eq("id", existing.id);
-    await supabase.rpc("decrement_post_likes", { post_id: postId });
+  const index = db.likes.findIndex(
+    (l) => l.user_id === userId && l.post_id === postId,
+  );
+  if (index >= 0) {
+    db.likes.splice(index, 1);
+    saveDB();
     return false;
-  } else {
-    // Add like
-    await supabase.from("likes").insert({ user_id: userId, post_id: postId });
-    await supabase.rpc("increment_post_likes", { post_id: postId });
-    void notifyPostOwner(userId, postId, "like");
-    return true;
   }
+  db.likes.push({ user_id: userId, post_id: postId });
+  saveDB();
+  void notifyPostOwner(userId, postId, "like");
+  return true;
 }
 
-// ========================================
-// FAVORITE FUNCTIONS
-// ========================================
-
 /**
- * Toggle favorite on a post
+ * Favorito / quitar favorito de una publicación.
+ * ▶ [LOVABLE CLOUD] Reconectar a favoritos del backend.
  */
 export async function togglePostFavorite(userId: string, postId: string) {
-  const { data: existing } = await supabase
-    .from("favorites")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("post_id", postId)
-    .single();
+  const db = getDB();
+  const post = db.posts.find((p) => p.id === postId);
+  if (!post) throw new Error("Publicación no encontrada");
 
-  if (existing) {
-    await supabase.from("favorites").delete().eq("id", existing.id);
-    await supabase.rpc("decrement_post_favorites", { post_id: postId });
+  const index = db.favorites.findIndex(
+    (f) => f.user_id === userId && f.post_id === postId,
+  );
+  if (index >= 0) {
+    db.favorites.splice(index, 1);
+    saveDB();
     return false;
-  } else {
-    await supabase
-      .from("favorites")
-      .insert({ user_id: userId, post_id: postId });
-    await supabase.rpc("increment_post_favorites", { post_id: postId });
-    void notifyPostOwner(userId, postId, "favorite");
-    return true;
   }
+  db.favorites.push({ user_id: userId, post_id: postId });
+  saveDB();
+  void notifyPostOwner(userId, postId, "favorite");
+  return true;
 }
 
 // ========================================
-// COMMENT FUNCTIONS
+// COMMENT FUNCTIONS (locales)
 // ========================================
 
 /**
- * Get comments for a post
+ * Comentarios de una publicación.
+ * ▶ [LOVABLE CLOUD] Reconectar a comentarios del backend.
  */
 export async function getComments(postId: string, currentUserId?: string) {
-  const { data: comments, error } = await supabase
-    .from("comments")
-    .select("*")
-    .eq("post_id", postId)
-    .order("created_at", { ascending: true });
-
-  if (error) throw error;
-
-  // Get all unique author IDs
-  const authorIds = [
-    ...new Set((comments || []).map((c) => c.author_id)),
-  ];
-
-  // Fetch all authors in one query
-  const { data: authors } = await supabase
-    .from("users")
-    .select("id, name, image")
-    .in("id", authorIds);
-
-  const authorMap = new Map(
-    (authors || []).map((a) => [
-      a.id,
-      { name: a.name || "Anónimo", image: a.image },
-    ])
+  const db = getDB();
+  const comments = db.comments
+    .filter((c) => c.post_id === postId)
+    .sort((a, b) => (a.created_at > b.created_at ? 1 : -1));
+  const authorMap = getAuthorMap(comments.map((c) => c.author_id));
+  const likedMap = likesMapFor(
+    db.commentLikes,
+    "comment_id",
+    currentUserId,
+    comments.map((c) => c.id),
   );
 
-  // Batch the comment-like lookup into a single query instead of one
-  // query per comment (N+1).
-  let commentLikedMap = new Map<string, boolean>();
-  if (currentUserId && (comments || []).length > 0) {
-    const commentIds = (comments || []).map((c) => c.id);
-    const { data: likes } = await supabase
-      .from("comment_likes")
-      .select("comment_id")
-      .eq("user_id", currentUserId)
-      .in("comment_id", commentIds);
-    commentLikedMap = new Map(
-      (likes || []).map((r) => [r.comment_id, true]),
-    );
-  }
-
-  // Process comments
-  return await Promise.all(
-    (comments || []).map(async (comment) => {
-      const author = authorMap.get(comment.author_id);
-      const likedByMe = !!commentLikedMap.get(comment.id);
-
-      return {
-        ...comment,
-        authorName: author?.name || "Anónimo",
-        authorImage: author?.image,
-        likedByMe,
-      };
-    })
-  );
+  return comments.map((comment) => {
+    const author = authorMap.get(comment.author_id) ?? ensureUser(comment.author_id);
+    return {
+      ...comment,
+      likes: db.commentLikes.filter((cl) => cl.comment_id === comment.id).length,
+      authorName: author?.name || "Anónimo",
+      authorImage: author?.image ?? null,
+      authorImageUrl: author?.image ? resolveFileUrl(author.image) : undefined,
+      likedByMe: likedMap.get(comment.id) ?? false,
+    };
+  });
 }
 
 /**
- * Create a comment
+ * Crea un comentario o respuesta (guardado local).
+ * ▶ [LOVABLE CLOUD] Reconectar a comentarios del backend.
  */
 export async function createComment(
   postId: string,
   authorId: string,
   content: string,
-  parentCommentId?: string
+  parentCommentId?: string,
 ) {
   if (content.trim().length === 0) {
     throw new Error("El comentario no puede estar vacío");
   }
-
   if (content.length > 1000) {
-    throw new Error(
-      "El comentario es demasiado largo (máximo 1000 caracteres)"
+    throw new Error("El comentario es demasiado largo (máximo 1000 caracteres)");
+  }
+
+  const db = getDB();
+  if (parentCommentId) {
+    const parent = db.comments.find(
+      (c) => c.id === parentCommentId && c.post_id === postId,
     );
+    if (!parent) throw new Error("Comentario padre no encontrado");
   }
 
-  // Verify parent comment exists if replying
+  const row: LocalCommentRow = {
+    id: uid(),
+    post_id: postId,
+    author_id: authorId,
+    content: content.trim(),
+    parent_comment_id: parentCommentId || null,
+    created_at: new Date().toISOString(),
+  };
+  db.comments.push(row);
+  saveDB();
+
+  // ▶ [LOVABLE CLOUD] Las notificaciones se generan con el backend.
   if (parentCommentId) {
-    const { data: parent } = await supabase
-      .from("comments")
-      .select("id")
-      .eq("id", parentCommentId)
-      .eq("post_id", postId)
-      .single();
-
-    if (!parent) {
-      throw new Error("Comentario padre no encontrado");
-    }
-  }
-
-  const { data, error } = await supabase
-    .from("comments")
-    .insert({
-      post_id: postId,
-      author_id: authorId,
-      content: content.trim(),
-      parent_comment_id: parentCommentId || null,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  // Notify the post author (comment) or the parent comment author (reply)
-  if (parentCommentId) {
-    const { data: parent } = await supabase
-      .from("comments")
-      .select("author_id")
-      .eq("id", parentCommentId)
-      .single();
+    const parent = db.comments.find((c) => c.id === parentCommentId);
     if (parent) {
       await createNotification({
         userId: parent.author_id,
         actorId: authorId,
         type: "reply",
         postId,
-        commentId: data.id,
+        commentId: row.id,
       });
     }
   } else {
-    const { data: post } = await supabase
-      .from("posts")
-      .select("author_id")
-      .eq("id", postId)
-      .single();
+    const post = db.posts.find((p) => p.id === postId);
     if (post) {
       await createNotification({
         userId: post.author_id,
         actorId: authorId,
         type: "comment",
         postId,
-        commentId: data.id,
+        commentId: row.id,
       });
     }
   }
 
-  return data;
+  return {
+    id: row.id,
+    post_id: row.post_id,
+    author_id: row.author_id,
+    content: row.content,
+    likes: 0,
+    parent_comment_id: row.parent_comment_id,
+    created_at: row.created_at,
+  };
 }
 
 /**
- * Toggle comment like
+ * Me gusta de un comentario (local).
+ * ▶ [LOVABLE CLOUD] Reconectar a likes de comentarios del backend.
  */
 export async function toggleCommentLike(userId: string, commentId: string) {
-  const { data: existing } = await supabase
-    .from("comment_likes")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("comment_id", commentId)
-    .single();
+  const db = getDB();
+  const comment = db.comments.find((c) => c.id === commentId);
+  if (!comment) throw new Error("Comentario no encontrado");
 
-  if (existing) {
-    await supabase.from("comment_likes").delete().eq("id", existing.id);
-    await supabase.rpc("decrement_comment_likes", { comment_id: commentId });
+  const index = db.commentLikes.findIndex(
+    (cl) => cl.user_id === userId && cl.comment_id === commentId,
+  );
+  if (index >= 0) {
+    db.commentLikes.splice(index, 1);
+    saveDB();
     return false;
-  } else {
-    await supabase
-      .from("comment_likes")
-      .insert({ user_id: userId, comment_id: commentId });
-    await supabase.rpc("increment_comment_likes", { comment_id: commentId });
-    return true;
   }
+  db.commentLikes.push({ user_id: userId, comment_id: commentId });
+  saveDB();
+  return true;
 }
 
 /**
- * Delete a comment
+ * Elimina un comentario (solo dueño). ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function deleteComment(commentId: string, userId: string) {
-  // Verify ownership
-  const { data: comment, error: commentError } = await supabase
-    .from("comments")
-    .select("author_id")
-    .eq("id", commentId)
-    .single();
-
-  if (commentError || !comment) throw new Error("Comentario no encontrado");
+  const db = getDB();
+  const comment = db.comments.find((c) => c.id === commentId);
+  if (!comment) throw new Error("Comentario no encontrado");
   if (comment.author_id !== userId) throw new Error("No autorizado");
 
-  // Delete likes for this comment
-  await supabase.from("comment_likes").delete().eq("comment_id", commentId);
-
-  // Delete replies to this comment
-  const { data: replies } = await supabase
-    .from("comments")
-    .select("id")
-    .eq("parent_comment_id", commentId);
-
-  for (const reply of replies || []) {
-    await supabase
-      .from("comment_likes")
-      .delete()
-      .eq("comment_id", reply.id);
-    await supabase.from("comments").delete().eq("id", reply.id);
+  const toDelete = new Set<string>([commentId]);
+  let found = true;
+  while (found) {
+    found = false;
+    for (const c of db.comments) {
+      if (c.parent_comment_id && toDelete.has(c.parent_comment_id) && !toDelete.has(c.id)) {
+        toDelete.add(c.id);
+        found = true;
+      }
+    }
   }
 
-  // Delete the comment
-  const { error } = await supabase
-    .from("comments")
-    .delete()
-    .eq("id", commentId);
-
-  if (error) throw error;
+  db.comments = db.comments.filter((c) => !toDelete.has(c.id));
+  db.commentLikes = db.commentLikes.filter(
+    (cl) => !toDelete.has(cl.comment_id),
+  );
+  db.notifications = db.notifications.filter(
+    (n) => !toDelete.has(n.comment_id ?? ""),
+  );
+  saveDB();
 }
 
 // ========================================
-// FOLLOW FUNCTIONS
+// FOLLOW FUNCTIONS (locales)
 // ========================================
 
 /**
- * Toggle follow a user
+ * Seguir / dejar de seguir. ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function toggleFollow(followerId: string, followingId: string) {
   if (followerId === followingId) {
     throw new Error("No puedes seguirte a ti mismo");
   }
-
-  const { data: existing } = await supabase
-    .from("follows")
-    .select("id")
-    .eq("follower_id", followerId)
-    .eq("following_id", followingId)
-    .single();
-
-  if (existing) {
-    await supabase.from("follows").delete().eq("id", existing.id);
+  const db = getDB();
+  const index = db.follows.findIndex(
+    (f) => f.follower_id === followerId && f.following_id === followingId,
+  );
+  if (index >= 0) {
+    db.follows.splice(index, 1);
+    saveDB();
     return false;
-  } else {
-    await supabase
-      .from("follows")
-      .insert({ follower_id: followerId, following_id: followingId });
-    await createNotification({
-      userId: followingId,
-      actorId: followerId,
-      type: "follow",
-    });
-    return true;
   }
+  db.follows.push({ follower_id: followerId, following_id: followingId });
+  saveDB();
+  await createNotification({
+    userId: followingId,
+    actorId: followerId,
+    type: "follow",
+  });
+  return true;
 }
 
 /**
- * Check if user A follows user B
+ * ¿El usuario A sigue al usuario B? ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function isFollowing(followerId: string, followingId: string) {
-  const { data } = await supabase
-    .from("follows")
-    .select("id")
-    .eq("follower_id", followerId)
-    .eq("following_id", followingId)
-    .single();
-
-  return !!data;
+  return getDB().follows.some(
+    (f) => f.follower_id === followerId && f.following_id === followingId,
+  );
 }
 
 /**
- * Get follow stats for a user
+ * Estadísticas de seguidores/siguiendo. ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function getFollowStats(userId: string) {
-  const { count: followerCount } = await supabase
-    .from("follows")
-    .select("*", { count: "exact", head: true })
-    .eq("following_id", userId);
-
-  const { count: followingCount } = await supabase
-    .from("follows")
-    .select("*", { count: "exact", head: true })
-    .eq("follower_id", userId);
-
+  const db = getDB();
   return {
-    followers: followerCount || 0,
-    following: followingCount || 0,
+    followers: db.follows.filter((f) => f.following_id === userId).length,
+    following: db.follows.filter((f) => f.follower_id === userId).length,
   };
 }
 
 /**
- * Get list of followers
+ * Lista de seguidores. ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function getFollowers(userId: string) {
-  const { data: follows, error } = await supabase
-    .from("follows")
-    .select("follower_id")
-    .eq("following_id", userId);
-
-  if (error) throw error;
-
-  const followerIds = (follows || []).map((f) => f.follower_id);
-
-  if (followerIds.length === 0) return [];
-
-  const { data: users } = await supabase
-    .from("users")
-    .select("id, name, image")
-    .in("id", followerIds);
-
-  return (users || []).map((u) => ({
-    _id: u.id,
-    name: u.name || "Anónimo",
-    imageUrl: u.image ? getStorageUrl("avatars", u.image) : undefined,
-  }));
+  const db = getDB();
+  const followerIds = db.follows
+    .filter((f) => f.following_id === userId)
+    .map((f) => f.follower_id);
+  const authorMap = getAuthorMap(followerIds);
+  return followerIds.map((id) => {
+    const u = authorMap.get(id) ?? ensureUser(id);
+    return {
+      _id: id,
+      name: u.name || "Anónimo",
+      imageUrl: u.image ? resolveFileUrl(u.image) : undefined,
+    };
+  });
 }
 
 /**
- * Get list of users this user follows
+ * Lista de usuarios seguidos. ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function getFollowing(userId: string) {
-  const { data: follows, error } = await supabase
-    .from("follows")
-    .select("following_id")
-    .eq("follower_id", userId);
-
-  if (error) throw error;
-
-  const followingIds = (follows || []).map((f) => f.following_id);
-
-  if (followingIds.length === 0) return [];
-
-  const { data: users } = await supabase
-    .from("users")
-    .select("id, name, image")
-    .in("id", followingIds);
-
-  return (users || []).map((u) => ({
-    _id: u.id,
-    name: u.name || "Anónimo",
-    imageUrl: u.image ? getStorageUrl("avatars", u.image) : undefined,
-  }));
+  const db = getDB();
+  const followingIds = db.follows
+    .filter((f) => f.follower_id === userId)
+    .map((f) => f.following_id);
+  const authorMap = getAuthorMap(followingIds);
+  return followingIds.map((id) => {
+    const u = authorMap.get(id) ?? ensureUser(id);
+    return {
+      _id: id,
+      name: u.name || "Anónimo",
+      imageUrl: u.image ? resolveFileUrl(u.image) : undefined,
+    };
+  });
 }
 
 // ========================================
-// STORAGE FUNCTIONS
+// STORAGE FUNCTIONS (solo dispositivo)
 // ========================================
 
 /**
- * Get public URL for a storage object
+ * URL pública local para un archivo guardado en el dispositivo.
+ * ▶ [LOVABLE CLOUD] Al migrar, devolver la URL del storage de Lovable.
  */
 export function getStorageUrl(bucket: string, path: string): string {
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(bucket).getPublicUrl(path);
-  return publicUrl;
+  void bucket; // el bucket ya no importa: todo vive en el dispositivo
+  return resolveFileUrl(path);
 }
 
 /**
- * Upload file to storage
+ * Guarda un archivo en el dispositivo (data URL en localStorage).
+ * Solo imágenes/datos pequeños caben en modo local.
+ * ▶ [LOVABLE CLOUD] Al migrar, subir a storage de Lovable Cloud.
  */
 export async function uploadFile(
   bucket: string,
   file: File,
-  path: string
+  path: string,
 ): Promise<string> {
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
+  if (file.type.startsWith("video/")) {
+    throw new Error(
+      "Los vídeos no se guardan en modo local. Estarán disponibles al migrar la app a Lovable Cloud.",
+    );
+  }
+  const maxByBucket: Record<string, number> = {
+    avatars: 3 * 1024 * 1024,
+    media: 4 * 1024 * 1024,
+    documents: 3 * 1024 * 1024,
+  };
+  const maxBytes = maxByBucket[bucket] ?? 3 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error(
+      `El archivo supera el límite del modo local (${Math.round(maxBytes / 1024 / 1024)} MB). Al migrar a Lovable Cloud podrás subir archivos más grandes.`,
+    );
+  }
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () =>
+      reject(new Error("No se pudo leer el archivo en el dispositivo"));
+    reader.readAsDataURL(file);
   });
 
-  if (error) throw error;
-
-  return getStorageUrl(bucket, path);
-}
-
-/**
- * Delete file from storage
- */
-export async function deleteFile(
-  bucket: string,
-  path: string
-): Promise<void> {
-  const { error } = await supabase.storage.from(bucket).remove([path]);
-
-  if (error) throw error;
+  getDB().files[path] = dataUrl;
+  saveDB();
+  return path;
 }
 
 // ========================================
 // HELPER FUNCTIONS
 // ========================================
 
-/**
- * Generate unique file path
- */
+/** Genera una ruta única de archivo (sin red, solo nombres). */
 export function generateFilePath(
   userId: string,
   fileName: string,
-  folder: string = "uploads"
+  folder: string = "uploads",
 ): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
@@ -1107,25 +1024,12 @@ export function generateFilePath(
 }
 
 // ========================================
-// NOTIFICATION FUNCTIONS
+// NOTIFICATION FUNCTIONS (locales)
 // ========================================
 
-export interface NotificationItem {
-  id: string;
-  user_id: string;
-  actor_id: string;
-  type: "like" | "favorite" | "comment" | "reply" | "follow";
-  post_id: string | null;
-  comment_id: string | null;
-  read: boolean;
-  created_at: string;
-  actorName?: string;
-  actorImageUrl?: string;
-}
-
 /**
- * Insert a notification. Silently ignores self-actions and logs
- * errors so a notification failure never breaks the main action.
+ * Inserta una notificación local. Ignora acciones propias.
+ * ▶ [LOVABLE CLOUD] Al migrar, generar notificaciones con el backend.
  */
 async function createNotification(input: {
   userId: string;
@@ -1135,100 +1039,96 @@ async function createNotification(input: {
   commentId?: string;
 }) {
   if (input.userId === input.actorId) return;
-  const { error } = await supabase.from("notifications").insert({
+  const db = getDB();
+  const duplicate = db.notifications.some(
+    (n) =>
+      n.user_id === input.userId &&
+      n.actor_id === input.actorId &&
+      n.type === input.type &&
+      n.post_id === (input.postId ?? null) &&
+      n.comment_id === (input.commentId ?? null),
+  );
+  if (duplicate) return;
+  db.notifications.push({
+    id: uid(),
     user_id: input.userId,
     actor_id: input.actorId,
     type: input.type,
     post_id: input.postId ?? null,
     comment_id: input.commentId ?? null,
+    read: false,
+    created_at: new Date().toISOString(),
   });
-  if (error) console.error("Error creating notification:", error);
+  saveDB();
 }
 
-/** Notify the owner of a post when it receives a like or favorite. */
+/** Notifica al dueño de la publicación por like/favorito. Local. */
 async function notifyPostOwner(
   actorId: string,
   postId: string,
-  type: "like" | "favorite"
+  type: "like" | "favorite",
 ) {
   try {
-    const { data: post } = await supabase
-      .from("posts")
-      .select("author_id")
-      .eq("id", postId)
-      .single();
+    const post = getDB().posts.find((p) => p.id === postId);
     if (post) {
-      await createNotification({ userId: post.author_id, actorId, type, postId });
+      await createNotification({
+        userId: post.author_id,
+        actorId,
+        type,
+        postId,
+      });
     }
   } catch (error) {
-    console.error("Error creating notification:", error);
+    console.error("Error al crear la notificación local:", error);
   }
 }
 
 /**
- * Get notifications for a user (newest first), with actor info.
+ * Notificaciones del usuario (más nuevas primero), con datos del actor.
+ * ▶ [LOVABLE CLOUD] Reconectar a notificaciones del backend.
  */
 export async function getNotifications(
   userId: string,
-  limit = 60
+  limit = 60,
 ): Promise<NotificationItem[]> {
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const db = getDB();
+  const rows = db.notifications
+    .filter((n) => n.user_id === userId)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .slice(0, limit);
 
-  if (error) throw error;
-
-  const actorIds = [...new Set((data || []).map((n) => n.actor_id))];
-  let actorMap = new Map<string, { name: string | null; image: string | null }>();
-  if (actorIds.length > 0) {
-    const { data: actors } = await supabase
-      .from("users")
-      .select("id, name, image")
-      .in("id", actorIds);
-    actorMap = new Map(
-      (actors || []).map((a) => [a.id, { name: a.name, image: a.image }])
-    );
-  }
-
-  return (data || []).map((n) => {
+  const actorMap = getAuthorMap(rows.map((n) => n.actor_id));
+  return rows.map((n) => {
     const actor = actorMap.get(n.actor_id);
     return {
       ...n,
       type: n.type as NotificationItem["type"],
       actorName: actor?.name || "Alguien",
-      actorImageUrl: actor?.image
-        ? getStorageUrl("avatars", actor.image)
-        : undefined,
+      actorImageUrl: actor?.image ? resolveFileUrl(actor.image) : undefined,
     };
   });
 }
 
 /**
- * Count unread notifications for a user.
+ * Notificaciones sin leer. ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function getUnreadNotificationsCount(userId: string) {
-  const { count, error } = await supabase
-    .from("notifications")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("read", false);
-
-  if (error) throw error;
-  return count || 0;
+  return getDB().notifications.filter(
+    (n) => n.user_id === userId && !n.read,
+  ).length;
 }
 
 /**
- * Mark all notifications as read for a user.
+ * Marca todas las notificaciones como leídas. ▶ [LOVABLE CLOUD] reconectar.
  */
 export async function markNotificationsRead(userId: string) {
-  const { error } = await supabase
-    .from("notifications")
-    .update({ read: true })
-    .eq("user_id", userId)
-    .eq("read", false);
-
-  if (error) console.error("Error marking notifications read:", error);
+  const db = getDB();
+  let changed = false;
+  for (const n of db.notifications) {
+    if (n.user_id === userId && !n.read) {
+      n.read = true;
+      changed = true;
+    }
+  }
+  if (changed) saveDB();
 }

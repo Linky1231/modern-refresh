@@ -1,3 +1,6 @@
+// ▶ [MIGRACIÓN LOVABLE CLOUD] El login/registro ya no sincroniza con
+// ningún backend: la sesión se guarda solo en el dispositivo (use-auth).
+// Al migrar a Lovable Cloud, use-auth se conecta a la autenticación real.
 import { Button } from "@/components/ui/button";
 import {
   Card,

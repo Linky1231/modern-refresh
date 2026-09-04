@@ -1,6 +1,19 @@
+// ═══════════════════════════════════════════════════════════════════
+// AUTENTICACIÓN — MODO LOCAL / SOLO DISPOSITIVO
+//
+// La sesión remota del backend fue ELIMINADA. Ahora la sesión se
+// guarda únicamente en el navegador del dispositivo (localStorage):
+// sin red, sin servidor.
+//
+// ▶ [MIGRACIÓN LOVABLE CLOUD] Cuando migres la app a Lovable Cloud,
+//   sustituye esta implementación por la autenticación real del
+//   backend de Lovable (login/registro/sesión persistente) manteniendo
+//   esta MISMA API de hook para no tener que tocar las páginas.
+// ═══════════════════════════════════════════════════════════════════
+
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
 import {
+  AUTH_STORAGE_KEY,
   getCurrentUser,
   loginUser,
   registerUser,
@@ -11,13 +24,11 @@ interface User {
   _id: string;
   name: string;
   username?: string;
-  email?: string;
-  image?: string;
-  role?: string;
+  email?: string | null;
+  image?: string | null;
+  role?: string | null;
   isAuthenticated: boolean;
 }
-
-const AUTH_STORAGE_KEY = "asternal_auth";
 
 // ─────────────────────────────────────────────────────────────
 // Shared auth store: every useAuth() instance reads the SAME
@@ -75,7 +86,12 @@ function toUser(profile: {
   };
 }
 
-async function syncFromSession() {
+/**
+ * Refresca el usuario de sesión desde los datos guardados en el
+ * dispositivo (sin red). ▶ [LOVABLE CLOUD] Al migrar, leer la
+ * sesión real del backend.
+ */
+async function syncFromLocal() {
   const profile = await getCurrentUser();
   if (profile) {
     setUser(toUser(profile));
@@ -88,21 +104,16 @@ function initialize() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
 
-  // Optimistic hydration from cache so protected routes don't bounce.
+  // Hidratación inmediata desde la caché para no rebotar rutas
+  // protegidas mientras se comprueba la sesión local.
   const cached = readCachedUser();
   if (cached) setState({ user: cached });
 
   (async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        const ok = await syncFromSession();
-        if (!ok && !cached) setUser(null);
-      } else {
-        setUser(null);
+      if (cached) {
+        const ok = await syncFromLocal();
+        if (!ok) setUser(null);
       }
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -110,19 +121,6 @@ function initialize() {
       setState({ loading: false });
     }
   })();
-
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (
-      (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") &&
-      session?.user
-    ) {
-      await syncFromSession();
-      setState({ loading: false });
-    } else if (event === "SIGNED_OUT") {
-      setUser(null);
-      setState({ loading: false });
-    }
-  });
 }
 
 export function useAuth() {
@@ -138,6 +136,8 @@ export function useAuth() {
     };
   }, []);
 
+  // ▶ [LOVABLE CLOUD] Al migrar, estos métodos deben llamar a la
+  // autenticación real de Lovable Cloud en lugar de la sesión local.
   const signIn = useCallback(
     async (credentials?: { username?: string; password?: string }) => {
       if (!credentials?.username || !credentials?.password) {
