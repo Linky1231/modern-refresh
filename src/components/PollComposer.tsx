@@ -74,14 +74,20 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
     >
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="text-sm font-semibold text-card-foreground">
             Encuesta
           </span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-            Anónima
-          </span>
+          {/* Toggle switch — clearly interactive */}
+          <label className="flex cursor-pointer items-center gap-1.5 select-none">
+            <span className="relative inline-flex h-5 w-8 shrink-0 items-center rounded-full bg-muted transition-colors">
+              <span className="pointer-events-none inline-block h-3.5 w-3.5 translate-x-[3px] rounded-full bg-card shadow-sm ring-0 transition-transform" />
+            </span>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Anónima
+            </span>
+          </label>
         </div>
         <button
           type="button"
@@ -102,7 +108,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={MAX_QUESTION}
           placeholder="Escribe tu pregunta…"
-          className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
         />
       </div>
 
@@ -127,7 +133,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
                 onChange={(e) => setOption(i, e.target.value)}
                 maxLength={MAX_OPTION_TEXT}
                 placeholder={`Opción ${i + 1}`}
-                className="h-9 flex-1 rounded-xl border border-border/60 bg-background px-3.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                className="h-9 flex-1 rounded-xl border border-border/60 bg-background px-3.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               />
               {options.length > MIN_OPTIONS && (
                 <button
@@ -156,9 +162,10 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           <span>Añadir opción</span>
           <span className="tabular-nums">({options.length}/{MAX_OPTIONS})</span>
         </button>
-        {!isValid && (
-          <p className="text-right text-[10px] leading-tight text-muted-foreground/50">
-            Mín. 2 opciones y una pregunta
+        {/* Validation hint — only shows when question is filled but not enough options */}
+        {question.trim().length > 0 && uniqueOptions.length < MIN_OPTIONS && (
+          <p className="text-[10px] text-muted-foreground/70">
+            Añade al menos {MIN_OPTIONS} opciones
           </p>
         )}
       </div>

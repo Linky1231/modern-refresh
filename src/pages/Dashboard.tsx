@@ -2945,7 +2945,7 @@ export default function Dashboard() {
                 onChange={(e) => setPostTitle(e.target.value)}
                 placeholder="Título (opcional)"
                 maxLength={120}
-                className="w-full bg-transparent text-base font-bold text-card-foreground outline-none placeholder:text-muted-foreground/50"
+                className="w-full bg-transparent text-base font-bold text-card-foreground outline-none placeholder:text-muted-foreground/60"
               />
               <div className="my-2 border-t border-border/30" />
               {/* Rich text editor */}
@@ -3050,11 +3050,14 @@ export default function Dashboard() {
               )}
               </AnimatePresence>
 
+              {/* Formatting toolbar — before actions for proper visual hierarchy */}
+              <FormatToolbar />
+
               {/* Separator */}
-              <div className="mt-5 border-t border-border/40" />
+              <div className="mt-3 border-t border-border/40" />
 
               {/* Actions row */}
-              <div className="mt-3.5 flex items-center justify-between">
+              <div className="mt-3 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <input
                     ref={fileInputRef}
@@ -3102,10 +3105,10 @@ export default function Dashboard() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className={`gap-1.5 ${
+                    className={`gap-1.5 rounded-lg px-2 py-1 transition-colors ${
                       showPollComposer || pollDraft
-                        ? "text-primary hover:text-primary"
-                        : "text-muted-foreground hover:text-primary"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-primary"
                     }`}
                     onClick={() => {
                       if (showPollComposer) {
@@ -3145,11 +3148,7 @@ export default function Dashboard() {
                 </Button>
               </div>
 
-              {/* Separator */}
-              <div className="mt-4 border-t border-border/40" />
-
-              {/* Formatting toolbar */}
-              <FormatToolbar />
+              {/* (Format toolbar moved above actions) */}
 
             </div>
           </div>
