@@ -2,6 +2,7 @@
 // funciona 100% en el dispositivo, sin sincronización remota.
 // Al migrar a Lovable Cloud, @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
+import { PostPoll } from "@/components/PostPoll";
 import {
   updateProfile,
   uploadFile,
@@ -346,13 +347,11 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 )}
               </button>
             </div>
-          ) : (
-            <div className="flex h-10 w-full max-w-sm items-center justify-center">
-              {currentTitle ? (
-                <p className="truncate text-sm font-medium italic text-primary/80">{currentTitle}</p>
-              ) : null}
+          ) : currentTitle ? (
+            <div className="flex w-full max-w-sm items-center justify-center">
+              <p className="truncate text-sm font-medium italic text-primary/80">{currentTitle}</p>
             </div>
-          )}
+          ) : null}
 
           {/* Separator */}
           <div className="h-px w-16 bg-border/60" />
@@ -378,7 +377,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                   >{formatCount(followStats.followers)}</motion.span>
                   <span className="text-[11px] text-muted-foreground">seguidores</span>
                 </motion.button>
-                <div className="h-8 w-px bg-border/60" />
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.95 }}
@@ -403,7 +401,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                   <div className="h-5 w-8 animate-pulse rounded bg-muted" />
                   <div className="h-2.5 w-14 animate-pulse rounded bg-muted" />
                 </div>
-                <div className="h-8 w-px bg-border/60" />
                 <div className="flex flex-col items-center gap-1.5">
                   <div className="h-5 w-8 animate-pulse rounded bg-muted" />
                   <div className="h-2.5 w-12 animate-pulse rounded bg-muted" />
@@ -459,7 +456,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       {/* ── Section: Mis publicaciones ──────────────────────── */}
       {userPosts && userPosts.length > 0 && (
         <motion.div {...stagger(3)} className="mt-8">
-          <div className="mb-4 border-t border-border/40 pt-6">
+          <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mis publicaciones</p>
           </div>
           <div className="flex flex-col gap-4">
@@ -467,6 +464,12 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               <div key={post._id} className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
                 {post.title && <p className="mb-1 text-sm font-bold text-card-foreground">{post.title}</p>}
                 <div className="text-[15px] leading-relaxed text-card-foreground" dangerouslySetInnerHTML={{ __html: post.content || "" }} />
+                {/* PARTE 5 · ENCUESTAS: también visibles en «Mis publicaciones». */}
+                {post.poll && (
+                  <div className="mt-3">
+                    <PostPoll poll={post.poll} userId={user?._id} />
+                  </div>
+                )}
                 {post.mediaUrls && post.mediaUrls.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {post.mediaUrls.map((m: { url: string; type: string }, i: number) =>

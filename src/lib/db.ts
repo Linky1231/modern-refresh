@@ -507,7 +507,8 @@ export async function getUserProfile(userId: string, currentUserId?: string) {
 }
 
 // ========================================
-// POLL HELPERS (locales — ▶ [LOVABLE CLOUD]: votos con el backend)
+// PARTE 1 · ENCUESTAS: almacenamiento + recuento de votos (locales)
+// ▶ [LOVABLE CLOUD]: votos con el backend
 // ========================================
 
 /** Cuenta votos de una encuesta. Anónimo: solo se guarda el recuento por opción. */
@@ -1194,7 +1195,8 @@ export async function markNotificationsRead(userId: string) {
 }
 
 // ========================================
-// POLL VOTE FUNCTIONS (locales — ▶ [LOVABLE CLOUD]: reconectar)
+// PARTE 1 · ENCUESTAS: funciones de voto (locales)
+// ▶ [LOVABLE CLOUD]: reconectar
 // ========================================
 
 /**

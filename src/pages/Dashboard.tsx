@@ -247,7 +247,7 @@ function sanitizePostHtml(html: string): string {
   // Post-process: wrap #hashtags in styled spans
   const result = tmp.innerHTML;
   return result.replace(
-    /(#[\w\u00C0-\u00FF\u0100-\u024F]+)/g,
+    /(#[\\w\\u00C0-\\u00FF\\u0100-\\u024F]+)/g,
     '<span class="hashtag">$1</span>'
   );
 }
@@ -1340,6 +1340,7 @@ function PostCard({
   onOpenProfile,
   isAdmin,
   postNumber,
+  refreshTick = 0,
 }: {
   post: {
     _id: string;
@@ -1368,6 +1369,8 @@ function PostCard({
   onOpenComments: (post: { _id: string; authorId: string; title?: string; content: string; createdAt: number; authorName: string; mediaUrls: LightboxItem[]; postNumber: number }) => void;
   onOpenProfile: (userId: string) => void;
   postNumber?: number;
+  /** Sube cuando el feed se refresca: re-chequea Seguir/Siguiendo. */
+  refreshTick?: number;
 }) {
   const [comments, setComments] = useState<any[]>([]);
   useEffect(() => {
@@ -1394,7 +1397,7 @@ function PostCard({
       }
     };
     checkFollow();
-  }, [currentUserId, post.authorId]);
+  }, [currentUserId, post.authorId, refreshTick]);
 
   return (
     <motion.div
@@ -1428,14 +1431,21 @@ function PostCard({
                   whileTap={{ scale: 0.92 }}
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                  onClick={() => isFollowingUser ? onRequestUnfollow(post.authorId, post.authorName) : onFollow(post.authorId)}
+                  onClick={() => {
+                    if (isFollowingUser) {
+                      onRequestUnfollow(post.authorId, post.authorName);
+                    } else {
+                      onFollow(post.authorId);
+                      setIsFollowingUser(true);
+                    }
+                  }}
                   className={`ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-md border transition-colors ${
                     isFollowingUser
                       ? "border-border/60 text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
                       : "border-primary/30 text-primary hover:bg-primary/5"
                   }`}
                 >
-                  {isFollowingUser ? "Siguiendo" : "Seguir"} {/* PROBE_A */}
+                  {isFollowingUser ? "Siguiendo" : "Seguir"}
                 </motion.button>
               )}
             </div>
@@ -1451,6 +1461,13 @@ function PostCard({
                   __html: sanitizePostHtml(post.content),
                 }}
               />
+            )}
+            {/* PARTE 5 · ENCUESTAS: encuesta publicada en la tarjeta.
+                Votos anónimos: solo se muestra el recuento por opción. */}
+            {post.poll && (
+              <div className="mt-3">
+                <PostPoll poll={post.poll} userId={currentUserId} />
+              </div>
             )}
           </div>
         </div>
@@ -2019,6 +2036,7 @@ function FollowListModal({
   );
 }
 
+
 const TABS: { id: "forYou" | "following" | "popular"; label: string }[] = [
   { id: "forYou", label: "Para ti" },
   { id: "following", label: "Seguidos" },
@@ -2369,23 +2387,25 @@ export default function Dashboard() {
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
-  
-  // Fetch posts when activeTab changes
-  useEffect(() => {
-    const fetchPosts = async () => {
-      if (!user?._id) return;
-      setLoadingPosts(true);
-      try {
-        const data = await getPosts(activeTab, user._id);
-        setPosts(data);
-      } catch (error) {
-        console.error("Error fetching posts:", error);
-      } finally {
-        setLoadingPosts(false);
-      }
-    };
-    fetchPosts();
+
+  // Fetch posts when activeTab changes. Todo es local, así que leer el feed
+  // es instantáneo: refreshPosts() se usa tras cada acción (publicar, me
+  // gusta, favorito, borrar…) para que la UI refleje el cambio al momento.
+  const refreshPosts = useCallback(async () => {
+    if (!user?._id) return;
+    try {
+      const data = await getPosts(activeTab, user._id);
+      setPosts(data);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    }
   }, [activeTab, user?._id]);
+
+  useEffect(() => {
+    if (!user?._id) return;
+    setLoadingPosts(true);
+    void refreshPosts().finally(() => setLoadingPosts(false));
+  }, [refreshPosts, user?._id]);
 
   const [content, setContent] = useState("");
   const [postTitle, setPostTitle] = useState("");
@@ -2394,6 +2414,13 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  // ── PARTE 4 · ENCUESTAS: estado del editor dentro del compositor ──
+  // showPollComposer controla si el panel está abierto; pollDraft es el
+  // borrador válido (pregunta + 2–5 opciones) que viaja con la publicación.
+  const [showPollComposer, setShowPollComposer] = useState(false);
+  const [pollDraft, setPollDraft] = useState<PollDraft | null>(null);
+  // Sube cuando el feed se refresca: PostCard re-chequea Seguir/Siguiendo.
+  const [refreshTick, setRefreshTick] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -2610,7 +2637,14 @@ export default function Dashboard() {
     // Get the latest HTML from the editor
     const html = editorRef.current?.innerHTML ?? content;
     const textOnly = editorRef.current?.textContent?.trim() ?? "";
-    if ((!textOnly && !postTitle.trim() && pendingMedia.length === 0) || posting) return;
+    if (
+      (!textOnly &&
+        !postTitle.trim() &&
+        pendingMedia.length === 0 &&
+        pendingDocs.length === 0 &&
+        !pollDraft) ||
+      posting
+    ) return;
 
     setPosting(true);
     setUploading(true);
@@ -2703,6 +2737,8 @@ export default function Dashboard() {
           uploadedDocs.length > 0 ? (uploadedDocs as any) : undefined,
         mentions:
           pendingMentions.length > 0 ? (pendingMentions as any) : undefined,
+        // PARTE 4 · ENCUESTAS: la encuesta viaja con la publicación.
+        poll: pollDraft ?? undefined,
       });
 
       pendingMedia.forEach((pm) => URL.revokeObjectURL(pm.preview));
@@ -2711,7 +2747,11 @@ export default function Dashboard() {
       setPendingMentions([]);
       setContent("");
       setPostTitle("");
+      setPollDraft(null);
+      setShowPollComposer(false);
       if (editorRef.current) editorRef.current.innerHTML = "";
+      // La publicación (y su encuesta) aparece en el feed al instante.
+      void refreshPosts();
     } catch (err) {
       console.error("Error al crear la publicación:", err);
     } finally {
@@ -2723,6 +2763,7 @@ export default function Dashboard() {
   const handleToggleLike = async (postId: string) => {
     try {
       await togglePostLike(user?._id || "", postId);
+      void refreshPosts(); // el contador se actualiza al instante
     } catch (err) {
       console.error("Error al dar me gusta:", err);
     }
@@ -2731,6 +2772,7 @@ export default function Dashboard() {
     if (!user?._id) return;
     try {
       await toggleFollow(user._id, targetUserId);
+      setRefreshTick((t) => t + 1); // re-chequea los botones Seguir/Siguiendo
     } catch (error) {
       console.error("Error toggling follow:", error);
     }
@@ -2739,6 +2781,7 @@ export default function Dashboard() {
   const handleToggleFavorite = async (postId: string) => {
     try {
       await togglePostFavorite(user?._id || "", postId);
+      void refreshPosts(); // el contador se actualiza al instante
     } catch (err) {
       console.error("Error al marcar favorito:", err);
     }
@@ -2751,6 +2794,7 @@ export default function Dashboard() {
       } else {
         await deletePost(deleteTarget, user?._id || "");
       }
+      void refreshPosts(); // la publicación desaparece al instante
     } catch (err) {
       console.error("Error al eliminar:", err);
     }
@@ -2760,6 +2804,8 @@ export default function Dashboard() {
     if (!unfollowTarget) return;
     try {
       await toggleFollow(user?._id || "", unfollowTarget.userId);
+      void refreshPosts();
+      setRefreshTick((t) => t + 1); // sincroniza el boton Seguir
     } catch (err) {
       console.error("Error al dejar de seguir:", err);
     }
@@ -2799,7 +2845,7 @@ export default function Dashboard() {
 
   const hasText =
     editorRef.current?.textContent?.trim().length ?? content.trim().length > 0;
-  const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0 || pendingDocs.length > 0;
+  const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft !== null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -2988,6 +3034,20 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* PARTE 4 · ENCUESTAS: editor de encuesta del compositor.
+                  Se abre con el botón «Encuesta» de la fila de acciones. */}
+              {showPollComposer && (
+                <div className="mt-4">
+                  <PollComposer
+                    onChange={setPollDraft}
+                    onRemove={() => {
+                      setPollDraft(null);
+                      setShowPollComposer(false);
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Separator */}
               <div className="mt-5 border-t border-border/40" />
 
@@ -3034,9 +3094,33 @@ export default function Dashboard() {
                     <Paperclip className="h-4 w-4" />
                     <span className="text-xs hidden sm:inline">Documento</span>
                   </Button>
-                  {(pendingMedia.length > 0 || pendingDocs.length > 0) && (
+                  {/* PARTE 4 · ENCUESTAS: botón justo después de «adjuntar
+                      archivos» (documento). Abre/cierra el editor de encuesta. */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={`gap-1.5 ${
+                      showPollComposer || pollDraft
+                        ? "text-primary hover:text-primary"
+                        : "text-muted-foreground hover:text-primary"
+                    }`}
+                    onClick={() => {
+                      if (showPollComposer) {
+                        setPollDraft(null);
+                        setShowPollComposer(false);
+                      } else {
+                        setShowPollComposer(true);
+                      }
+                    }}
+                    title="Añadir encuesta"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span className="text-xs hidden sm:inline">Encuesta</span>
+                  </Button>
+                  {(pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft) && (
                     <span className="ml-1 text-[11px] text-muted-foreground tabular-nums">
-                      {pendingMedia.length + pendingDocs.length}
+                      {pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)}
                     </span>
                   )}
                 </div>
@@ -3169,6 +3253,7 @@ export default function Dashboard() {
                   onOpenProfile={(userId) => { setViewingUserId(userId); setCurrentView("userProfile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                   isAdmin={isAdmin}
                   postNumber={posts.length - idx}
+                  refreshTick={refreshTick}
                 />
               ))}
               </div>

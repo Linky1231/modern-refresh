@@ -1,3 +1,5 @@
+// ─────────────────────────────────────────────────────────────────────
+// PARTE 3 · ENCUESTAS: visualización + votación dentro de la publicación.
 // ▶ [MIGRACIÓN LOVABLE CLOUD] Componente de encuestas de una
 // publicación. Los votos se guardan en el dispositivo (anónimos:
 // solo se cuentan, nunca se muestra quién votó qué).

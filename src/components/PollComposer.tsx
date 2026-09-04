@@ -1,11 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────
-// PARTE 2 — ENCUESTAS: constructor del compositor.
+// PARTE 2 · ENCUESTAS: editor de la encuesta dentro del compositor.
 // ▶ [MIGRACIÓN LOVABLE CLOUD] Este panel se mantiene igual al migrar:
 // solo cambia dónde se guarda la encuesta al publicar (createPost en
 // @/lib/db). Votos: anónimos, solo recuento por opción.
 // ─────────────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { BarChart3, Plus, Trash2, X } from "lucide-react";
+// probe
 
 /** Encuesta válida lista para publicar (2–5 opciones únicas). */
 export interface PollDraft {
