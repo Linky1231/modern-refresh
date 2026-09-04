@@ -171,6 +171,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         const path = generateFilePath(user?._id || '', file.name, 'avatars');
         await uploadFile('avatars', file, path);
         await updateProfile(user?._id || '', { image: path });
+        // Sincronización inmediata del avatar
         setCurrentUser((prev: any) => ({
           ...(prev || {}),
           image: path,
