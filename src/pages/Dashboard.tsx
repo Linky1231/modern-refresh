@@ -4,6 +4,8 @@
 // Al migrar la app a Lovable Cloud, la capa @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
 import ProfilePage from "./ProfilePage";
+import PollComposer, { type PollDraft } from "@/components/PollComposer";
+import { PostPoll, type PollViewData } from "@/components/PostPoll";
 import { useAuth } from "@/hooks/use-auth";
 import {
   getPosts,
@@ -55,6 +57,7 @@ import {
   Home,
   User,
   ArrowLeft,
+  BarChart3,
   Newspaper,
   Bell,
   UserPlus,
@@ -1352,6 +1355,7 @@ function PostCard({
     mediaUrls: LightboxItem[];
     documentUrls: DocumentUrl[];
     hashtags: string[];
+    poll?: PollViewData | null;
   };
   currentUserId?: string;
   onToggleLike: (postId: string) => void;
