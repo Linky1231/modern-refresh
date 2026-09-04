@@ -266,8 +266,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       </div>
 
       {/* ── Card 1: Avatar + Name + Title + Follow Stats ──────── */}
-      <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card px-6 py-8 sm:px-8 sm:py-10">
-        <div className="flex flex-col items-center gap-5">
+      <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card px-5 py-7 sm:px-7 sm:py-9">
+        <div className="flex flex-col items-center gap-4">
           {/* Avatar */}
           <div className="relative">
             <Avatar className="h-24 w-24 border-2 border-border/50">
@@ -354,10 +354,10 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           ) : null}
 
           {/* Separator */}
-          <div className="h-px w-16 bg-border/60" />
+          <div className="h-px w-14 bg-border/50" />
 
           {/* Follow Stats — always rendered to prevent layout shift */}
-          <div className="flex items-center gap-8 text-sm" style={{ minHeight: 44 }}>
+          <div className="flex items-center gap-6 text-sm" style={{ minHeight: 40 }}>
             {followStats ? (
               <>
                 <motion.button
@@ -412,8 +412,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       </motion.div>
 
       {/* ── Card 2: Bio / Descripción ───────────────────────── */}
-      <motion.div {...stagger(1)} className="mt-4">
-        <div className="rounded-2xl border border-border/60 bg-card px-6 py-5 sm:px-8 sm:py-6">
+      <motion.div {...stagger(1)} className="mt-3">
+        <div className="rounded-2xl border border-border/60 bg-card px-5 py-4 sm:px-7 sm:py-5">
           <div className="flex items-center gap-2 mb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
             {editing && <Pencil className="h-3 w-3 text-muted-foreground" />}
@@ -455,7 +455,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
       {/* ── Section: Mis publicaciones ──────────────────────── */}
       {userPosts && userPosts.length > 0 && (
-        <motion.div {...stagger(3)} className="mt-8">
+        <motion.div {...stagger(3)} className="mt-6">
           <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mis publicaciones</p>
           </div>

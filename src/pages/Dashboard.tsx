@@ -3155,7 +3155,7 @@ export default function Dashboard() {
 
         {/* ── Feed Tabs ──────────────────────────────────────────── */}
         <div
-          className="mt-4 overflow-hidden rounded-2xl border border-border/60 bg-card"
+          className="mt-3 overflow-hidden rounded-2xl border border-border/60 bg-card"
         >
           <div className="relative flex">
             {TABS.map((tab) => (
@@ -3183,7 +3183,7 @@ export default function Dashboard() {
         </div>
 
         {/* Feed */}
-        <div className="mt-6 flex flex-col gap-4 sm:mt-8 sm:gap-5">
+        <div className="mt-5 flex flex-col gap-4 sm:mt-7 sm:gap-5">
           <AnimatePresence initial={false}>
             {posts === undefined ? null : posts.length === 0 ? (
               <motion.div
