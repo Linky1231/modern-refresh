@@ -102,7 +102,7 @@ export default function Landing() {
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Engine v1 — open beta
+              Engine v1 — ya disponible
             </div>
           </motion.div>
 
@@ -216,17 +216,17 @@ export default function Landing() {
       </section>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <footer className="border-t border-border/50 py-8">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <img
-              src="/logo.png"
-              alt="Asternal"
-              className="h-4 w-4 rounded object-contain"
-            />
-            Asternal
+      <footer className="border-t border-border/50 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-6 sm:flex-row sm:gap-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 font-display text-base font-bold text-primary">
+              A
+            </span>
+            <span className="font-display text-base font-bold tracking-tight">
+              Asternal
+            </span>
           </div>
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-xs text-muted-foreground/70">
             &copy; {new Date().getFullYear()} Asternal. Todos los derechos reservados.
           </p>
         </div>
