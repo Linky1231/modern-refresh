@@ -70,7 +70,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-      className="rounded-2xl border border-border/30 bg-card px-4 py-4 sm:px-5"
+      className="rounded-2xl border border-border/40 bg-card px-4 py-4 sm:px-5"
     >
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
@@ -108,7 +108,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={MAX_QUESTION}
           placeholder="Escribe tu pregunta…"
-          className="w-full rounded-xl border border-border/35 bg-background px-3.5 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          className="w-full rounded-xl border border-border/45 bg-background px-3.5 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
         />
       </div>
 
@@ -133,7 +133,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
                 onChange={(e) => setOption(i, e.target.value)}
                 maxLength={MAX_OPTION_TEXT}
                 placeholder={`Opción ${i + 1}`}
-                className="h-9 flex-1 rounded-xl border border-border/35 bg-background px-3.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                className="h-9 flex-1 rounded-xl border border-border/45 bg-background px-3.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               />
               {options.length > MIN_OPTIONS && (
                 <button

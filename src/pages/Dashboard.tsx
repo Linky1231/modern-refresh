@@ -613,7 +613,7 @@ function DeleteConfirmDialog({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 8 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="mx-4 w-full max-w-sm rounded-2xl border border-border/35 bg-card p-6 shadow-xl"
+            className="mx-4 w-full max-w-sm rounded-2xl border border-border/45 bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">
@@ -675,7 +675,7 @@ function UnfollowConfirmDialog({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 8 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="mx-4 w-full max-w-sm rounded-2xl border border-border/35 bg-card p-6 shadow-xl"
+            className="mx-4 w-full max-w-sm rounded-2xl border border-border/45 bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">
@@ -1030,7 +1030,7 @@ function FormatToolbar() {
                     key={c.value || "default"}
                     type="button"
                     title={c.label}
-                    className="h-6 w-6 rounded-full border border-border/35 transition-transform hover:scale-110"
+                    className="h-6 w-6 rounded-full border border-border/45 transition-transform hover:scale-110"
                     style={{ backgroundColor: c.value || "var(--card-foreground)" }}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -1080,7 +1080,7 @@ function FormatToolbar() {
                   <button
                     key={s.tag}
                     type="button"
-                    className="rounded-lg border border-border/35 bg-card px-2.5 py-1.5 text-card-foreground transition-colors hover:border-primary/40 hover:bg-accent"
+                    className="rounded-lg border border-border/45 bg-card px-2.5 py-1.5 text-card-foreground transition-colors hover:border-primary/40 hover:bg-accent"
                     onMouseDown={(e) => {
                       e.preventDefault();
                       restoreSelection();
@@ -1289,7 +1289,7 @@ function CommentItem({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 6 }}
               transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-              className="mx-4 w-full max-w-xs rounded-2xl border border-border/35 bg-card p-5 shadow-xl"
+              className="mx-4 w-full max-w-xs rounded-2xl border border-border/45 bg-card p-5 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3">
@@ -1405,12 +1405,12 @@ function PostCard({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="overflow-hidden rounded-2xl border border-border/35 bg-card transition-all duration-300 ease-out hover:border-border/80 hover:shadow-sm"
+      className="overflow-hidden rounded-2xl border border-border/45 bg-card transition-all duration-300 ease-out hover:border-border/80 hover:shadow-sm"
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
           <button type="button" onClick={() => onOpenProfile(post.authorId)} className="shrink-0 cursor-pointer">
-            <Avatar className="h-10 w-10 border border-border/30">
+            <Avatar className="h-10 w-10 border border-border/40">
               {(post as any).authorImageUrl && (
                 <AvatarImage src={(post as any).authorImageUrl} alt={post.authorName} className="object-cover" />
               )}
@@ -1441,7 +1441,7 @@ function PostCard({
                   }}
                   className={`ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-md border transition-colors ${
                     isFollowingUser
-                      ? "border-border/35 text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
+                      ? "border-border/45 text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
                       : "border-primary/30 text-primary hover:bg-primary/5"
                   }`}
                 >
@@ -1668,7 +1668,7 @@ function MentionPicker({
 
       {/* Search */}
       <div className="border-b border-border/24 px-4 py-3">
-        <div className="flex items-center gap-2 rounded-xl border border-border/30 bg-muted/50 px-3 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 px-3 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             ref={searchInputRef}
@@ -1712,7 +1712,7 @@ function MentionPicker({
                 onClick={() => onSelect(u)}
                 className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/50"
               >
-                <Avatar className="h-9 w-9 shrink-0 border border-border/30">
+                <Avatar className="h-9 w-9 shrink-0 border border-border/40">
                   {u.image ? (
                     <img src={u.image} alt={u.name} className="h-full w-full rounded-full object-cover" />
                   ) : (
@@ -1831,7 +1831,7 @@ function CommentsModal({
           >
             <X className="h-4 w-4" />
           </button>
-          <Avatar className="h-9 w-9 shrink-0 border border-border/30">
+          <Avatar className="h-9 w-9 shrink-0 border border-border/40">
             <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
               {getInitials(post.authorName)}
             </AvatarFallback>
@@ -1920,7 +1920,7 @@ function CommentsModal({
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(); } }}
               placeholder={replyTo ? "Escribe una respuesta…" : "Escribe un comentario…"}
-              className="min-h-[36px] w-full rounded-xl border border-border/30 bg-muted/50 px-3 py-2 text-xs text-card-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+              className="min-h-[36px] w-full rounded-xl border border-border/40 bg-muted/50 px-3 py-2 text-xs text-card-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
               maxLength={1000}
             />
           </div>
@@ -2020,7 +2020,7 @@ function FollowListModal({
           <div className="divide-y divide-border/30">
             {list.map((u) => (
               <div key={u._id} className="flex items-center gap-3 px-5 py-3">
-                <Avatar className="h-10 w-10 shrink-0 border border-border/30">
+                <Avatar className="h-10 w-10 shrink-0 border border-border/40">
                   {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
                   <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                     {getInitials(u.name)}
@@ -2100,7 +2100,7 @@ function NotificationsPanel({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -8, scale: 0.98 }}
         transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-        className="fixed right-3 top-14 z-50 flex max-h-[70vh] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-border/35 bg-card shadow-lift"
+        className="fixed right-3 top-14 z-50 flex max-h-[70vh] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-border/45 bg-card shadow-lift"
       >
         <div className="flex items-center justify-between border-b border-border/24 px-4 py-3">
           <h3 className="text-sm font-bold text-card-foreground">Notificaciones</h3>
@@ -2144,7 +2144,7 @@ function NotificationsPanel({
                         key={n.id}
                         className="flex items-start gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-muted/40"
                       >
-                        <Avatar className="h-8 w-8 shrink-0 border border-border/30">
+                        <Avatar className="h-8 w-8 shrink-0 border border-border/40">
                           {n.actorImageUrl && (
                             <AvatarImage
                               src={n.actorImageUrl}
@@ -2250,9 +2250,9 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
         {userData ? (
           <div>
             {/* ── Card 1: Avatar + Name + Title + Follow Stats ── */}
-            <div className="rounded-2xl border border-border/35 bg-card px-6 py-8 sm:px-8 sm:py-10">
+            <div className="rounded-2xl border border-border/45 bg-card px-6 py-8 sm:px-8 sm:py-10">
               <div className="flex flex-col items-center gap-5">
-                <Avatar className="h-24 w-24 border-2 border-border/30">
+                <Avatar className="h-24 w-24 border-2 border-border/40">
                   {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
                   <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                     {getInitials(userData.authorName)}
@@ -2319,7 +2319,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
 
             {/* ── Card 2: Bio ───────────────────────────────── */}
             {(userData as any).authorBio && (
-              <div className="mt-4 rounded-2xl border border-border/35 bg-card px-6 py-5 sm:px-8 sm:py-6">
+              <div className="mt-4 rounded-2xl border border-border/45 bg-card px-6 py-5 sm:px-8 sm:py-6">
                 <div className="mb-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
                 </div>
@@ -2927,12 +2927,12 @@ export default function Dashboard() {
           ) : (<>
         {/* Composer */}
         <div
-          className="rounded-2xl border border-border/35 bg-card p-4 sm:p-5"
+          className="rounded-2xl border border-border/45 bg-card p-4 sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
           <div className="flex items-start gap-4">
-            <Avatar className="h-10 w-10 shrink-0 border border-border/30">
+            <Avatar className="h-10 w-10 shrink-0 border border-border/40">
               <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                 {user?.name ? getInitials(user.name) : "?"}
               </AvatarFallback>
@@ -3156,7 +3156,7 @@ export default function Dashboard() {
 
         {/* ── Feed Tabs ──────────────────────────────────────────── */}
         <div
-          className="mt-3 overflow-hidden rounded-2xl border border-border/35 bg-card"
+          className="mt-3 overflow-hidden rounded-2xl border border-border/45 bg-card"
         >
           <div className="relative flex">
             {TABS.map((tab) => (
