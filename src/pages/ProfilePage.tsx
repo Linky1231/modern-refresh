@@ -266,11 +266,11 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
       </div>
 
       {/* ── Card 1: Avatar + Name + Title + Follow Stats ──────── */}
-      <motion.div {...stagger(0)} className="rounded-2xl border border-border/60 bg-card px-5 py-7 sm:px-7 sm:py-9">
+      <motion.div {...stagger(0)} className="rounded-2xl border border-border/45 bg-card px-5 py-7 sm:px-7 sm:py-9">
         <div className="flex flex-col items-center gap-4">
           {/* Avatar */}
           <div className="relative">
-            <Avatar className="h-24 w-24 border-2 border-border/50">
+            <Avatar className="h-24 w-24 border-2 border-border/40">
               {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={displayName} />}
               <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                 {displayName !== "Sin nombre" ? getInitials(displayName) : <User className="h-10 w-10" />}
@@ -302,7 +302,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 onChange={(e) => setEditName(e.target.value)}
                 maxLength={40}
                 placeholder="Tu nombre"
-                className="h-10 flex-1 rounded-xl border border-border/60 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                className="h-10 flex-1 rounded-xl border border-border/45 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               />
               <button
                 type="button"
@@ -332,7 +332,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 onChange={(e) => setEditTitle(e.target.value)}
                 maxLength={60}
                 placeholder="Título (opcional)"
-                className="h-10 flex-1 rounded-xl border border-border/60 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                className="h-10 flex-1 rounded-xl border border-border/45 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               />
               <button
                 type="button"
@@ -413,7 +413,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
       {/* ── Card 2: Bio / Descripción ───────────────────────── */}
       <motion.div {...stagger(1)} className="mt-3">
-        <div className="rounded-2xl border border-border/60 bg-card px-5 py-4 sm:px-7 sm:py-5">
+        <div className="rounded-2xl border border-border/45 bg-card px-5 py-4 sm:px-7 sm:py-5">
           <div className="flex items-center gap-2 mb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
             {editing && <Pencil className="h-3 w-3 text-muted-foreground" />}
@@ -426,7 +426,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 maxLength={200}
                 rows={4}
                 placeholder="Escribe algo sobre ti…"
-                className="w-full min-h-[100px] resize-none rounded-xl border border-border/60 bg-background px-4 py-3 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                className="w-full min-h-[100px] resize-none rounded-xl border border-border/45 bg-background px-4 py-3 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               />
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-[11px] text-muted-foreground tabular-nums">{editBio.length}/200</span>
@@ -461,7 +461,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           </div>
           <div className="flex flex-col gap-4">
             {userPosts.map((post) => (
-              <div key={post._id} className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
+              <div key={post._id} className="rounded-2xl border border-border/45 bg-card p-4 sm:p-5">
                 {post.title && <p className="mb-1 text-sm font-bold text-card-foreground">{post.title}</p>}
                 <div className="text-[15px] leading-relaxed text-card-foreground" dangerouslySetInnerHTML={{ __html: post.content || "" }} />
                 {/* PARTE 5 · ENCUESTAS: también visibles en «Mis publicaciones». */}
@@ -561,7 +561,7 @@ function FollowListModalInline({
       transition={{ duration: 0.25 }}
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
-      <div className="border-b border-border/50 bg-background px-4 py-3">
+      <div className="border-b border-border/40 bg-background px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -593,7 +593,7 @@ function FollowListModalInline({
           <div className="divide-y divide-border/30">
             {list.map((u) => (
               <div key={u._id} className="flex items-center gap-3 px-5 py-3">
-                <Avatar className="h-10 w-10 shrink-0 border border-border/50">
+                <Avatar className="h-10 w-10 shrink-0 border border-border/40">
                   {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
                   <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                     {getInitials(u.name)}

@@ -613,7 +613,7 @@ function DeleteConfirmDialog({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 8 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="mx-4 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 shadow-xl"
+            className="mx-4 w-full max-w-sm rounded-2xl border border-border/45 bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">
@@ -675,7 +675,7 @@ function UnfollowConfirmDialog({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 8 }}
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="mx-4 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-6 shadow-xl"
+            className="mx-4 w-full max-w-sm rounded-2xl border border-border/45 bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">
@@ -864,7 +864,7 @@ function MediaGrid({
 }) {
   if (!media || media.length === 0) return null;
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border border-border/40">
+    <div className="mt-3 overflow-hidden rounded-xl border border-border/24">
       {media.length === 1 ? (
         <SingleMedia
           item={media[0]}
@@ -928,7 +928,7 @@ function FormatToolbar() {
   return (
     <div className="w-full pt-3">
       {/* Toolbar buttons row */}
-      <div className="inline-flex items-center gap-0.5 rounded-xl border border-border/50 bg-muted/40 p-1">
+      <div className="inline-flex items-center gap-0.5 rounded-xl border border-border/30 bg-muted/40 p-1">
         <Button
           type="button"
           variant="ghost"
@@ -1022,7 +1022,7 @@ function FormatToolbar() {
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/24 bg-muted/50 p-2.5">
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Color</span>
               <div className="flex flex-wrap gap-1.5">
                 {TEXT_COLORS.map((c) => (
@@ -1030,7 +1030,7 @@ function FormatToolbar() {
                     key={c.value || "default"}
                     type="button"
                     title={c.label}
-                    className="h-6 w-6 rounded-full border border-border/60 transition-transform hover:scale-110"
+                    className="h-6 w-6 rounded-full border border-border/45 transition-transform hover:scale-110"
                     style={{ backgroundColor: c.value || "var(--card-foreground)" }}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -1068,7 +1068,7 @@ function FormatToolbar() {
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-muted/50 p-2.5">
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/24 bg-muted/50 p-2.5">
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tamaño</span>
               <div className="flex flex-wrap gap-1.5">
                 {([
@@ -1080,7 +1080,7 @@ function FormatToolbar() {
                   <button
                     key={s.tag}
                     type="button"
-                    className="rounded-lg border border-border/60 bg-card px-2.5 py-1.5 text-card-foreground transition-colors hover:border-primary/40 hover:bg-accent"
+                    className="rounded-lg border border-border/45 bg-card px-2.5 py-1.5 text-card-foreground transition-colors hover:border-primary/40 hover:bg-accent"
                     onMouseDown={(e) => {
                       e.preventDefault();
                       restoreSelection();
@@ -1183,7 +1183,7 @@ function CommentItem({
   const [showReplies, setShowReplies] = useState(replies.length <= 3);
 
   return (
-    <div className={depth > 0 ? "ml-6 border-l-2 border-border/40 pl-4" : ""}>
+    <div className={depth > 0 ? "ml-6 border-l-2 border-border/24 pl-4" : ""}>
       <div className="flex items-start gap-2.5 py-2.5">
         <Avatar className="h-7 w-7 shrink-0">
           <AvatarFallback className="bg-muted text-[10px] font-semibold">
@@ -1240,7 +1240,7 @@ function CommentItem({
         <motion.div
           initial={false}
           animate={{ height: "auto", opacity: 1 }}
-          className="ml-4 mt-1 overflow-hidden rounded-xl border border-border/30 bg-muted/20 pl-3 pr-1 py-1 sm:ml-6"
+          className="ml-4 mt-1 overflow-hidden rounded-xl border border-border/24 bg-muted/20 pl-3 pr-1 py-1 sm:ml-6"
         >
           {!showReplies && replies.length > 3 && (
             <button
@@ -1289,7 +1289,7 @@ function CommentItem({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 6 }}
               transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-              className="mx-4 w-full max-w-xs rounded-2xl border border-border/60 bg-card p-5 shadow-xl"
+              className="mx-4 w-full max-w-xs rounded-2xl border border-border/45 bg-card p-5 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3">
@@ -1405,12 +1405,12 @@ function PostCard({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 ease-out hover:border-border/80 hover:shadow-sm"
+      className="overflow-hidden rounded-2xl border border-border/45 bg-card transition-all duration-300 ease-out hover:border-border/80 hover:shadow-sm"
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
           <button type="button" onClick={() => onOpenProfile(post.authorId)} className="shrink-0 cursor-pointer">
-            <Avatar className="h-10 w-10 border border-border/50">
+            <Avatar className="h-10 w-10 border border-border/40">
               {(post as any).authorImageUrl && (
                 <AvatarImage src={(post as any).authorImageUrl} alt={post.authorName} className="object-cover" />
               )}
@@ -1441,7 +1441,7 @@ function PostCard({
                   }}
                   className={`ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-md border transition-colors ${
                     isFollowingUser
-                      ? "border-border/60 text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
+                      ? "border-border/45 text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
                       : "border-primary/30 text-primary hover:bg-primary/5"
                   }`}
                 >
@@ -1480,7 +1480,7 @@ function PostCard({
       )}
       {/* Documents */}
       {post.documentUrls && post.documentUrls.length > 0 && (
-        <div className="px-4 pb-3 pt-3 sm:px-5 sm:pt-4 border-t border-border/30">
+        <div className="px-4 pb-3 pt-3 sm:px-5 sm:pt-4 border-t border-border/24">
           <div className="flex flex-col gap-2">
             {post.documentUrls.map((doc, i) => {
               const ext = doc.name.split(".").pop()?.toUpperCase() ?? "FILE";
@@ -1591,7 +1591,7 @@ function PostCard({
       </div>
 
       {/* Comments button */}
-      <div className="border-t border-border/40 px-4 py-2 sm:px-5">
+      <div className="border-t border-border/30 px-4 py-2 sm:px-5">
         <motion.button
           type="button"
           whileTap={{ scale: 0.97 }}
@@ -1655,7 +1655,7 @@ function MentionPicker({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/50 bg-background px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-border/30 bg-background px-4 py-3">
         <button
           type="button"
           onClick={onClose}
@@ -1667,8 +1667,8 @@ function MentionPicker({
       </div>
 
       {/* Search */}
-      <div className="border-b border-border/40 px-4 py-3">
-        <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/50 px-3 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
+      <div className="border-b border-border/24 px-4 py-3">
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/50 px-3 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             ref={searchInputRef}
@@ -1712,7 +1712,7 @@ function MentionPicker({
                 onClick={() => onSelect(u)}
                 className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/50"
               >
-                <Avatar className="h-9 w-9 shrink-0 border border-border/50">
+                <Avatar className="h-9 w-9 shrink-0 border border-border/40">
                   {u.image ? (
                     <img src={u.image} alt={u.name} className="h-full w-full rounded-full object-cover" />
                   ) : (
@@ -1822,7 +1822,7 @@ function CommentsModal({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="border-b border-border/50 bg-background px-4 py-3 sm:px-5 sm:py-4">
+      <div className="border-b border-border/30 bg-background px-4 py-3 sm:px-5 sm:py-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -1831,7 +1831,7 @@ function CommentsModal({
           >
             <X className="h-4 w-4" />
           </button>
-          <Avatar className="h-9 w-9 shrink-0 border border-border/50">
+          <Avatar className="h-9 w-9 shrink-0 border border-border/40">
             <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
               {getInitials(post.authorName)}
             </AvatarFallback>
@@ -1872,7 +1872,7 @@ function CommentsModal({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-                  className="rounded-xl border border-border/40 bg-card/50 px-3 py-2"
+                  className="rounded-xl border border-border/24 bg-card/50 px-3 py-2"
                 >
                   <CommentItem
                     comment={comment}
@@ -1889,7 +1889,7 @@ function CommentsModal({
       </div>
 
       {/* Comment input (fixed at bottom) */}
-      <div className="border-t border-border/50 bg-background px-4 py-3 sm:px-5">
+      <div className="border-t border-border/30 bg-background px-4 py-3 sm:px-5">
         <AnimatePresence>
           {replyTo && (
             <motion.div
@@ -1920,7 +1920,7 @@ function CommentsModal({
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(); } }}
               placeholder={replyTo ? "Escribe una respuesta…" : "Escribe un comentario…"}
-              className="min-h-[36px] w-full rounded-xl border border-border/50 bg-muted/50 px-3 py-2 text-xs text-card-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+              className="min-h-[36px] w-full rounded-xl border border-border/40 bg-muted/50 px-3 py-2 text-xs text-card-foreground outline-none placeholder:text-muted-foreground focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
               maxLength={1000}
             />
           </div>
@@ -1988,7 +1988,7 @@ function FollowListModal({
       transition={{ duration: 0.25 }}
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
-      <div className="border-b border-border/50 bg-background px-4 py-3">
+      <div className="border-b border-border/30 bg-background px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -2020,7 +2020,7 @@ function FollowListModal({
           <div className="divide-y divide-border/30">
             {list.map((u) => (
               <div key={u._id} className="flex items-center gap-3 px-5 py-3">
-                <Avatar className="h-10 w-10 shrink-0 border border-border/50">
+                <Avatar className="h-10 w-10 shrink-0 border border-border/40">
                   {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
                   <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                     {getInitials(u.name)}
@@ -2100,9 +2100,9 @@ function NotificationsPanel({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -8, scale: 0.98 }}
         transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-        className="fixed right-3 top-14 z-50 flex max-h-[70vh] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lift"
+        className="fixed right-3 top-14 z-50 flex max-h-[70vh] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-border/45 bg-card shadow-lift"
       >
-        <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border/24 px-4 py-3">
           <h3 className="text-sm font-bold text-card-foreground">Notificaciones</h3>
           <button
             type="button"
@@ -2144,7 +2144,7 @@ function NotificationsPanel({
                         key={n.id}
                         className="flex items-start gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-muted/40"
                       >
-                        <Avatar className="h-8 w-8 shrink-0 border border-border/50">
+                        <Avatar className="h-8 w-8 shrink-0 border border-border/40">
                           {n.actorImageUrl && (
                             <AvatarImage
                               src={n.actorImageUrl}
@@ -2212,7 +2212,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
   return (
     <div className="min-h-screen bg-background pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-50 border-b border-border/50 bg-background">
+      <div className="sticky top-0 z-50 border-b border-border/30 bg-background">
         <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
           <button
             type="button"
@@ -2250,9 +2250,9 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
         {userData ? (
           <div>
             {/* ── Card 1: Avatar + Name + Title + Follow Stats ── */}
-            <div className="rounded-2xl border border-border/60 bg-card px-6 py-8 sm:px-8 sm:py-10">
+            <div className="rounded-2xl border border-border/45 bg-card px-6 py-8 sm:px-8 sm:py-10">
               <div className="flex flex-col items-center gap-5">
-                <Avatar className="h-24 w-24 border-2 border-border/50">
+                <Avatar className="h-24 w-24 border-2 border-border/40">
                   {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
                   <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                     {getInitials(userData.authorName)}
@@ -2319,7 +2319,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
 
             {/* ── Card 2: Bio ───────────────────────────────── */}
             {(userData as any).authorBio && (
-              <div className="mt-4 rounded-2xl border border-border/60 bg-card px-6 py-5 sm:px-8 sm:py-6">
+              <div className="mt-4 rounded-2xl border border-border/45 bg-card px-6 py-5 sm:px-8 sm:py-6">
                 <div className="mb-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
                 </div>
@@ -2328,7 +2328,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
             )}
 
             {/* ── Section: Publicaciones ─────────────────────── */}
-            <div className="mt-8 mb-4 border-t border-border/40 pt-6">
+            <div className="mt-8 mb-4 border-t border-border/24 pt-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Publicaciones</p>
             </div>
             <div className="flex flex-col gap-4 pb-24">
@@ -2851,7 +2851,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       {/* ── Nav ──────────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 border-b border-border/50 bg-background">
+        className="sticky top-0 z-50 border-b border-border/30 bg-background">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -2927,12 +2927,12 @@ export default function Dashboard() {
           ) : (<>
         {/* Composer */}
         <div
-          className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5"
+          className="rounded-2xl border border-border/45 bg-card p-4 sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
           <div className="flex items-start gap-4">
-            <Avatar className="h-10 w-10 shrink-0 border border-border/50">
+            <Avatar className="h-10 w-10 shrink-0 border border-border/40">
               <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                 {user?.name ? getInitials(user.name) : "?"}
               </AvatarFallback>
@@ -2947,7 +2947,7 @@ export default function Dashboard() {
                 maxLength={120}
                 className="w-full bg-transparent text-base font-bold text-card-foreground outline-none placeholder:text-muted-foreground/60"
               />
-              <div className="my-2 border-t border-border/30" />
+              <div className="my-2 border-t border-border/24" />
               {/* Rich text editor */}
               <div
                 ref={editorRef}
@@ -2967,7 +2967,7 @@ export default function Dashboard() {
                   {pendingMedia.map((pm) => (
                     <motion.div
                       key={pm.id}
-                      className="group relative overflow-hidden rounded-xl border border-border/40 bg-muted"
+                      className="group relative overflow-hidden rounded-xl border border-border/24 bg-muted"
                     >
                       {pm.type === "video" ? (
                         <VideoThumb src={pm.preview} alt={pm.file.name} />
@@ -3008,7 +3008,7 @@ export default function Dashboard() {
                   {pendingDocs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="group flex items-center gap-3 rounded-xl border border-border/40 bg-muted/30 px-3 py-2.5"
+                      className="group flex items-center gap-3 rounded-xl border border-border/24 bg-muted/30 px-3 py-2.5"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <FileText className="h-4 w-4" />
@@ -3054,7 +3054,7 @@ export default function Dashboard() {
               <FormatToolbar />
 
               {/* Separator */}
-              <div className="mt-3 border-t border-border/40" />
+              <div className="mt-3 border-t border-border/24" />
 
               {/* Actions row */}
               <div className="mt-3 flex items-center justify-between">
@@ -3156,7 +3156,7 @@ export default function Dashboard() {
 
         {/* ── Feed Tabs ──────────────────────────────────────────── */}
         <div
-          className="mt-3 overflow-hidden rounded-2xl border border-border/60 bg-card"
+          className="mt-3 overflow-hidden rounded-2xl border border-border/45 bg-card"
         >
           <div className="relative flex">
             {TABS.map((tab) => (
@@ -3191,7 +3191,7 @@ export default function Dashboard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="rounded-2xl border border-border/40 bg-card/50 px-6 py-12"
+                className="rounded-2xl border border-border/24 bg-card/50 px-6 py-12"
               >
                 <div className="flex flex-col items-center text-center">
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/8">
@@ -3317,7 +3317,7 @@ export default function Dashboard() {
       />
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-background/95 backdrop-blur-md">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
