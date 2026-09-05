@@ -217,16 +217,15 @@ export default function Landing() {
 
       {/* ── Footer ──────────────────────────────────────────── */}
       <footer className="border-t border-border/50 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-6 sm:flex-row sm:gap-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 font-display text-base font-bold text-primary">
-              A
-            </span>
-            <span className="font-display text-base font-bold tracking-tight">
-              Asternal
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground/70">
+        <div className="mx-auto flex max-w-6xl flex-nowrap items-center justify-center gap-x-3 px-6">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 font-display text-sm font-bold text-primary">
+            A
+          </span>
+          <span className="whitespace-nowrap font-display text-base font-bold tracking-tight">
+            Asternal
+          </span>
+          <span aria-hidden className="hidden h-3 w-px shrink-0 bg-border/70 sm:block" />
+          <p className="whitespace-nowrap text-xs text-muted-foreground/70">
             &copy; {new Date().getFullYear()} Asternal. Todos los derechos reservados.
           </p>
         </div>
