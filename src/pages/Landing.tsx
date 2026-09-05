@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Code2, Rocket, ChevronRight } from "lucide-react";
+import { Code2, Rocket, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@/lib/router-compat";
 
@@ -167,6 +167,34 @@ export default function Landing() {
               >
                 Iniciar sesión
               </Button>
+            </motion.div>
+          </motion.div>
+
+          {/* Editor entry */}
+          <motion.div
+            className="mt-12"
+            initial="hidden"
+            animate="visible"
+            variants={fadeUp}
+            custom={4}
+          >
+            <motion.div
+              className="flex flex-col items-center justify-center"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 420, damping: 22 }}
+            >
+              <Button
+                size="lg"
+                className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lift transition-shadow hover:shadow-xl active:shadow-lg"
+                onClick={() => navigate("/editor")}
+              >
+                <Plus className="h-9 w-9" />
+                <span className="sr-only">Abrir editor</span>
+              </Button>
+              <p className="mt-4 text-sm font-medium text-muted-foreground">
+                Abre el editor de juegos
+              </p>
             </motion.div>
           </motion.div>
         </div>
