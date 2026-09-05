@@ -217,14 +217,11 @@ export default function Landing() {
 
       {/* ── Footer ──────────────────────────────────────────── */}
       <footer className="border-t border-border/50 py-10">
-        <div className="mx-auto flex max-w-6xl flex-nowrap items-baseline justify-center gap-x-3 px-6">
-          <span className="whitespace-nowrap font-display text-lg font-bold tracking-tight">
-            Asternal
-          </span>
-          <p className="whitespace-nowrap text-xs text-muted-foreground/70">
-            Todos los derechos reservados.
-          </p>
-        </div>
+        <p className="mx-auto whitespace-nowrap px-6 text-center text-sm text-muted-foreground/75">
+          <span className="font-display font-bold tracking-tight text-foreground">Asternal</span>
+          <span aria-hidden className="mx-2 text-muted-foreground/40">·</span>
+          Todos los derechos reservados.
+        </p>
       </footer>
     </div>
   );
