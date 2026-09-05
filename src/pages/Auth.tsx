@@ -154,7 +154,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
           >
-            <Card className="border-border/40 shadow-md shadow-primary/5">
+            <Card className="border-border/30 shadow-md shadow-primary/5">
               <AnimatePresence mode="wait">
                 {mode === "login" ? (
                   <motion.div
@@ -376,7 +376,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               </AnimatePresence>
 
               {/* ── Switch mode ─────────────────────── */}
-              <div className="border-t border-border/40 px-6 py-3.5 text-center">
+              <div className="border-t border-border/30 px-6 py-3.5 text-center">
                 <p className="text-xs text-muted-foreground">
                   {mode === "login" ? (
                     <>
