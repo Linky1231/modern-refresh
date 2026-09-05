@@ -10,7 +10,6 @@ import "./index.css";
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
-const EditorPage = lazy(() => import("./pages/Editor.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -66,7 +65,7 @@ class RootErrorBoundary extends React.Component<
               {this.state.message}
             </p>
             {this.state.stack && (
-              <pre className="mt-3 text-left text-[10px] leading-4 text-muted-foreground/80 max-h-40 overflow-auto rounded border border-border/60 p-2">
+              <pre className="mt-3 text-left text-[10px] leading-4 text-muted-foreground/80 max-h-40 overflow-auto rounded border border-border/30 p-2">
                 {this.state.stack}
               </pre>
             )}
@@ -121,14 +120,6 @@ createRoot(document.getElementById("root")!).render(
               element={
                 <RequireAuth>
                   <Dashboard />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/editor"
-              element={
-                <RequireAuth>
-                  <EditorPage />
                 </RequireAuth>
               }
             />

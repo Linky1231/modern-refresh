@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Code2, Rocket, ChevronRight, Plus } from "lucide-react";
+import { Code2, Rocket, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@/lib/router-compat";
 
@@ -66,7 +66,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Navbar ──────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <img
@@ -100,7 +100,7 @@ export default function Landing() {
             variants={fadeIn}
             custom={0}
           >
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/45 bg-muted/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/35 bg-muted/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Engine v1 — ya disponible
             </div>
@@ -169,39 +169,11 @@ export default function Landing() {
               </Button>
             </motion.div>
           </motion.div>
-
-          {/* Editor entry */}
-          <motion.div
-            className="mt-12"
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            custom={4}
-          >
-            <motion.div
-              className="flex flex-col items-center justify-center"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 420, damping: 22 }}
-            >
-              <Button
-                size="lg"
-                className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lift transition-shadow hover:shadow-xl active:shadow-lg"
-                onClick={() => navigate("/editor")}
-              >
-                <Plus className="h-9 w-9" />
-                <span className="sr-only">Abrir editor</span>
-              </Button>
-              <p className="mt-4 text-sm font-medium text-muted-foreground">
-                Abre el editor de juegos
-              </p>
-            </motion.div>
-          </motion.div>
         </div>
       </section>
 
       {/* ── Features ────────────────────────────────────────── */}
-      <section className="relative border-t border-border/40 bg-muted/30 py-16">
+      <section className="relative border-t border-border/30 bg-muted/30 py-16">
         <div className="mx-auto max-w-6xl px-6">
           <motion.div
             className="text-center"
@@ -228,7 +200,7 @@ export default function Landing() {
                 custom={i}
                 whileHover={{ y: -3 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                className="group rounded-2xl border border-border/45 bg-card p-8 transition-colors hover:border-primary/30 hover:bg-accent/50"
+                className="group rounded-2xl border border-border/35 bg-card p-8 transition-colors hover:border-primary/30 hover:bg-accent/50"
               >
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                   <f.icon className="h-6 w-6" />
@@ -244,7 +216,7 @@ export default function Landing() {
       </section>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <footer className="border-t border-border/40 py-5">
+      <footer className="border-t border-border/30 py-5">
         <p className="block mx-auto max-w-[90%] text-center text-sm text-muted-foreground/70">
           <span className="font-display font-semibold tracking-tight text-foreground">Asternal</span>
           <span aria-hidden className="mx-2 text-muted-foreground/40">·</span>
