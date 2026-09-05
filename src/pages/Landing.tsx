@@ -217,8 +217,8 @@ export default function Landing() {
 
       {/* ── Footer ──────────────────────────────────────────── */}
       <footer className="border-t border-border/50 py-5">
-        <p className="block mx-auto max-w-[90%] text-center text-xs text-muted-foreground/70">
-          <span className="font-display font-medium tracking-tight text-foreground">Asternal</span>
+        <p className="block mx-auto max-w-[90%] text-center text-sm text-muted-foreground/70">
+          <span className="font-display font-semibold tracking-tight text-foreground">Asternal</span>
           <span aria-hidden className="mx-2 text-muted-foreground/40">·</span>
           Todos los derechos reservados.
         </p>
