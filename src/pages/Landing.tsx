@@ -173,7 +173,7 @@ export default function Landing() {
       </section>
 
       {/* ── Features ────────────────────────────────────────── */}
-      <section className="relative border-t border-border/50 bg-muted/30 py-24">
+      <section className="relative border-t border-border/50 bg-muted/30 py-16">
         <div className="mx-auto max-w-6xl px-6">
           <motion.div
             className="text-center"
@@ -190,7 +190,7 @@ export default function Landing() {
             </h2>
           </motion.div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 max-w-3xl mx-auto">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 max-w-3xl mx-auto">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
