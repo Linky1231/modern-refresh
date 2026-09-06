@@ -3300,7 +3300,7 @@ export default function Dashboard() {
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
                         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 shadow-[0_-6px_20px_-10px_rgba(15,23,42,0.12)] backdrop-blur-md dark:bg-slate-950/90">
-        <div className="mx-auto flex max-w-2xl items-center gap-2.5 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-2xl items-end gap-2.5 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1.5">
           <button
             type="button"
             aria-label="Inicio"
@@ -3308,7 +3308,8 @@ export default function Dashboard() {
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "feed" ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900" : "hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200")}
           >
-            <Home className="h-5 w-5" />
+            <span className="text-balance">Inicio</span>
+            <Home className="ml-1.5 h-5 w-5" />
           </button>
 
           <button
@@ -3316,9 +3317,9 @@ export default function Dashboard() {
             aria-label="Abrir el editor de juegos"
             title="Abrir el editor de juegos"
             onClick={() => navigate("/editor")}
-            className="-mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-white transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95 dark:ring-slate-950"
+            className="mt-1 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-white transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95 dark:ring-slate-950"
           >
-            <Plus className="h-6 w-6" strokeWidth={2.25} />
+            <Plus className="h-5 w-5" strokeWidth={2.25} />
           </button>
 
           <button
@@ -3328,7 +3329,8 @@ export default function Dashboard() {
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "profile" ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900" : "hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200")}
           >
-            <User className="h-5 w-5" />
+            <User className="mr-1.5 h-5 w-5" />
+            <span className="text-balance">Perfil</span>
           </button>
         </div>
       </nav>
