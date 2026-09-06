@@ -102,7 +102,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={MAX_QUESTION}
           placeholder="Escribe tu pregunta…"
-          className="w-full rounded-xl border border-border/35 bg-card px-3.5 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          className="w-full rounded-xl border border-slate-200 bg-card px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-slate-400 focus:border-blue-500"
         />
       </div>
 
@@ -127,7 +127,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
                 onChange={(e) => setOption(i, e.target.value)}
                 maxLength={MAX_OPTION_TEXT}
                 placeholder={`Opción ${i + 1}`}
-                className="h-9 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-foreground outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500"
+                className="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-foreground outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
               {options.length > MIN_OPTIONS && (
                 <button
@@ -146,6 +146,9 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
 
       {/* ── Footer ─────────────────────────────────────────── */}
       <div className="mt-3 border-t border-border/24 pt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-right">
+          <span className="text-xs text-slate-400">Duración</span>
+        </div>
         <button
           type="button"
           onClick={addOption}
@@ -156,7 +159,6 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           <span>Añadir opción</span>
           <span className="tabular-nums">({options.length}/{MAX_OPTIONS})</span>
         </button>
-        <span className="text-xs text-slate-500">Duración</span>
         <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1">
           {["24 hrs", "3 días", "7 días"].map((d) => (
             <button
