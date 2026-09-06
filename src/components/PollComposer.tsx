@@ -147,9 +147,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       {/* ── Footer ─────────────────────────────────────────── */}
       <div className="mt-3 border-t border-border/24 pt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-right">
-          <div>
-            <span className="text-xs text-slate-400">Duración</span>
-          </div>
+          <span className="text-xs text-slate-400">Duración</span>
         </div>
         <button
           type="button"
