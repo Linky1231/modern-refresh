@@ -65,6 +65,7 @@ import {
 import { useNavigate } from "@/lib/router-compat";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -2383,7 +2384,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"forYou" | "following" | "popular">("forYou");
   const isAdmin = (user as any)?.role === "admin";
-  const [currentView, setCurrentView] = useState<"feed" | "profile" | "userProfile">("feed");
+  const [currentView, setCurrentView] = useState<"feed" | "profile" | "userProfile" | "editor">("feed");
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -3317,27 +3318,36 @@ export default function Dashboard() {
       />
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1 transition-colors ${currentView === "feed" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "feed" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
           >
             <Home className="h-5 w-5" />
-            <span className={`text-[10px] ${currentView === "feed" ? "font-semibold" : "font-medium"}`}>Inicio</span>
+            <span className={"text-[10px] " + (currentView === "feed" ? "font-semibold" : "font-medium")}>Inicio</span>
           </button>
           <button
             type="button"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1 transition-colors ${currentView === "profile" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "profile" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
           >
             <User className="h-5 w-5" />
-            <span className={`text-[10px] ${currentView === "profile" ? "font-semibold" : "font-medium"}`}>Perfil</span>
+            <span className={"text-[10px] " + (currentView === "profile" ? "font-semibold" : "font-medium")}>Perfil</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/editor")}
+            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "editor" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105 active:scale-95">
+              <Plus className="h-5 w-5" />
+            </span>
+            <span className={"text-[10px] " + (currentView === "editor" ? "font-semibold" : "font-medium")}>Editor</span>
           </button>
         </div>
       </nav>
-
       {/* Bottom padding to account for fixed nav */}
       <div className="h-16" />
     </div>

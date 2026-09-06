@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Code2, Rocket, ChevronRight, Plus } from "lucide-react";
+import { Code2, Rocket, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@/lib/router-compat";
 
@@ -180,30 +180,6 @@ export default function Landing() {
                 onClick={() => navigate("/auth?mode=login&returnTo=/dashboard")}
               >
                 Iniciar sesión
-              </Button>
-            </motion.div>
-          </motion.div>
-
-          {/* Editor entry */}
-          <motion.div
-            className="mt-12 flex justify-center"
-            initial="hidden"
-            animate="visible"
-            variants={float}
-          >
-            <motion.div
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.94 }}
-              transition={{ type: "spring", stiffness: 460, damping: 20 }}
-            >
-              <Button
-                size="lg"
-                className="group relative flex h-24 w-24 items-center justify-center rounded-full bg-primary shadow-lift transition-shadow hover:shadow-xl active:shadow-lg"
-                onClick={() => navigate("/editor")}
-              >
-                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
-                <Plus className="h-10 w-10 text-primary-foreground" />
-                <span className="sr-only">Abrir editor</span>
               </Button>
             </motion.div>
           </motion.div>
