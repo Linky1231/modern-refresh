@@ -15,12 +15,12 @@ interface PollComposerProps {
   onRemove: () => void;
 }
 
+type DurationOption = "24 hrs" | "3 días" | "7 días";
+
 const MAX_OPTIONS = 5;
 const MIN_OPTIONS = 2;
 const MAX_QUESTION = 200;
 const MAX_OPTION_TEXT = 100;
-
-type DurationOption = "24 hrs" | "3 días" | "7 días";
 
 function draftsEqual(a: PollDraft | null, b: PollDraft | null): boolean {
   if (a === b) return true;
@@ -102,7 +102,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={MAX_QUESTION}
           placeholder="Escribe tu pregunta…"
-          className="w-full rounded-xl border border-slate-200 bg-card px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-slate-400 focus:border-blue-500"
+          className="w-full rounded-xl border border-slate-200 bg-card px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -118,7 +118,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
               transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
               className="flex items-center gap-2.5"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white border border-slate-300 text-xs font-semibold text-slate-500 tabular-nums">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-500 tabular-nums">
                 {i + 1}
               </span>
               <input
@@ -147,7 +147,9 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       {/* ── Footer ─────────────────────────────────────────── */}
       <div className="mt-3 border-t border-border/24 pt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-right">
-          <span className="text-xs text-slate-400">Duración</span>
+          <div>
+            <span className="text-xs text-slate-400">Duración</span>
+          </div>
         </div>
         <button
           type="button"
@@ -159,7 +161,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           <span>Añadir opción</span>
           <span className="tabular-nums">({options.length}/{MAX_OPTIONS})</span>
         </button>
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1 relative">
           {["24 hrs", "3 días", "7 días"].map((d) => (
             <button
               key={d}
