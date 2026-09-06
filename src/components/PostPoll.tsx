@@ -61,7 +61,8 @@ export function PostPoll({ poll, userId }: PostPollProps) {
     totalVotes === 0 ? 0 : Math.round(((votes[optionId] || 0) / totalVotes) * 100);
 
   return (
-    <div className="flex w-full flex-col rounded-xl border border-border/30 bg-card px-4 py-3.5 shadow-sm">
+    <div className="mx-auto w-full max-w-sm">
+      <div className="flex w-full flex-col rounded-xl border border-border/30 bg-card px-4 py-3.5 shadow-sm">
       {/* ── Header ────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5">
         <BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -122,5 +123,6 @@ export function PostPoll({ poll, userId }: PostPollProps) {
         </p>
       </div>
     </div>
+      </div>
   );
 }

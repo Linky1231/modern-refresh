@@ -3039,14 +3039,16 @@ export default function Dashboard() {
                   Se abre con el botón «Encuesta» de la fila de acciones. */}
               <AnimatePresence>
               {showPollComposer && (
-                <div className="mt-3">
-                  <PollComposer
-                    onChange={setPollDraft}
-                    onRemove={() => {
-                      setPollDraft(null);
-                      setShowPollComposer(false);
-                    }}
-                  />
+                <div className="mt-3 flex justify-center">
+                  <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border/40 bg-card/95 p-4">
+                    <PollComposer
+                      onChange={setPollDraft}
+                      onRemove={() => {
+                        setPollDraft(null);
+                        setShowPollComposer(false);
+                      }}
+                    />
+                  </div>
                 </div>
               )}
               </AnimatePresence>
