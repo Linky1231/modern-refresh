@@ -2851,7 +2851,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950">
       {/* ── Nav ──────────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 mb-4 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
+        className="sticky top-0 z-50 mb-2 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -2902,7 +2902,7 @@ export default function Dashboard() {
       </AnimatePresence>
 
       {/* ── Main ─────────────────────────────────────────────── */}
-      <main className="mx-auto max-w-2xl px-4 pt-6 pb-24 sm:pt-10 sm:pb-28">
+      <main className="mx-auto max-w-2xl px-4 pt-5 pb-24 sm:pt-8 sm:pb-28">
         <AnimatePresence mode="wait" initial={false}>
           {currentView === "userProfile" ? (
             <motion.div
