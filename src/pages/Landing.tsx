@@ -184,15 +184,6 @@ export default function Landing() {
             </motion.div>
           </motion.div>
 
-          <motion.p
-            className="mt-5 text-sm text-muted-foreground"
-            initial="hidden"
-            animate="visible"
-            variants={fadeIn}
-            custom={4}
-          >
-            Abre el editor de juegos
-          </motion.p>
         </div>
       </section>
 
