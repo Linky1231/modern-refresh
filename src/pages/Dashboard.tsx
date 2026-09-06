@@ -60,6 +60,9 @@ import {
   BarChart3,
   Newspaper,
   Bell,
+  Bold,
+  Type,
+  Underline,
   UserPlus,
 } from "lucide-react";
 import { useNavigate } from "@/lib/router-compat";
@@ -889,7 +892,26 @@ function MediaGrid({
 }
 
 // ── Format Toolbar ─────────────────────────────────────────────────
-function FormatToolbar() {
+// ── Format Toolbar (single clean icon bar) ────────────────────────
+interface FormatToolbarProps {
+  onAddMedia?: () => void;
+  onAddDoc?: () => void;
+  onTogglePoll?: () => void;
+  pollActive?: boolean;
+  mediaDisabled?: boolean;
+  docDisabled?: boolean;
+  attachCount?: number;
+}
+
+function FormatToolbar({
+  onAddMedia,
+  onAddDoc,
+  onTogglePoll,
+  pollActive = false,
+  mediaDisabled,
+  docDisabled,
+  attachCount = 0,
+}: FormatToolbarProps) {
   const [showColors, setShowColors] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
@@ -924,78 +946,105 @@ function FormatToolbar() {
     hintTimer.current = setTimeout(() => setHint(null), 2500);
   };
 
-
+  const toolBtnBase =
+    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-white hover:text-blue-600 disabled:pointer-events-none disabled:opacity-35 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-blue-400";
+  const toolBtnActive =
+    "bg-blue-600 text-white shadow-sm hover:bg-blue-600 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white";
 
   return (
     <div className="w-full pt-3">
-      {/* Toolbar buttons row */}
-      <div className="inline-flex items-center gap-0.5 rounded-xl border border-border/30 bg-muted/40 p-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={`gap-1.5 px-3 ${showColors ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
-          onClick={() => {
-            if (showColors) { setShowColors(false); return; }
-            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            saveSelection();
-            setShowColors(true);
-          }}
-          title="Color del texto"
-        >
-          <Palette className="h-4 w-4 shrink-0" />
-          <span className="text-xs font-medium whitespace-nowrap">Color</span>
-        </Button>
+      {/* One clean toolbar: attach · poll · color · format */}
+      <div className="flex w-full items-center gap-1 rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800/70">
+        <div className="flex min-w-0 flex-1 items-center justify-around gap-0.5">
+          <button
+            type="button"
+            title="Añadir imagen o vídeo"
+            aria-label="Añadir imagen o vídeo"
+            onClick={onAddMedia}
+            disabled={mediaDisabled}
+            className={toolBtnBase}
+          >
+            <ImagePlus className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            title="Añadir documento"
+            aria-label="Añadir documento"
+            onClick={onAddDoc}
+            disabled={docDisabled}
+            className={toolBtnBase}
+          >
+            <Paperclip className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            title="Añadir encuesta"
+            aria-label="Añadir encuesta"
+            onClick={onTogglePoll}
+            className={`${toolBtnBase} ${pollActive ? toolBtnActive : ""}`}
+          >
+            <BarChart3 className="h-[18px] w-[18px]" />
+          </button>
 
+          <span className="mx-0.5 h-5 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
 
-
-        {/* Text size (H1 / H2 / H3 / Normal) */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={`gap-1.5 px-3 ${showSizes ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
-          onClick={() => {
-            if (showSizes) { setShowSizes(false); return; }
-            if (hasSelection()) saveSelection();
-            setShowSizes(true);
-          }}
-          title="Tamaño del texto"
-        >
-          <span className="text-sm font-extrabold leading-none">H</span>
-          <span className="text-xs font-medium whitespace-nowrap">Tamaño</span>
-        </Button>
-
-        {/* Bold */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={`gap-1.5 px-3 ${selectionHasStyle("fontWeight", "bold") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
-          onClick={() => {
-            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            document.execCommand("bold");
-          }}
-          title="Negrita"
-        >
-          <span className="text-sm font-extrabold leading-none">B</span>
-        </Button>
-
-        {/* Underline */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={`gap-1.5 px-3 ${selectionHasStyle("textDecoration", "underline") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-primary"}`}
-          onClick={() => {
-            if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
-            document.execCommand("underline");
-          }}
-          title="Subrayado"
-        >
-          <span className="text-sm font-medium underline leading-none">S</span>
-        </Button>
-
+          <button
+            type="button"
+            title="Color del texto"
+            aria-label="Color del texto"
+            className={`${toolBtnBase} ${showColors ? toolBtnActive : ""}`}
+            onClick={() => {
+              if (showColors) { setShowColors(false); return; }
+              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              saveSelection();
+              setShowColors(true);
+            }}
+          >
+            <Palette className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            title="Tamaño del texto"
+            aria-label="Tamaño del texto"
+            className={`${toolBtnBase} ${showSizes ? toolBtnActive : ""}`}
+            onClick={() => {
+              if (showSizes) { setShowSizes(false); return; }
+              if (hasSelection()) saveSelection();
+              setShowSizes(true);
+            }}
+          >
+            <Type className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            title="Negrita"
+            aria-label="Negrita"
+            className={`${toolBtnBase} ${selectionHasStyle("fontWeight", "bold") ? toolBtnActive : ""}`}
+            onClick={() => {
+              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              document.execCommand("bold");
+            }}
+          >
+            <Bold className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            title="Subrayado"
+            aria-label="Subrayado"
+            className={`${toolBtnBase} ${selectionHasStyle("textDecoration", "underline") ? toolBtnActive : ""}`}
+            onClick={() => {
+              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              document.execCommand("underline");
+            }}
+          >
+            <Underline className="h-[18px] w-[18px]" />
+          </button>
+        </div>
+        {attachCount > 0 && (
+          <span className="shrink-0 rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-bold text-blue-600 tabular-nums dark:bg-blue-400/15 dark:text-blue-400">
+            {attachCount}
+          </span>
+        )}
       </div>
 
       {/* Hint below toolbar */}
@@ -1406,7 +1455,7 @@ function PostCard({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="overflow-hidden rounded-2xl border border-border/35 bg-card transition-all duration-300 ease-out hover:border-border/80 hover:shadow-sm"
+      className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] transition-all duration-300 ease-out hover:shadow-md dark:bg-slate-900 dark:ring-white/10"
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
@@ -2849,10 +2898,10 @@ export default function Dashboard() {
   const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft !== null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* ── Nav ──────────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 border-b border-border/30 bg-background">
+        className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -2928,7 +2977,7 @@ export default function Dashboard() {
           ) : (<>
         {/* Composer */}
         <div
-          className="rounded-2xl border border-border/35 bg-card p-4 sm:p-5"
+          className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/[0.04] dark:bg-slate-900 dark:ring-white/10 sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
@@ -3051,85 +3100,49 @@ export default function Dashboard() {
               )}
               </AnimatePresence>
 
-              {/* Formatting toolbar — before actions for proper visual hierarchy */}
-              <FormatToolbar />
+              {/* One toolbar: attach · poll · format, then publish */}
+              <FormatToolbar
+                onAddMedia={() => fileInputRef.current?.click()}
+                onAddDoc={() => docInputRef.current?.click()}
+                onTogglePoll={() => {
+                  if (showPollComposer) {
+                    setPollDraft(null);
+                    setShowPollComposer(false);
+                  } else {
+                    setShowPollComposer(true);
+                  }
+                }}
+                pollActive={showPollComposer || !!pollDraft}
+                mediaDisabled={pendingMedia.length >= MAX_FILES}
+                docDisabled={pendingDocs.length >= MAX_DOCS}
+                attachCount={
+                  pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)
+                }
+              />
+
+              {/* Hidden file inputs */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={`${ACCEPTED_IMAGE},${ACCEPTED_VIDEO}`}
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <input
+                ref={docInputRef}
+                type="file"
+                accept={ACCEPTED_DOCS_ONLY}
+                multiple
+                className="hidden"
+                onChange={handleDocChange}
+              />
 
               {/* Separator */}
-              <div className="mt-3 border-t border-border/24" />
+              <div className="mt-3 border-t border-slate-100 dark:border-slate-800" />
 
-              {/* Actions row */}
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={`${ACCEPTED_IMAGE},${ACCEPTED_VIDEO}`}
-                    multiple
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <input
-                    ref={docInputRef}
-                    type="file"
-                    accept={ACCEPTED_DOCS_ONLY}
-                    multiple
-                    className="hidden"
-                    onChange={handleDocChange}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 text-muted-foreground hover:text-primary"
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Añadir imagen o vídeo"
-                    disabled={pendingMedia.length >= MAX_FILES}
-                  >
-                    <ImagePlus className="h-4 w-4" />
-                    <span className="text-xs hidden sm:inline">Foto/Video</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 text-muted-foreground hover:text-primary"
-                    onClick={() => docInputRef.current?.click()}
-                    title="Añadir documento"
-                    disabled={pendingDocs.length >= MAX_DOCS}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                    <span className="text-xs hidden sm:inline">Documento</span>
-                  </Button>
-                  {/* PARTE 4 · ENCUESTAS: botón justo después de «adjuntar
-                      archivos» (documento). Abre/cierra el editor de encuesta. */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className={`gap-1.5 rounded-lg px-2 py-1 transition-colors ${
-                      showPollComposer || pollDraft
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-primary"
-                    }`}
-                    onClick={() => {
-                      if (showPollComposer) {
-                        setPollDraft(null);
-                        setShowPollComposer(false);
-                      } else {
-                        setShowPollComposer(true);
-                      }
-                    }}
-                    title="Añadir encuesta"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    <span className="text-xs hidden sm:inline">Encuesta</span>
-                  </Button>
-                  {(pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft) && (
-                    <span className="ml-1 text-[11px] text-muted-foreground tabular-nums">
-                      {pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)}
-                    </span>
-                  )}
-                </div>
+              {/* Publish row */}
+              <div className="mt-3 flex items-center justify-end gap-2">
                 <Button
                   size="sm"
                   className="gap-1.5 px-5 min-w-[120px]"
@@ -3149,33 +3162,29 @@ export default function Dashboard() {
                 </Button>
               </div>
 
-              {/* (Format toolbar moved above actions) */}
-
             </div>
           </div>
         </div>
 
         {/* ── Feed Tabs ──────────────────────────────────────────── */}
-        <div
-          className="mt-3 overflow-hidden rounded-2xl border border-border/35 bg-card"
-        >
-          <div className="relative flex">
+        <div className="mt-4 rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] dark:bg-slate-900 dark:ring-white/10">
+          <div className="relative flex px-1.5">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className={`relative flex-1 py-3 text-center text-xs font-semibold transition-colors ${
+                className={`relative flex-1 py-3 text-center text-sm transition-colors ${
                   activeTab === tab.id
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "font-semibold text-blue-600 dark:text-blue-400"
+                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-1/2 h-0.5 w-[calc(100%-1.5rem)] -translate-x-1/2 bg-primary"
+                    className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-blue-600 dark:bg-blue-400"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -3192,38 +3201,38 @@ export default function Dashboard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="rounded-2xl border border-border/24 bg-card/50 px-6 py-12"
+                className="rounded-2xl bg-white px-6 py-10 shadow-sm ring-1 ring-black/[0.04] dark:bg-slate-900 dark:ring-white/10"
               >
                 <div className="flex flex-col items-center text-center">
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/8">
-                    <Newspaper className="h-7 w-7 text-primary/60" />
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm dark:bg-blue-500/10 dark:text-blue-400">
+                    <Newspaper className="h-5 w-5" />
                   </div>
                   {activeTab === "forYou" && (
                     <>
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="text-[15px] font-semibold text-slate-900 dark:text-white">
                         No hay publicaciones para ti
                       </p>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                         Cuando haya publicaciones nuevas, aparecerán aquí.
                       </p>
                     </>
                   )}
                   {activeTab === "following" && (
                     <>
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="text-[15px] font-semibold text-slate-900 dark:text-white">
                         No hay publicaciones de tus seguidos
                       </p>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                         Sigue a otras personas para ver sus publicaciones aquí.
                       </p>
                     </>
                   )}
                   {activeTab === "popular" && (
                     <>
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="text-[15px] font-semibold text-slate-900 dark:text-white">
                         No hay tendencias aún
                       </p>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                         Las publicaciones con más interacciones aparecerán aquí.
                       </p>
                     </>
@@ -3318,14 +3327,14 @@ export default function Dashboard() {
       />
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-                        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
+                        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/95 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex max-w-2xl items-center gap-2.5 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             aria-label="Inicio"
             title="Inicio"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 transition-colors " + (currentView === "feed" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "feed" ? "bg-blue-50 text-blue-600 shadow-sm" : "hover:bg-slate-200/80 hover:text-slate-700") + " dark:bg-slate-800/70 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200"}
           >
             <Home className="h-5 w-5" />
           </button>
@@ -3335,7 +3344,7 @@ export default function Dashboard() {
             aria-label="Abrir el editor de juegos"
             title="Abrir el editor de juegos"
             onClick={() => navigate("/editor")}
-            className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-background transition-transform hover:scale-105 active:scale-95"
+            className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 ring-4 ring-slate-50 transition-transform hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 active:scale-95 dark:ring-slate-950"
           >
             <Plus className="h-7 w-7" strokeWidth={2.25} />
           </button>
@@ -3345,7 +3354,7 @@ export default function Dashboard() {
             aria-label="Perfil"
             title="Perfil"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 transition-colors " + (currentView === "profile" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "profile" ? "bg-blue-50 text-blue-600 shadow-sm" : "hover:bg-slate-200/80 hover:text-slate-700") + " dark:bg-slate-800/70 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200"}
           >
             <User className="h-5 w-5" />
           </button>
