@@ -3011,7 +3011,7 @@ export default function Dashboard() {
                   {pendingDocs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="group flex items-center gap-3 rounded-xl border border-border/24 bg-muted/30 px-3 py-2.5"
+                      className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white shadow-sm py-2 px-3"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <FileText className="h-4 w-4" />
@@ -3028,7 +3028,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => removePendingDoc(doc.id)}
-                        className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                        className="shrink-0 text-slate-400 transition-colors hover:text-slate-600"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -3094,7 +3094,7 @@ export default function Dashboard() {
               {/* Publish row — bottom-right inside the editor card */}
               <div className="mt-4 flex items-center justify-between gap-2">
                 {(pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft) && (
-                  <span className="text-xs font-medium text-slate-500 tabular-nums dark:text-slate-400">
+                  <span className="text-xs text-slate-400 tabular-nums">
                     {pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)}{" "}
                     adjunto{pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0) !== 1 ? "s" : ""} para publicar
                   </span>
