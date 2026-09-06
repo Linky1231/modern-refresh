@@ -947,14 +947,14 @@ function FormatToolbar({
   };
 
   const toolBtnBase =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-white hover:text-blue-600 disabled:pointer-events-none disabled:opacity-35 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-blue-400";
+    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-white hover:text-primary disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-slate-700";
   const toolBtnActive =
-    "bg-blue-600 text-white shadow-sm hover:bg-blue-600 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white";
+    "bg-primary text-primary-foreground shadow-sm";
 
   return (
     <div className="w-full pt-3">
       {/* One clean toolbar: attach · poll · color · format */}
-      <div className="flex w-full items-center gap-1 rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800/70">
+      <div className="flex w-full items-center gap-1 rounded-2xl bg-muted/60 p-1.5">
         <div className="flex min-w-0 flex-1 items-center justify-around gap-0.5">
           <button
             type="button"
@@ -986,7 +986,7 @@ function FormatToolbar({
             <BarChart3 className="h-[18px] w-[18px]" />
           </button>
 
-          <span className="mx-0.5 h-5 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
+          <span className="mx-0.5 h-5 w-px shrink-0 bg-border" />
 
           <button
             type="button"
@@ -1041,7 +1041,7 @@ function FormatToolbar({
           </button>
         </div>
         {attachCount > 0 && (
-          <span className="shrink-0 rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-bold text-blue-600 tabular-nums dark:bg-blue-400/15 dark:text-blue-400">
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary tabular-nums">
             {attachCount}
           </span>
         )}
@@ -1455,7 +1455,7 @@ function PostCard({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] transition-all duration-300 ease-out hover:shadow-md dark:bg-slate-900 dark:ring-white/10"
+      className="overflow-hidden rounded-2xl border border-border/35 bg-card shadow-sm transition-all duration-300 ease-out hover:border-border/80 hover:shadow-md"
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
@@ -2898,10 +2898,10 @@ export default function Dashboard() {
   const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft !== null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* ── Nav ──────────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
+        className="sticky top-0 z-50 border-b border-border/30 bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -2977,7 +2977,7 @@ export default function Dashboard() {
           ) : (<>
         {/* Composer */}
         <div
-          className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/[0.04] dark:bg-slate-900 dark:ring-white/10 sm:p-5"
+          className="rounded-2xl border border-border/35 bg-card p-4 shadow-sm sm:p-5"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
@@ -3139,7 +3139,7 @@ export default function Dashboard() {
               />
 
               {/* Separator */}
-              <div className="mt-3 border-t border-slate-100 dark:border-slate-800" />
+              <div className="mt-3 border-t border-border/24" />
 
               {/* Publish row */}
               <div className="mt-3 flex items-center justify-end gap-2">
@@ -3167,7 +3167,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── Feed Tabs ──────────────────────────────────────────── */}
-        <div className="mt-4 rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] dark:bg-slate-900 dark:ring-white/10">
+        <div className="mt-4 rounded-2xl border border-border/35 bg-card shadow-sm">
           <div className="relative flex px-1.5">
             {TABS.map((tab) => (
               <button
@@ -3176,15 +3176,15 @@ export default function Dashboard() {
                 onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className={`relative flex-1 py-3 text-center text-sm transition-colors ${
                   activeTab === tab.id
-                    ? "font-semibold text-blue-600 dark:text-blue-400"
-                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                    ? "font-semibold text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-blue-600 dark:bg-blue-400"
+                    className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-primary"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -3201,38 +3201,38 @@ export default function Dashboard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="rounded-2xl bg-white px-6 py-10 shadow-sm ring-1 ring-black/[0.04] dark:bg-slate-900 dark:ring-white/10"
+                className="rounded-2xl border border-border/35 bg-card px-6 py-10 shadow-sm"
               >
                 <div className="flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm dark:bg-blue-500/10 dark:text-blue-400">
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm">
                     <Newspaper className="h-5 w-5" />
                   </div>
                   {activeTab === "forYou" && (
                     <>
-                      <p className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                      <p className="text-[15px] font-semibold text-foreground">
                         No hay publicaciones para ti
                       </p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                         Cuando haya publicaciones nuevas, aparecerán aquí.
                       </p>
                     </>
                   )}
                   {activeTab === "following" && (
                     <>
-                      <p className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                      <p className="text-[15px] font-semibold text-foreground">
                         No hay publicaciones de tus seguidos
                       </p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                         Sigue a otras personas para ver sus publicaciones aquí.
                       </p>
                     </>
                   )}
                   {activeTab === "popular" && (
                     <>
-                      <p className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                      <p className="text-[15px] font-semibold text-foreground">
                         No hay tendencias aún
                       </p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                         Las publicaciones con más interacciones aparecerán aquí.
                       </p>
                     </>
@@ -3327,14 +3327,14 @@ export default function Dashboard() {
       />
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-                        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/95 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
+                        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center gap-2.5 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             aria-label="Inicio"
             title="Inicio"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "feed" ? "bg-blue-50 text-blue-600 shadow-sm" : "hover:bg-slate-200/80 hover:text-slate-700") + " dark:bg-slate-800/70 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200"}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 text-muted-foreground transition-colors " + (currentView === "feed" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 hover:text-foreground")}
           >
             <Home className="h-5 w-5" />
           </button>
@@ -3344,7 +3344,7 @@ export default function Dashboard() {
             aria-label="Abrir el editor de juegos"
             title="Abrir el editor de juegos"
             onClick={() => navigate("/editor")}
-            className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 ring-4 ring-slate-50 transition-transform hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 active:scale-95 dark:ring-slate-950"
+            className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95"
           >
             <Plus className="h-7 w-7" strokeWidth={2.25} />
           </button>
@@ -3354,7 +3354,7 @@ export default function Dashboard() {
             aria-label="Perfil"
             title="Perfil"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "profile" ? "bg-blue-50 text-blue-600 shadow-sm" : "hover:bg-slate-200/80 hover:text-slate-700") + " dark:bg-slate-800/70 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200"}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 text-muted-foreground transition-colors " + (currentView === "profile" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 hover:text-foreground")}
           >
             <User className="h-5 w-5" />
           </button>
