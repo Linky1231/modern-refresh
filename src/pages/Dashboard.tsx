@@ -2851,7 +2851,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950">
       {/* ── Nav ──────────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
+        className="sticky top-0 z-50 mb-4 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -2932,8 +2932,11 @@ export default function Dashboard() {
           onDrop={handleDrop}
         >
           <div className="flex items-start gap-4">
-            <Avatar className="h-10 w-10 shrink-0 border border-border/30">
-              <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+            <Avatar className="h-10 w-10 shrink-0 rounded-full border border-border/30">
+              {user?.image && (
+                <AvatarImage src={user.image} alt={user.name ?? ""} className="object-cover" />
+              )}
+              <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary uppercase">
                 {user?.name ? getInitials(user.name) : "?"}
               </AvatarFallback>
             </Avatar>
@@ -3098,7 +3101,7 @@ export default function Dashboard() {
                 )}
                 <Button
                   size="sm"
-                  className="ml-auto gap-1.5 px-6 min-w-[120px] shadow-sm"
+                  className="ml-auto gap-1.5 rounded-xl px-6 min-w-[120px] shadow-sm"
                   disabled={!isPostable || posting}
                   onClick={handlePost}
                 >
@@ -3133,14 +3136,16 @@ export default function Dashboard() {
                     : "font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 }`}
               >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
+                <span className="relative inline-block">
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute inset-x-0 -bottom-1 h-[2px] rounded-full bg-primary"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </span>
               </button>
             ))}
           </div>
@@ -3172,20 +3177,20 @@ export default function Dashboard() {
                   )}
                   {activeTab === "following" && (
                     <>
-                      <p className="text-[15px] font-semibold text-foreground">
+                      <p className="text-base font-medium text-slate-900 dark:text-white">
                         No hay publicaciones de tus seguidos
                       </p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
                         Sigue a otras personas para ver sus publicaciones aquí.
                       </p>
                     </>
                   )}
                   {activeTab === "popular" && (
                     <>
-                      <p className="text-[15px] font-semibold text-foreground">
+                      <p className="text-base font-medium text-slate-900 dark:text-white">
                         No hay tendencias aún
                       </p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
                         Las publicaciones con más interacciones aparecerán aquí.
                       </p>
                     </>
