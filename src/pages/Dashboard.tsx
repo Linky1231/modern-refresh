@@ -3319,13 +3319,13 @@ export default function Dashboard() {
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
                         <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-2xl items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-2xl items-center gap-2.5 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             aria-label="Inicio"
             title="Inicio"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 w-12 items-center justify-center rounded-full border border-border/30 bg-muted/40 transition-colors " + (currentView === "feed" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 transition-colors " + (currentView === "feed" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
           >
             <Home className="h-5 w-5" />
           </button>
@@ -3345,7 +3345,7 @@ export default function Dashboard() {
             aria-label="Perfil"
             title="Perfil"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 w-12 items-center justify-center rounded-full border border-border/30 bg-muted/40 transition-colors " + (currentView === "profile" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 transition-colors " + (currentView === "profile" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
           >
             <User className="h-5 w-5" />
           </button>
