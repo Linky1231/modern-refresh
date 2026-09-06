@@ -1464,10 +1464,10 @@ function PostCard({
                       setIsFollowingUser(true);
                     }
                   }}
-                  className={`ml-auto text-[11px] font-medium px-2.5 py-0.5 rounded-md border transition-colors ${
+                  className={`ml-auto text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
                     isFollowingUser
-                      ? "border-border/35 text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
-                      : "border-primary/30 text-primary hover:bg-primary/5"
+                      ? "border border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
                   }`}
                 >
                   {isFollowingUser ? "Siguiendo" : "Seguir"}
