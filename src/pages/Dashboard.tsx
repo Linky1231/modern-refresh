@@ -952,7 +952,7 @@ function FormatToolbar({
   return (
     <div className="w-full">
       {/* Clean toolbar at the foot of the editor box */}
-      <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-1.5 py-1 dark:border-slate-700 dark:bg-slate-800/60">
+      <div className="mt-3 flex items-center rounded-xl border border-slate-200 bg-slate-50 px-1.5 py-1 dark:border-slate-700 dark:bg-slate-800/60">
         {/* Attach / files — left */}
         <div className="flex items-center gap-0.5">
           <button
@@ -986,8 +986,11 @@ function FormatToolbar({
           </button>
         </div>
 
+        {/* Divider between attach and text controls */}
+        <span className="mx-1.5 h-6 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
+
         {/* Format — right (B, I, U, color) */}
-        <div className="flex items-center gap-0.5">
+        <div className="ml-auto flex items-center gap-0.5">
           <button
             type="button"
             title="Color del texto"
@@ -2899,7 +2902,7 @@ export default function Dashboard() {
       </AnimatePresence>
 
       {/* ── Main ─────────────────────────────────────────────── */}
-      <main className="mx-auto max-w-2xl px-4 pt-6 pb-20 sm:pt-10 sm:pb-24">
+      <main className="mx-auto max-w-2xl px-4 pt-6 pb-24 sm:pt-10 sm:pb-28">
         <AnimatePresence mode="wait" initial={false}>
           {currentView === "userProfile" ? (
             <motion.div
@@ -3085,8 +3088,8 @@ export default function Dashboard() {
               {/* Separator */}
               <div className="mt-4 border-t border-slate-200/80 dark:border-slate-700" />
 
-              {/* Publish row */}
-              <div className="mt-3 flex items-center justify-between gap-2">
+              {/* Publish row — bottom-right inside the editor card */}
+              <div className="mt-4 flex items-center justify-between gap-2">
                 {(pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft) && (
                   <span className="text-xs font-medium text-slate-500 tabular-nums dark:text-slate-400">
                     {pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)}{" "}
@@ -3095,7 +3098,7 @@ export default function Dashboard() {
                 )}
                 <Button
                   size="sm"
-                  className="gap-1.5 px-5 min-w-[120px]"
+                  className="ml-auto gap-1.5 px-6 min-w-[120px] shadow-sm"
                   disabled={!isPostable || posting}
                   onClick={handlePost}
                 >
@@ -3294,9 +3297,9 @@ export default function Dashboard() {
             aria-label="Abrir el editor de juegos"
             title="Abrir el editor de juegos"
             onClick={() => navigate("/editor")}
-            className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-white transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95 dark:ring-slate-950"
+            className="-mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-white transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95 dark:ring-slate-950"
           >
-            <Plus className="h-7 w-7" strokeWidth={2.25} />
+            <Plus className="h-6 w-6" strokeWidth={2.25} />
           </button>
 
           <button
