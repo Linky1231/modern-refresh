@@ -61,7 +61,7 @@ export function PostPoll({ poll, userId }: PostPollProps) {
     totalVotes === 0 ? 0 : Math.round(((votes[optionId] || 0) / totalVotes) * 100);
 
   return (
-    <div className="rounded-2xl border border-border/30 bg-card px-4 py-3.5 sm:px-5">
+    <div className="flex w-full flex-col rounded-xl border border-border/30 bg-card px-4 py-3.5 shadow-sm">
       {/* ── Header ────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5">
         <BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -78,10 +78,10 @@ export function PostPoll({ poll, userId }: PostPollProps) {
           return hasVoted ? (
             <div
               key={option.id}
-              className="relative overflow-hidden rounded-xl border border-border/24 bg-background px-3 py-2.5"
+              className="relative overflow-hidden rounded-lg border border-border/30 bg-background px-3 py-2.5"
             >
               <div
-                className="absolute inset-y-0 left-0 rounded-l-xl bg-muted transition-all duration-500 ease-out"
+                className="absolute inset-y-0 left-0 rounded-l-lg bg-foreground/40 transition-all duration-500 ease-out"
                 style={{ width: `${Math.max(p, 2)}%` }}
               />
               <div className="relative flex items-center justify-between gap-2">
@@ -104,10 +104,10 @@ export function PostPoll({ poll, userId }: PostPollProps) {
               type="button"
               disabled={voting}
               onClick={() => handleVote(option.id)}
-              className="poll-vote-btn flex items-center justify-between gap-2 rounded-xl border border-border/30 bg-background px-3 py-2.5 text-left text-[13px] font-medium text-card-foreground disabled:opacity-60"
+              className="poll-vote-btn flex w-full items-center justify-between gap-2 rounded-lg border border-border/40 bg-background px-3 py-2.5 text-left text-[13px] font-medium text-card-foreground disabled:opacity-60 shadow-sm"
             >
               <span className="truncate">{option.text}</span>
-              <span className="shrink-0 rounded-lg border border-border/30 px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              <span className="shrink-0 rounded-md border border-border/40 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                 Votar
               </span>
             </button>
@@ -116,12 +116,9 @@ export function PostPoll({ poll, userId }: PostPollProps) {
       </div>
 
       {/* ── Footer ─────────────────────────────────────────── */}
-      <div className="mt-2.5 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between border-t border-border/24 pt-2.5">
         <p className="text-[11px] text-muted-foreground/50 tabular-nums">
-          {totalVotes} {totalVotes === 1 ? "voto" : "votos"}
-        </p>
-        <p className="text-[11px] text-muted-foreground/50">
-          respuestas anónimas
+          {totalVotes} {totalVotes === 1 ? "voto" : "votos"} · respuestas anónimas
         </p>
       </div>
     </div>

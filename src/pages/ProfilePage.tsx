@@ -214,56 +214,56 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   });
 
   return (
-    <div className="pb-8">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <span className="text-sm font-semibold">
-            {editing ? "Editar perfil" : "Mi perfil"}
-          </span>
-        </div>
+    <div className="pb-8">       {/* Header — único nivel, sin duplicar la barra superior */}
+       <div className="mb-4 flex items-center justify-between">
+         <div className="flex items-center gap-2">
+           <button
+             type="button"
+             onClick={onBack}
+             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+           >
+             <ArrowLeft className="h-4 w-4" />
+           </button>
+           <span className="text-sm font-semibold">
+             {editing ? "Editar perfil" : "Mi perfil"}
+           </span>
+         </div>
 
-        {editing ? (
-          <button
-            type="button"
-            onClick={handleCancelEdit}
-            className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Cancelar
-          </button>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={handleEnterEdit} className="gap-2 text-sm">
-                <Pencil className="h-3.5 w-3.5" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => toast("Esta función estará disponible próximamente")}
-                className="gap-2 text-sm"
-              >
-                <Share2 className="h-3.5 w-3.5" />
-                Compartir perfil
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
+         {editing ? (
+           <button
+             type="button"
+             onClick={handleCancelEdit}
+             className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+           >
+             Cancelar
+           </button>
+         ) : (
+           <DropdownMenu>
+             <DropdownMenuTrigger asChild>
+               <button
+                 type="button"
+                 className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+               >
+                 <MoreHorizontal className="h-4 w-4" />
+               </button>
+             </DropdownMenuTrigger>
+             <DropdownMenuContent align="end" className="w-44">
+               <DropdownMenuItem onClick={handleEnterEdit} className="gap-2 text-sm">
+                 <Pencil className="h-3.5 w-3.5" />
+                 Editar
+               </DropdownMenuItem>
+               <DropdownMenuItem
+                 onClick={() => toast("Esta función estará disponible próximamente")}
+                 className="gap-2 text-sm"
+               >
+                 <Share2 className="h-3.5 w-3.5" />
+                 Compartir perfil
+               </DropdownMenuItem>
+             </DropdownMenuContent>
+           </DropdownMenu>
+         )}
+       </div>
+
 
       {/* ── Card 1: Avatar + Name + Title + Follow Stats ──────── */}
       <motion.div {...stagger(0)} className="rounded-2xl border border-border/35 bg-card px-5 py-7 sm:px-7 sm:py-9">
@@ -291,67 +291,76 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               </button>
             )}
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-          </div>
+          </div>          {/* Name — etiqueta igual que los demás campos */}
+           <div className="w-full max-w-sm">
+             {editing ? (
+               <div className="flex h-10 items-center gap-2.5">
+                 <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre</span>
+                 <input
+                   type="text"
+                   value={editName}
+                   onChange={(e) => setEditName(e.target.value)}
+                   maxLength={40}
+                   placeholder="Tu nombre"
+                   className="flex-1 h-10 rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground text-center outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                 />
+                 <button
+                   type="button"
+                   onClick={handleSaveName}
+                   disabled={!editName.trim() || editName.trim() === (user?.name ?? "") || savingName}
+                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+                 >
+                   {savingName ? (
+                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                   ) : (
+                     <Check className="h-4 w-4" />
+                   )}
+                 </button>
+               </div>
+             ) : (
+               <div className="flex h-10 items-center justify-center">
+                 <p className="truncate text-xl font-extrabold tracking-tight text-card-foreground">{displayName}</p>
+               </div>
+             )}
+           </div>
 
-          {/* Name */}
-          {editing ? (
-            <div className="flex h-10 w-full max-w-sm items-center gap-2.5">
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                maxLength={40}
-                placeholder="Tu nombre"
-                className="h-10 flex-1 rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              />
-              <button
-                type="button"
-                onClick={handleSaveName}
-                disabled={!editName.trim() || editName.trim() === (user?.name ?? "") || savingName}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-              >
-                {savingName ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          ) : (
-            <div className="flex h-10 w-full max-w-sm items-center justify-center">
-              <p className="truncate text-xl font-extrabold tracking-tight text-card-foreground">{displayName}</p>
-            </div>
-          )}
+           {/* Title — misma estructura que Name */}
+           <div className="w-full max-w-sm">
+             {editing ? (
+               <div className="flex h-10 items-center gap-2.5">
+                 <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Título</span>
+                 <input
+                   type="text"
+                   value={editTitle}
+                   onChange={(e) => setEditTitle(e.target.value)}
+                   maxLength={60}
+                   placeholder="Título (opcional)"
+                   className="flex-1 h-10 rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground text-center outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                 />
+                 <button
+                   type="button"
+                   onClick={handleSaveTitle}
+                   disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
+                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+                 >
+                   {savingTitle ? (
+                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                   ) : (
+                     <Check className="h-4 w-4" />
+                   )}
+                 </button>
+               </div>
+             ) : currentTitle ? (
+               <div className="flex h-10 items-center justify-center">
+                 <p className="truncate text-sm font-medium italic text-primary/80">{currentTitle}</p>
+               </div>
+             ) : (
+               <div className="flex h-10 items-center justify-center">
+                 <span className="text-sm text-muted-foreground/50 italic">Sin título</span>
+               </div>
+             )}
+           </div>
 
-          {/* Title */}
-          {editing ? (
-            <div className="flex h-10 w-full max-w-sm items-center gap-2.5">
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                maxLength={60}
-                placeholder="Título (opcional)"
-                className="h-10 flex-1 rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground text-center outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              />
-              <button
-                type="button"
-                onClick={handleSaveTitle}
-                disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-              >
-                {savingTitle ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          ) : currentTitle ? (
-            <div className="flex w-full max-w-sm items-center justify-center">
-              <p className="truncate text-sm font-medium italic text-primary/80">{currentTitle}</p>
-            </div>
-          ) : null}
 
           {/* Separator */}
           <div className="h-px w-14 bg-border/50" />
@@ -409,55 +418,12 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             )}
           </div>
         </div>
-      </motion.div>
+      </motion.div>       {/* ── Section: Mis publicaciones ──────────────────────── */}
+       {userPosts && userPosts.length > 0 && (
+         <motion.div {...stagger(2)} className="mt-6">
+           <div className="mb-4">
+             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mis publicaciones</p>
 
-      {/* ── Card 2: Bio / Descripción ───────────────────────── */}
-      <motion.div {...stagger(1)} className="mt-3">
-        <div className="rounded-2xl border border-border/35 bg-card px-5 py-4 sm:px-7 sm:py-5">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
-            {editing && <Pencil className="h-3 w-3 text-muted-foreground" />}
-          </div>
-          {editing ? (
-            <div>
-              <textarea
-                value={editBio}
-                onChange={(e) => setEditBio(e.target.value)}
-                maxLength={200}
-                rows={4}
-                placeholder="Escribe algo sobre ti…"
-                className="w-full min-h-[100px] resize-none rounded-xl border border-border/35 bg-background px-4 py-3 text-sm text-card-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              />
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-[11px] text-muted-foreground tabular-nums">{editBio.length}/200</span>
-                <Button
-                  size="sm"
-                  className="gap-1.5 px-4"
-                  disabled={editBio === ((currentUser as any)?.bio ?? "") || savingBio}
-                  onClick={handleSaveBio}
-                >
-                  {savingBio ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : savedBio ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : null}
-                  {savedBio ? "Guardado" : "Guardar"}
-                </Button>
-              </div>
-            </div>
-          ) : currentBio ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">{currentBio}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground/50 italic">Sin descripción</p>
-          )}
-        </div>
-      </motion.div>
-
-      {/* ── Section: Mis publicaciones ──────────────────────── */}
-      {userPosts && userPosts.length > 0 && (
-        <motion.div {...stagger(3)} className="mt-6">
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mis publicaciones</p>
           </div>
           <div className="flex flex-col gap-4">
             {userPosts.map((post) => (
