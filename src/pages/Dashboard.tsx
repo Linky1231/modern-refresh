@@ -3157,15 +3157,15 @@ export default function Dashboard() {
                 className="rounded-2xl bg-white px-6 py-12 shadow-md dark:bg-slate-900"
               >
                 <div className="flex flex-col items-center text-center">
-                  <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-100 dark:bg-slate-800">
-                    <Newspaper className="h-9 w-9 text-primary" strokeWidth={1.6} />
+                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+                    <Newspaper className="h-6 w-6 text-primary" strokeWidth={1.8} />
                   </div>
                   {activeTab === "forYou" && (
                     <>
-                      <p className="text-lg font-medium text-slate-900 dark:text-white">
+                      <p className="text-base font-medium text-slate-900 dark:text-white">
                         No hay publicaciones para ti
                       </p>
-                      <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
                         Cuando haya publicaciones nuevas, aparecerán aquí.
                       </p>
                     </>
