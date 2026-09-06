@@ -61,7 +61,7 @@ import {
   Newspaper,
   Bell,
   Bold,
-  Type,
+  Italic,
   Underline,
   UserPlus,
 } from "lucide-react";
@@ -437,6 +437,7 @@ function selectionHasStyle(prop: string, value: string): boolean {
   // Bold / underline: use native detection
   if (prop === "fontWeight") return document.queryCommandState("bold");
   if (prop === "textDecoration") return document.queryCommandState("underline");
+  if (prop === "fontStyle") return document.queryCommandState("italic");
   // For color / fontSize: check computed style at the anchor node
   const node = sel.getRangeAt(0).startContainer;
   const el = node instanceof HTMLElement ? node : node.parentElement;
@@ -892,7 +893,7 @@ function MediaGrid({
 }
 
 // ── Format Toolbar ─────────────────────────────────────────────────
-// ── Format Toolbar (single clean icon bar) ────────────────────────
+// ── Format Toolbar (docked to the foot of the editor box) ──────────
 interface FormatToolbarProps {
   onAddMedia?: () => void;
   onAddDoc?: () => void;
@@ -900,7 +901,6 @@ interface FormatToolbarProps {
   pollActive?: boolean;
   mediaDisabled?: boolean;
   docDisabled?: boolean;
-  attachCount?: number;
 }
 
 function FormatToolbar({
@@ -910,10 +910,8 @@ function FormatToolbar({
   pollActive = false,
   mediaDisabled,
   docDisabled,
-  attachCount = 0,
 }: FormatToolbarProps) {
   const [showColors, setShowColors] = useState(false);
-  const [showSizes, setShowSizes] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRange = useRef<Range | null>(null);
@@ -947,15 +945,16 @@ function FormatToolbar({
   };
 
   const toolBtnBase =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-white hover:text-primary disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-slate-700";
+    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-primary disabled:pointer-events-none disabled:opacity-35 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-primary";
   const toolBtnActive =
-    "bg-primary text-primary-foreground shadow-sm";
+    "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-600";
 
   return (
-    <div className="w-full pt-3">
-      {/* One clean toolbar: attach · poll · color · format */}
-      <div className="flex w-full items-center gap-1 rounded-2xl bg-muted/60 p-1.5">
-        <div className="flex min-w-0 flex-1 items-center justify-around gap-0.5">
+    <div className="w-full">
+      {/* Clean toolbar at the foot of the editor box */}
+      <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-1.5 py-1 dark:border-slate-700 dark:bg-slate-800/60">
+        {/* Attach / files — left */}
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             title="Añadir imagen o vídeo"
@@ -964,7 +963,7 @@ function FormatToolbar({
             disabled={mediaDisabled}
             className={toolBtnBase}
           >
-            <ImagePlus className="h-[18px] w-[18px]" />
+            <ImagePlus className="h-[18px] w-[18px]" strokeWidth={1.8} />
           </button>
           <button
             type="button"
@@ -974,7 +973,7 @@ function FormatToolbar({
             disabled={docDisabled}
             className={toolBtnBase}
           >
-            <Paperclip className="h-[18px] w-[18px]" />
+            <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.8} />
           </button>
           <button
             type="button"
@@ -983,11 +982,12 @@ function FormatToolbar({
             onClick={onTogglePoll}
             className={`${toolBtnBase} ${pollActive ? toolBtnActive : ""}`}
           >
-            <BarChart3 className="h-[18px] w-[18px]" />
+            <BarChart3 className="h-[18px] w-[18px]" strokeWidth={1.8} />
           </button>
+        </div>
 
-          <span className="mx-0.5 h-5 w-px shrink-0 bg-border" />
-
+        {/* Format — right (B, I, U, color) */}
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             title="Color del texto"
@@ -1000,20 +1000,7 @@ function FormatToolbar({
               setShowColors(true);
             }}
           >
-            <Palette className="h-[18px] w-[18px]" />
-          </button>
-          <button
-            type="button"
-            title="Tamaño del texto"
-            aria-label="Tamaño del texto"
-            className={`${toolBtnBase} ${showSizes ? toolBtnActive : ""}`}
-            onClick={() => {
-              if (showSizes) { setShowSizes(false); return; }
-              if (hasSelection()) saveSelection();
-              setShowSizes(true);
-            }}
-          >
-            <Type className="h-[18px] w-[18px]" />
+            <Palette className="h-[18px] w-[18px]" strokeWidth={1.8} />
           </button>
           <button
             type="button"
@@ -1025,7 +1012,19 @@ function FormatToolbar({
               document.execCommand("bold");
             }}
           >
-            <Bold className="h-[18px] w-[18px]" />
+            <Bold className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          </button>
+          <button
+            type="button"
+            title="Cursiva"
+            aria-label="Cursiva"
+            className={`${toolBtnBase} ${selectionHasStyle("fontStyle", "italic") ? toolBtnActive : ""}`}
+            onClick={() => {
+              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              document.execCommand("italic");
+            }}
+          >
+            <Italic className="h-[18px] w-[18px]" strokeWidth={1.8} />
           </button>
           <button
             type="button"
@@ -1037,14 +1036,9 @@ function FormatToolbar({
               document.execCommand("underline");
             }}
           >
-            <Underline className="h-[18px] w-[18px]" />
+            <Underline className="h-[18px] w-[18px]" strokeWidth={1.8} />
           </button>
         </div>
-        {attachCount > 0 && (
-          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary tabular-nums">
-            {attachCount}
-          </span>
-        )}
       </div>
 
       {/* Hint below toolbar */}
@@ -1055,14 +1049,14 @@ function FormatToolbar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -2 }}
             transition={{ duration: 0.15 }}
-            className="mt-2 max-w-full text-[11px] text-muted-foreground/60 italic break-words"
+            className="mt-2 max-w-full text-[11px] italic break-words text-slate-500"
           >
             {hint}
           </motion.p>
         )}
       </AnimatePresence>
 
-      {/* Inline panels */}
+      {/* Color panel */}
       <AnimatePresence>
         {showColors && (
           <motion.div
@@ -1072,15 +1066,15 @@ function FormatToolbar({
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/24 bg-muted/50 p-2.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Color</span>
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-800/60">
+              <span className="text-[10px] font-medium tracking-wider text-slate-500 uppercase">Color</span>
               <div className="flex flex-wrap gap-1.5">
                 {TEXT_COLORS.map((c) => (
                   <button
                     key={c.value || "default"}
                     type="button"
                     title={c.label}
-                    className="h-6 w-6 rounded-full border border-border/35 transition-transform hover:scale-110"
+                    className="h-6 w-6 rounded-full border border-slate-300 transition-transform hover:scale-110"
                     style={{ backgroundColor: c.value || "var(--card-foreground)" }}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -1102,58 +1096,11 @@ function FormatToolbar({
                 className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
                 onChange={(e) => { restoreSelection(); applyStyleToSelection("color", e.target.value); setShowColors(false); }}
               />
-              <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowColors(false)}><X className="h-3 w-3" /></button>
+              <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-slate-500 hover:text-slate-800" onClick={() => setShowColors(false)}><X className="h-3 w-3" /></button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Text size panel */}
-      <AnimatePresence>
-        {showSizes && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/24 bg-muted/50 p-2.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tamaño</span>
-              <div className="flex flex-wrap gap-1.5">
-                {([
-                  { tag: "h1", label: "H1", cls: "text-base font-normal" },
-                  { tag: "h2", label: "H2", cls: "text-[15px] font-normal" },
-                  { tag: "h3", label: "H3", cls: "text-sm font-normal" },
-                  { tag: "p", label: "Normal", cls: "text-xs font-medium" },
-                ] as const).map((s) => (
-                  <button
-                    key={s.tag}
-                    type="button"
-                    className="rounded-lg border border-border/35 bg-card px-2.5 py-1.5 text-card-foreground transition-colors hover:border-primary/40 hover:bg-accent"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      restoreSelection();
-                      // Sin selección previa: enfocar el editor y aplicar al bloque actual
-                      const sel = window.getSelection();
-                      const editor = document.querySelector<HTMLElement>("[contenteditable]");
-                      if ((!sel || sel.rangeCount === 0) && editor) {
-                        editor.focus();
-                      }
-                      document.execCommand("formatBlock", false, s.tag === "p" ? "p" : s.tag);
-                      setShowSizes(false);
-                    }}
-                  >
-                    <span className={s.cls}>{s.label}</span>
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="ml-auto flex h-5 w-5 items-center justify-center rounded text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowSizes(false)}><X className="h-3 w-3" /></button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
     </div>
   );
 }
@@ -1455,7 +1402,7 @@ function PostCard({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="overflow-hidden rounded-2xl border border-border/35 bg-card shadow-sm transition-all duration-300 ease-out hover:border-border/80 hover:shadow-md"
+      className="overflow-hidden rounded-2xl bg-white shadow-md transition-shadow duration-300 ease-out hover:shadow-lg dark:bg-slate-900"
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
@@ -2898,10 +2845,10 @@ export default function Dashboard() {
   const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft !== null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950">
       {/* ── Nav ──────────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 border-b border-border/30 bg-background/95 backdrop-blur-xl">
+        className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Asternal" className="h-8 w-8 rounded-lg object-contain" />
@@ -2977,7 +2924,7 @@ export default function Dashboard() {
           ) : (<>
         {/* Composer */}
         <div
-          className="rounded-2xl border border-border/35 bg-card p-4 shadow-sm sm:p-5"
+          className="rounded-2xl bg-white p-6 shadow-md dark:bg-slate-900"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
@@ -3115,9 +3062,6 @@ export default function Dashboard() {
                 pollActive={showPollComposer || !!pollDraft}
                 mediaDisabled={pendingMedia.length >= MAX_FILES}
                 docDisabled={pendingDocs.length >= MAX_DOCS}
-                attachCount={
-                  pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)
-                }
               />
 
               {/* Hidden file inputs */}
@@ -3139,10 +3083,16 @@ export default function Dashboard() {
               />
 
               {/* Separator */}
-              <div className="mt-3 border-t border-border/24" />
+              <div className="mt-4 border-t border-slate-200/80 dark:border-slate-700" />
 
               {/* Publish row */}
-              <div className="mt-3 flex items-center justify-end gap-2">
+              <div className="mt-3 flex items-center justify-between gap-2">
+                {(pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft) && (
+                  <span className="text-xs font-medium text-slate-500 tabular-nums dark:text-slate-400">
+                    {pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)}{" "}
+                    adjunto{pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0) !== 1 ? "s" : ""} para publicar
+                  </span>
+                )}
                 <Button
                   size="sm"
                   className="gap-1.5 px-5 min-w-[120px]"
@@ -3167,24 +3117,24 @@ export default function Dashboard() {
         </div>
 
         {/* ── Feed Tabs ──────────────────────────────────────────── */}
-        <div className="mt-4 rounded-2xl border border-border/35 bg-card shadow-sm">
-          <div className="relative flex px-1.5">
+        <div className="mt-6">
+          <div className="flex items-stretch border-b border-slate-200/80 dark:border-slate-800">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className={`relative flex-1 py-3 text-center text-sm transition-colors ${
+                className={`relative flex-1 py-3.5 text-center text-sm transition-colors ${
                   activeTab === tab.id
-                    ? "font-semibold text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "font-semibold text-slate-900 dark:text-white"
+                    : "font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-primary"
+                    className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -3201,18 +3151,18 @@ export default function Dashboard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="rounded-2xl border border-border/35 bg-card px-6 py-10 shadow-sm"
+                className="rounded-2xl bg-white px-6 py-12 shadow-md dark:bg-slate-900"
               >
                 <div className="flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm">
-                    <Newspaper className="h-5 w-5" />
+                  <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-100 dark:bg-slate-800">
+                    <Newspaper className="h-9 w-9 text-primary" strokeWidth={1.6} />
                   </div>
                   {activeTab === "forYou" && (
                     <>
-                      <p className="text-[15px] font-semibold text-foreground">
+                      <p className="text-lg font-medium text-slate-900 dark:text-white">
                         No hay publicaciones para ti
                       </p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
                         Cuando haya publicaciones nuevas, aparecerán aquí.
                       </p>
                     </>
@@ -3327,14 +3277,14 @@ export default function Dashboard() {
       />
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-                        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
+                        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 shadow-[0_-6px_20px_-10px_rgba(15,23,42,0.12)] backdrop-blur-md dark:bg-slate-950/90">
         <div className="mx-auto flex max-w-2xl items-center gap-2.5 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             aria-label="Inicio"
             title="Inicio"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 text-muted-foreground transition-colors " + (currentView === "feed" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 hover:text-foreground")}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "feed" ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900" : "hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200")}
           >
             <Home className="h-5 w-5" />
           </button>
@@ -3344,7 +3294,7 @@ export default function Dashboard() {
             aria-label="Abrir el editor de juegos"
             title="Abrir el editor de juegos"
             onClick={() => navigate("/editor")}
-            className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95"
+            className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-white transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95 dark:ring-slate-950"
           >
             <Plus className="h-7 w-7" strokeWidth={2.25} />
           </button>
@@ -3354,7 +3304,7 @@ export default function Dashboard() {
             aria-label="Perfil"
             title="Perfil"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl border border-border/30 bg-muted/40 text-muted-foreground transition-colors " + (currentView === "profile" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 hover:text-foreground")}
+            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "profile" ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900" : "hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200")}
           >
             <User className="h-5 w-5" />
           </button>
