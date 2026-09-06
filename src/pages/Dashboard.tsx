@@ -91,10 +91,9 @@ const MAX_FILES = 10;
 const MAX_IMAGE_MB = 10;
 const MAX_VIDEO_MB = 50;
 
-// ▶ [MODO LOCAL / DISPOSITIVO] La subida de archivos del compositor
-// aún apunta al endpoint de la plataforma y NO funciona en modo local.
-// Las imágenes se podrán adjuntar de nuevo al migrar a Lovable Cloud.
-// (El avatar de perfil sí se guarda en el dispositivo vía @/lib/db).
+// ▶ [MODO LOCAL / DISPOSITIVO] Los adjuntos del compositor se guardan
+// en el dispositivo como data URLs (imágenes y documentos), igual que el
+// avatar de perfil. ▶ [LOVABLE CLOUD] Sustituir uploadFile() por storage real.
 
 const TEXT_COLORS = [
   { label: "Predeterminado", value: "" },
@@ -2499,9 +2498,14 @@ export default function Dashboard() {
         .slice(0, remaining)
         .filter((file) => {
           const isVideo = file.type.startsWith("video/");
-          const maxMb = isVideo ? MAX_VIDEO_MB : MAX_IMAGE_MB;
-          if (file.size > maxMb * 1024 * 1024) {
-            console.warn(`El archivo ${file.name} supera ${maxMb}MB`);
+          if (isVideo) {
+            toast.error(
+              "Los vídeos no se guardan en modo local todavía. Se podrán adjuntar al migrar la app a la nube.",
+            );
+            return false;
+          }
+          if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+            toast.error(`El archivo ${file.name} supera ${MAX_IMAGE_MB}MB en modo local`);
             return false;
           }
           return true;
@@ -2650,81 +2654,66 @@ export default function Dashboard() {
     setUploading(true);
     try {
       const totalFiles = pendingMedia.length + pendingDocs.length;
-      setUploadProgress({ current: 0, total: totalFiles });
       const uploaded: UploadedMedia[] = [];
-      const maxRetries = 2;
+      const uploadedDocs: UploadedDoc[] = [];
       let filesUploaded = 0;
+      const bumpProgress = () => {
+        filesUploaded++;
+        setUploadProgress({ current: filesUploaded, total: totalFiles });
+      };
+
+      // Guardar adjuntos en el dispositivo (data URLs): instantáneo y sin red.
+      // ▶ [LOVABLE CLOUD] Reemplazar uploadFile() por el storage de la nube.
       for (const pm of pendingMedia) {
-        let lastError = "";
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-          try {
-            const path = generateFilePath(user?._id || "", "upload", "media");
-            const result = await fetch(path, {
-              method: "POST",
-              headers: {
-                "Content-Type": pm.file.type || "application/octet-stream",
-              },
-              body: pm.file,
-            });
-            if (!result.ok) {
-              lastError = `HTTP ${result.status}`;
-              console.error(
-                `Error al subir ${pm.file.name} (intento ${attempt + 1}): ${lastError}`,
-              );
-              if (attempt < maxRetries) continue;
-              break;
-            }
-            const json = await result.json();
-            if (json.storageId) {
-              uploaded.push({
-                storageId: json.storageId,
-                type: pm.type,
-                mime: pm.file.type || undefined,
-              });
-              filesUploaded++;
-              setUploadProgress({ current: filesUploaded, total: totalFiles });
-              break;
-            } else {
-              lastError = "Respuesta sin storageId";
-              if (attempt < maxRetries) continue;
-            }
-          } catch (fetchErr) {
-            lastError =
-              fetchErr instanceof Error ? fetchErr.message : "Error de red";
-            console.error(
-              `Error de red al subir ${pm.file.name} (intento ${attempt + 1}):`,
-              lastError,
-            );
-            if (attempt < maxRetries) continue;
-          }
+        try {
+          const path = generateFilePath(user?._id || "", pm.file.name, "media");
+          const storageId = await uploadFile("media", pm.file, path);
+          uploaded.push({
+            storageId,
+            type: pm.type,
+            mime: pm.file.type || undefined,
+          });
+          bumpProgress();
+        } catch (err) {
+          console.error(`Error al adjuntar ${pm.file.name}:`, err);
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : `No se pudo adjuntar ${pm.file.name}`,
+          );
+        }
+      }
+      for (const doc of pendingDocs) {
+        try {
+          const path = generateFilePath(user?._id || "", doc.name, "documents");
+          const storageId = await uploadFile("documents", doc.file, path);
+          uploadedDocs.push({
+            storageId,
+            name: doc.name,
+            size: doc.size,
+            mime: doc.file.type || undefined,
+          });
+          bumpProgress();
+        } catch (err) {
+          console.error(`Error al adjuntar ${doc.name}:`, err);
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : `No se pudo adjuntar ${doc.name}`,
+          );
         }
       }
 
-      // Upload documents
-      const uploadedDocs: UploadedDoc[] = [];
-      for (const doc of pendingDocs) {
-        let docError = "";
-        for (let attempt = 0; attempt <= 2; attempt++) {
-          try {
-            const path = generateFilePath(user?._id || "", "upload", "media");
-            const result = await fetch(path, {
-              method: "POST",
-              headers: { "Content-Type": doc.file.type || "application/octet-stream" },
-              body: doc.file,
-            });
-            if (!result.ok) { docError = `HTTP ${result.status}`; if (attempt < 2) continue; break; }
-            const json = await result.json();
-            if (json.storageId) {
-              uploadedDocs.push({ storageId: json.storageId, name: doc.name, size: doc.size, mime: doc.file.type || undefined });
-              filesUploaded++;
-              setUploadProgress({ current: filesUploaded, total: totalFiles });
-              break;
-            }
-          } catch (e) {
-            docError = e instanceof Error ? e.message : "Error de red";
-            if (attempt < 2) continue;
-          }
-        }
+      // Si al final no queda contenido publicable, avisamos y salimos.
+      if (
+        !textOnly &&
+        !postTitle.trim() &&
+        uploaded.length === 0 &&
+        uploadedDocs.length === 0 &&
+        !pollDraft
+      ) {
+        toast.error("Añade texto o un adjunto para publicar");
+        return;
       }
 
       // Send HTML content (or empty string if no text)
