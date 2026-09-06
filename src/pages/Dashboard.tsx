@@ -3318,35 +3318,35 @@ export default function Dashboard() {
       />
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-                  <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
+                        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "feed" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+            className={"rounded-full border border-border/30 bg-muted/40 px-5 py-2 text-center transition-colors " + (currentView === "feed" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
           >
-            <Home className="h-5 w-5" />
-            <span className={"text-[10px] " + (currentView === "feed" ? "font-semibold" : "font-medium")}>Inicio</span>
+            <Home className="mr-1.5 h-4 w-4" />
+            <span className={"text-sm " + (currentView === "feed" ? "font-semibold" : "font-medium")}>Inicio</span>
           </button>
 
           <button
             type="button"
             onClick={() => navigate("/editor")}
-            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "editor" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+            className={"relative rounded-full border border-border/30 bg-muted/40 px-5 py-2 text-center transition-colors " + (currentView === "editor" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105 active:scale-95">
+            <span className="absolute inset-0 flex items-center justify-center">
               <Plus className="h-5 w-5" />
             </span>
-            <span className={"text-[10px] " + (currentView === "editor" ? "font-semibold" : "font-medium")}>Editor</span>
+            <span className={"text-sm " + (currentView === "editor" ? "font-semibold" : "font-medium")}>Editor</span>
           </button>
 
           <button
             type="button"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "profile" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+            className={"rounded-full border border-border/30 bg-muted/40 px-5 py-2 text-center transition-colors " + (currentView === "profile" ? "border-primary/40 bg-accent/40 text-primary shadow-sm" : "hover:bg-muted/60 hover:border-border/45 text-muted-foreground")}
           >
-            <User className="h-5 w-5" />
-            <span className={"text-[10px] " + (currentView === "profile" ? "font-semibold" : "font-medium")}>Perfil</span>
+            <User className="mr-1.5 h-4 w-4" />
+            <span className={"text-sm " + (currentView === "profile" ? "font-semibold" : "font-medium")}>Perfil</span>
           </button>
         </div>
       </nav>

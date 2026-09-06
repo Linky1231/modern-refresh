@@ -79,15 +79,6 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           <span className="text-sm font-semibold text-card-foreground">
             Encuesta
           </span>
-          {/* Toggle switch — clearly interactive */}
-          <label className="flex cursor-pointer items-center gap-1.5 select-none">
-            <span className="relative inline-flex h-5 w-8 shrink-0 items-center rounded-full bg-muted transition-colors">
-              <span className="pointer-events-none inline-block h-3.5 w-3.5 translate-x-[3px] rounded-full bg-card shadow-sm ring-0 transition-transform" />
-            </span>
-            <span className="text-[11px] font-medium text-muted-foreground">
-              Anónima
-            </span>
-          </label>
         </div>
         <button
           type="button"
