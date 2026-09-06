@@ -1108,6 +1108,31 @@ function FormatToolbar({
   );
 }
 
+// ── Reusable remove button (attachment close icon) ─────────────
+function RemoveButton({
+  onClick,
+  label,
+  className = "",
+}: {
+  onClick: () => void;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={
+        "absolute top-2 right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200 hover:text-slate-700 " +
+        className
+      }
+    >
+      <X className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
 // ── Video thumbnail component for previews ──────────────────────
 function VideoThumb({ src, alt }: { src: string; alt?: string }) {
   const thumb = useVideoThumbnail(src);
@@ -2981,13 +3006,7 @@ export default function Dashboard() {
                           className="h-28 w-full object-contain"
                         />
                       )}
-                      <button
-                        type="button"
-                        onClick={() => removePending(pm.id)}
-                        className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+                      <RemoveButton onClick={() => removePending(pm.id)} label={`Eliminar ${pm.file.name}`} />
                       <div className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
                         {pm.type === "video" ? (
                           <Film className="inline h-3 w-3" />
@@ -3011,7 +3030,7 @@ export default function Dashboard() {
                   {pendingDocs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white shadow-sm py-2 px-3"
+                      className="group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white shadow-sm py-2 pl-3 pr-10"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <FileText className="h-4 w-4" />
@@ -3025,13 +3044,7 @@ export default function Dashboard() {
                       <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
                         {doc.extension}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => removePendingDoc(doc.id)}
-                        className="ml-1.5 shrink-0 text-slate-400 transition-colors hover:text-slate-600"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+                      <RemoveButton onClick={() => removePendingDoc(doc.id)} label={`Eliminar ${doc.name}`} />
                     </div>
                   ))}
                 </div>
@@ -3141,6 +3154,7 @@ export default function Dashboard() {
                   {activeTab === tab.id && (
                     <motion.div
                       layoutId="activeTab"
+                      layout="position"
                       className="absolute inset-x-0 -bottom-1 h-[2px] rounded-full bg-primary"
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
