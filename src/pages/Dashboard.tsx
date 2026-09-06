@@ -3318,7 +3318,7 @@ export default function Dashboard() {
       />
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-            <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
+                  <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/34 bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
@@ -3328,14 +3328,7 @@ export default function Dashboard() {
             <Home className="h-5 w-5" />
             <span className={"text-[10px] " + (currentView === "feed" ? "font-semibold" : "font-medium")}>Inicio</span>
           </button>
-          <button
-            type="button"
-            onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "profile" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
-          >
-            <User className="h-5 w-5" />
-            <span className={"text-[10px] " + (currentView === "profile" ? "font-semibold" : "font-medium")}>Perfil</span>
-          </button>
+
           <button
             type="button"
             onClick={() => navigate("/editor")}
@@ -3345,6 +3338,15 @@ export default function Dashboard() {
               <Plus className="h-5 w-5" />
             </span>
             <span className={"text-[10px] " + (currentView === "editor" ? "font-semibold" : "font-medium")}>Editor</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className={"flex flex-col items-center gap-0.5 px-4 py-1 transition-colors " + (currentView === "profile" ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+          >
+            <User className="h-5 w-5" />
+            <span className={"text-[10px] " + (currentView === "profile" ? "font-semibold" : "font-medium")}>Perfil</span>
           </button>
         </div>
       </nav>
