@@ -3028,7 +3028,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => removePendingDoc(doc.id)}
-                        className="shrink-0 text-slate-400 transition-colors hover:text-slate-600"
+                        className="ml-1.5 shrink-0 text-slate-400 transition-colors hover:text-slate-600"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
