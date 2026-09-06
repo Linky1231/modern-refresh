@@ -688,10 +688,9 @@ function UnfollowConfirmDialog({
                 <UserX className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold">Dejar de seguir</h3>
+                <h3 className="text-sm font-semibold">¿Dejar de seguir a @userName?</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  ¿Dejar de seguir a <span className="font-medium text-foreground">{userName}</span>?
-                  Sus publicaciones dejarán de aparecer en tu pestaña "Seguidos".
+                  Dejarás de ver sus publicaciones en tu pestaña de Seguidos.
                 </p>
               </div>
             </div>
@@ -705,6 +704,7 @@ function UnfollowConfirmDialog({
                 onClick={onConfirm}
                 className="gap-1.5"
               >
+                <Trash2 className="h-3.5 w-3.5" />
                 Dejar de seguir
               </Button>
             </div>
@@ -1969,21 +1969,32 @@ function CommentsModal({
 }
 
 // ── Follow list modal ──────────────────────────────────────────
+type FollowListUser = {
+  _id: string;
+  name: string;
+  imageUrl?: string | null;
+};
+
 function FollowListModal({
   userId,
   type,
   onClose,
+  currentUserId,
 }: {
   userId: string;
   type: "followers" | "following";
   onClose: () => void;
+  currentUserId?: string;
 }) {
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<FollowListUser[]>([]);
+  const [inFlight, setInFlight] = useState<Set<string>>(new Set());
+  const [listStats, setListStats] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     const fetchList = async () => {
       try {
         const data = type === "followers" ? await getFollowers(userId) : await getFollowing(userId);
-        setList(data);
+        setList(data as FollowListUser[]);
       } catch (error) {
         console.error("Error fetching follow list:", error);
       }
@@ -2004,6 +2015,11 @@ function FollowListModal({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  const isFollowingUser = (targetId: string) => {
+    if (!currentUserId) return false;
+    return listStats[targetId] ?? false;
+  };
 
   return (
     <motion.div
@@ -2028,11 +2044,7 @@ function FollowListModal({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {list === undefined ? (
-          <div className="flex flex-col items-center justify-center py-16" style={{ minHeight: 120 }}>
-            <span />
-          </div>
-        ) : list.length === 0 ? (
+        {list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <User className="h-8 w-8 text-muted-foreground/30" />
             <p className="mt-3 text-xs text-muted-foreground">
@@ -2043,17 +2055,52 @@ function FollowListModal({
           </div>
         ) : (
           <div className="divide-y divide-border/30">
-            {list.map((u) => (
-              <div key={u._id} className="flex items-center gap-3 px-5 py-3">
-                <Avatar className="h-10 w-10 shrink-0 border border-border/30">
-                  {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
-                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                    {getInitials(u.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium text-card-foreground">{u.name}</span>
-              </div>
-            ))}
+            {list.map((u) => {
+              const following = isFollowingUser(u._id);
+              const busy = inFlight.has(u._id);
+              return (
+                <div key={u._id} className="flex items-center gap-3 px-5 py-3">
+                  <Avatar className="h-10 w-10 shrink-0 border border-border/30">
+                    {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
+                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      {getInitials(u.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium text-card-foreground">{u.name}</span>
+                  {currentUserId && currentUserId !== u._id && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setInFlight((prev) => new Set(prev).add(u._id));
+                        toggleFollow(currentUserId, u._id).then((nowFollowing) => {
+                          setListStats((prev) => ({ ...prev, [u._id]: nowFollowing }));
+                          setInFlight((prev) => {
+                            const next = new Set(prev);
+                            next.delete(u._id);
+                            return next;
+                          });
+                        }).catch((error) => {
+                          console.error("Error toggling follow in list:", error);
+                          setInFlight((prev) => {
+                            const next = new Set(prev);
+                            next.delete(u._id);
+                            return next;
+                          });
+                        });
+                      }}
+                      className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
+                        following
+                          ? "border border-slate-300 text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      {busy ? "…" : following ? "Siguiendo" : "Seguir"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -2208,6 +2255,7 @@ function NotificationsPanel({
 function UserProfileView({ userId, onBack }: { userId: string; onBack: () => void }) {
   const { user } = useAuth();
   const [userPosts, setUserPosts] = useState<any[] | undefined>(undefined);
+  const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
     const fetchUserPosts = async () => {
       try {
@@ -2218,7 +2266,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
       }
     };
     fetchUserPosts();
-  }, [userId, user?._id]);
+  }, [userId, user?._id, refreshTick]);
   const userData = userPosts && userPosts.length > 0 ? userPosts[0] : null;
   const [followStats, setFollowStats] = useState<{ followers: number; following: number } | undefined>(undefined);
   useEffect(() => {
@@ -2374,6 +2422,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
                     onOpenComments={() => {}}
                     onOpenProfile={() => {}}
                     postNumber={(userPosts ?? []).length - idx}
+                    refreshTick={refreshTick}
                   />
                 ))
               )}
@@ -2393,6 +2442,7 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
             userId={userId}
             type={showFollowList}
             onClose={() => setShowFollowList(null)}
+            currentUserId={user?._id}
           />
         )}
       </AnimatePresence>

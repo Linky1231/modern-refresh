@@ -12,6 +12,7 @@ import {
   getFollowStats,
   getFollowers,
   getFollowing,
+  toggleFollow,
 } from "@/lib/db";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -474,6 +475,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             userId={user._id}
             type={showFollowList}
             onClose={() => setShowFollowList(null)}
+            currentUserId={user._id}
           />
         )}
       </AnimatePresence>
@@ -482,28 +484,39 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 }
 
 // ── Follow list modal (inline version for ProfilePage) ─────────────
+type FollowListUser = {
+  _id: string;
+  name: string;
+  imageUrl?: string | null;
+};
+
 function FollowListModalInline({
   userId,
   type,
   onClose,
+  currentUserId,
 }: {
   userId: string;
   type: "followers" | "following";
   onClose: () => void;
+  currentUserId?: string;
 }) {
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<FollowListUser[]>([]);
   useEffect(() => {
     const fetchList = async () => {
       if (!userId) return;
       try {
         const data = type === "followers" ? await getFollowers(userId) : await getFollowing(userId);
-        setList(data);
+        setList(data as FollowListUser[]);
       } catch (error) {
         console.error("Error fetching follow list:", error);
       }
     };
     fetchList();
   }, [type, userId]);
+
+  const [inFlight, setInFlight] = useState<Set<string>>(new Set());
+  const [listStats, setListStats] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -518,6 +531,11 @@ function FollowListModalInline({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  const isFollowingUser = (targetId: string) => {
+    if (!currentUserId) return false;
+    return listStats[targetId] ?? false;
+  };
 
   return (
     <motion.div
@@ -542,11 +560,7 @@ function FollowListModalInline({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {list === undefined ? (
-          <div className="flex flex-col items-center justify-center py-16" style={{ minHeight: 120 }}>
-            <span />
-          </div>
-        ) : list.length === 0 ? (
+        {list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <User className="h-8 w-8 text-muted-foreground/30" />
             <p className="mt-3 text-xs text-muted-foreground">
@@ -557,17 +571,52 @@ function FollowListModalInline({
           </div>
         ) : (
           <div className="divide-y divide-border/30">
-            {list.map((u) => (
-              <div key={u._id} className="flex items-center gap-3 px-5 py-3">
-                <Avatar className="h-10 w-10 shrink-0 border border-border/30">
-                  {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
-                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                    {getInitials(u.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium text-card-foreground">{u.name}</span>
-              </div>
-            ))}
+            {list.map((u) => {
+              const following = isFollowingUser(u._id);
+              const busy = inFlight.has(u._id);
+              return (
+                <div key={u._id} className="flex items-center gap-3 px-5 py-3">
+                  <Avatar className="h-10 w-10 shrink-0 border border-border/30">
+                    {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
+                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      {getInitials(u.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium text-card-foreground">{u.name}</span>
+                  {currentUserId && currentUserId !== u._id && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setInFlight((prev) => new Set(prev).add(u._id));
+                        toggleFollow(currentUserId, u._id).then((nowFollowing: boolean) => {
+                          setListStats((prev) => ({ ...prev, [u._id]: nowFollowing }));
+                          setInFlight((prev) => {
+                            const next = new Set(prev);
+                            next.delete(u._id);
+                            return next;
+                          });
+                        }).catch((error: unknown) => {
+                          console.error("Error toggling follow in list:", error);
+                          setInFlight((prev) => {
+                            const next = new Set(prev);
+                            next.delete(u._id);
+                            return next;
+                          });
+                        });
+                      }}
+                      className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
+                        following
+                          ? "border border-slate-300 text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      {busy ? "…" : following ? "Siguiendo" : "Seguir"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
