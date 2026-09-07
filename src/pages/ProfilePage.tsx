@@ -85,16 +85,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user?._id) return;
-      try {
-        const data = await getUserProfile(user._id, user._id);
-        setCurrentUser(data);
-        setUserPosts(data?.posts || []);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      }
-    };
     if (!user?._id) return;
     fetchProfile(user._id, setCurrentUser, setUserPosts);
   }, [user?._id]);
@@ -122,6 +112,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const [showFollowList, setShowFollowList] = useState<
     "followers" | "following" | null
   >(null);
+
+  const displayName = (currentUser?.name as string | undefined) ?? user?.name ?? "Sin nombre";
 
   return (
     <div className="pb-8">
@@ -158,8 +150,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      const displayName = (currentUser?.name as string | undefined) ?? user?.name ?? "Sin nombre";
 
       {/* ── Banner + Avatar + Name + Title + Bio + Follow stats ─── */}
       <motion.div
@@ -363,7 +353,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
       {/* ── Modal de edición de perfil ─────────────────────────── */}
       <AnimatePresence>
-        {showEditModal && (
+        {showEditModal && user?._id && (
           <EditProfileModal
             currentUser={currentUser}
             user={user}
