@@ -23,6 +23,7 @@ import {
   User,
   MoreHorizontal,
   X,
+  Check,
   MessageCircle,
   Heart,
   FileText,
@@ -495,7 +496,7 @@ function EditProfileModal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[90] flex z-50 items-center justify-center bg-black/50 pb-32"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 pb-32"
       onClick={onClose}
     >
       <motion.div
@@ -522,10 +523,10 @@ function EditProfileModal({
                   !isBioDirty &&
                   !savingAvatar
                 }
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
-                title="Guardar cambios"
+                className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
               >
-                <X className="h-4 w-4" />
+                <Check className="h-3.5 w-3.5" />
+                Guardar
               </button>
             )}
             <button
