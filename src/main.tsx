@@ -8,6 +8,7 @@ import "./index.css";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
+const ProfilePageRouter = lazy(() => import("./pages/ProfilePageRouter.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const EditorPage = lazy(() => import("./pages/Editor.tsx"));
@@ -132,6 +133,7 @@ createRoot(document.getElementById("root")!).render(
                 </RequireAuth>
               }
             />
+            <Route path="/profile/*" element={<ProfilePageRouter />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
