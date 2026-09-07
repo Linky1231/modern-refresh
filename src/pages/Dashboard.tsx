@@ -2493,6 +2493,8 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [uploadState, setUploadState] = useState<"idle" | "uploading">("idle");
+  const isBusy = posting || uploading || uploadState === "uploading";
   // ── PARTE 4 · ENCUESTAS: estado del editor dentro del compositor ──
   // showPollComposer controla si el panel está abierto; pollDraft es el
   // borrador válido (pregunta + 2–5 opciones) que viaja con la publicación.
@@ -2570,31 +2572,36 @@ export default function Dashboard() {
   }, [loadNotifications]);
 
   // ── File handling ──────────────────────────────────────────────
+  // ▶ [MODO LOCAL / DISPOSITIVO] Las imágenes se guardan en el dispositivo
+  // via @/lib/db.uploadFile (data URL), igual que el avatar de perfil.
+  // Los vídeos no caben en localStorage y quedan excluidos hasta la
+  // migración a Lovable Cloud.
   const addFiles = useCallback(
-    (files: FileList | File[]) => {
+    async (files: FileList | File[]) => {
       const arr = Array.from(files);
       const remaining = MAX_FILES - pendingMedia.length;
-      const newItems: PendingMedia[] = arr
-        .slice(0, remaining)
-        .filter((file) => {
-          const isVideo = file.type.startsWith("video/");
-          const maxMb = isVideo ? MAX_VIDEO_MB : MAX_IMAGE_MB;
-          if (file.size > maxMb * 1024 * 1024) {
-            console.warn(`El archivo ${file.name} supera ${maxMb}MB`);
-            return false;
-          }
-          return true;
-        })
-        .map((file) => {
-          const isVideo = file.type.startsWith("video/");
-          return {
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            file,
-            type: (isVideo ? "video" : "image") as "image" | "video",
-            preview: URL.createObjectURL(file),
-          };
-        });
-      setPendingMedia((prev) => [...prev, ...newItems]);
+      const fresh: PendingMedia[] = [];
+
+      for (const file of arr.slice(0, remaining)) {
+        const isVideo = file.type.startsWith("video/");
+        const maxMb = isVideo ? MAX_VIDEO_MB : MAX_IMAGE_MB;
+        if (file.size > maxMb * 1024 * 1024) {
+          console.warn(`El archivo ${file.name} supera ${maxMb}MB`);
+          continue;
+        }
+
+        // En modo local solo aceptamos imágenes; los vídeos no se persisten.
+        if (isVideo) {
+          toast.warning("Los vídeos no se pueden adjuntar en modo local. Estarán disponibles al migrar a Lovable Cloud.");
+          continue;
+        }
+
+        const preview = URL.createObjectURL(file);
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        fresh.push({ id, file, type: "image" as const, preview });
+      }
+
+      setPendingMedia((prev) => [...prev, ...fresh]);
     },
     [pendingMedia.length],
   );
@@ -2608,12 +2615,12 @@ export default function Dashboard() {
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) addFiles(e.target.files);
+    if (e.target.files) void addFiles(e.target.files);
     e.target.value = "";
   };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files) void addFiles(e.dataTransfer.files);
   };
 
   // ── Editor handlers ────────────────────────────────────────────
@@ -2722,12 +2729,12 @@ export default function Dashboard() {
         pendingMedia.length === 0 &&
         pendingDocs.length === 0 &&
         !pollDraft) ||
-      posting ||
-      uploading
+      isBusy
     ) return;
 
     setPosting(true);
     setUploading(true);
+    setUploadState("uploading");
     const start = Date.now();
     try {
       // Fallback timeout so a stuck network request can't leave the button in a
@@ -2736,56 +2743,32 @@ export default function Dashboard() {
 
       const totalFiles = pendingMedia.length + pendingDocs.length;
       setUploadProgress({ current: 0, total: totalFiles });
+
+      // ▶ [MODO LOCAL / DISPOSITIVO] Las imágenes se persisten en el
+      // dispositivo via @/lib/db.uploadFile (data URL), igual que el avatar
+      // de perfil. Los documentos usan la misma ruta local.
       const uploaded: UploadedMedia[] = [];
-      const maxRetries = 2;
       let filesUploaded = 0;
       for (const pm of pendingMedia) {
         if (Date.now() - start > timeoutLimit) {
           toast.error("Subida cancelada por timeout. Inténtalo de nuevo.");
           throw new Error("timeout");
         }
-        let lastError = "";
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-          try {
-            const path = generateFilePath(user?._id || "", "upload", "media");
-            const result = await fetch(path, {
-              method: "POST",
-              headers: {
-                "Content-Type": pm.file.type || "application/octet-stream",
-              },
-              body: pm.file,
-            });
-            if (!result.ok) {
-              lastError = `HTTP ${result.status}`;
-              console.error(
-                `Error al subir ${pm.file.name} (intento ${attempt + 1}): ${lastError}`,
-              );
-              if (attempt < maxRetries) continue;
-              break;
-            }
-            const json = await result.json();
-            if (json.storageId) {
-              uploaded.push({
-                storageId: json.storageId,
-                type: pm.type,
-                mime: pm.file.type || undefined,
-              });
-              filesUploaded++;
-              setUploadProgress({ current: filesUploaded, total: totalFiles });
-              break;
-            } else {
-              lastError = "Respuesta sin storageId";
-              if (attempt < maxRetries) continue;
-            }
-          } catch (fetchErr) {
-            lastError =
-              fetchErr instanceof Error ? fetchErr.message : "Error de red";
-            console.error(
-              `Error de red al subir ${pm.file.name} (intento ${attempt + 1}):`,
-              lastError,
-            );
-            if (attempt < maxRetries) continue;
-          }
+        try {
+          const filePath = generateFilePath(user?._id || "", pm.file.name, "media");
+          const storagePath = await uploadFile("media", pm.file, filePath);
+          uploaded.push({
+            storageId: storagePath,
+            type: pm.type,
+            mime: pm.file.type || undefined,
+          });
+          filesUploaded++;
+          setUploadProgress({ current: filesUploaded, total: totalFiles });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Error al guardar la imagen";
+          console.error(`Error al subir ${pm.file.name}:`, message);
+          toast.error(message);
+          throw new Error("media_upload_failed");
         }
       }
 
@@ -2797,27 +2780,22 @@ export default function Dashboard() {
             toast.error("Subida cancelada por timeout. Inténtalo de nuevo.");
             throw new Error("timeout");
           }
-          let docError = "";
-          for (let attempt = 0; attempt <= 2; attempt++) {
-            try {
-              const path = generateFilePath(user?._id || "", "upload", "media");
-              const result = await fetch(path, {
-                method: "POST",
-                headers: { "Content-Type": doc.file.type || "application/octet-stream" },
-                body: doc.file,
-              });
-              if (!result.ok) { docError = `HTTP ${result.status}`; if (attempt < 2) continue; break; }
-              const json = await result.json();
-              if (json.storageId) {
-                uploadedDocs.push({ storageId: json.storageId, name: doc.name, size: doc.size, mime: doc.file.type || undefined });
-                filesUploaded++;
-                setUploadProgress({ current: filesUploaded, total: totalFiles });
-                break;
-              }
-            } catch (e) {
-              docError = e instanceof Error ? e.message : "Error de red";
-              if (attempt < 2) continue;
-            }
+          try {
+            const docPath = generateFilePath(user?._id || "", doc.file.name, "documents");
+            const storagePath = await uploadFile("documents", doc.file, docPath);
+            uploadedDocs.push({
+              storageId: storagePath,
+              name: doc.name,
+              size: doc.size,
+              mime: doc.file.type || undefined,
+            });
+            filesUploaded++;
+            setUploadProgress({ current: filesUploaded, total: totalFiles });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : "Error al guardar el documento";
+            console.error(`Error al subir ${doc.file.name}:`, message);
+            toast.error(message);
+            throw new Error("doc_upload_failed");
           }
         }
       }
@@ -2852,6 +2830,10 @@ export default function Dashboard() {
     } catch (err: unknown) {
       if (err instanceof Error && err.message === "timeout") {
         // already toasted above
+      } else if (err instanceof Error && err.message === "media_upload_failed") {
+        // already toasted above
+      } else if (err instanceof Error && err.message === "doc_upload_failed") {
+        // already toasted above
       } else {
         const message = err instanceof Error ? err.message : "No se pudo publicar";
         toast.error(message);
@@ -2860,6 +2842,7 @@ export default function Dashboard() {
     } finally {
       setUploading(false);
       setPosting(false);
+      setUploadState("idle");
     }
   };
 
@@ -2949,6 +2932,8 @@ export default function Dashboard() {
   const hasText =
     editorRef.current?.textContent?.trim().length ?? content.trim().length > 0;
   const isPostable = hasText || postTitle.trim().length > 0 || pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft !== null;
+  const contentIsEmpty = !hasText && !postTitle.trim() && pendingMedia.length === 0 && pendingDocs.length === 0 && !pollDraft;
+  const canShowEmptyHint = contentIsEmpty && pendingMedia.length === 0 && pendingDocs.length === 0 && !pollDraft && !isBusy;
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950">
@@ -3066,33 +3051,29 @@ export default function Dashboard() {
                 style={{ wordBreak: "break-word" }}
               />
 
-              {/* Media previews */}
+              {/* Media previews (images only in local mode) */}
               {pendingMedia.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 gap-2.5">
                   <AnimatePresence initial={false}>
                   {pendingMedia.map((pm) => (
                     <motion.div
                       key={pm.id}
-                      className="group relative overflow-hidden rounded-xl border border-border/24 bg-muted"
+                      className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
                     >
-                      {pm.type === "video" ? (
-                        <div className="h-full max-h-40 w-full">
-                          <VideoThumb src={pm.preview} alt={pm.file.name} />
-                        </div>
-                      ) : (
-                        <img
-                          src={pm.preview}
-                          alt={pm.file.name}
-                          className="h-full max-h-40 w-full object-cover rounded-xl"
-                        />
-                      )}
+                      <img
+                        src={pm.preview}
+                        alt={pm.file.name}
+                        className="h-full max-h-40 w-full object-cover rounded-xl"
+                        onError={() => {
+                          // If the preview fails for any reason, keep the card visible
+                          // but show a neutral placeholder so the layout doesn't collapse.
+                          const prev = URL.createObjectURL(new Blob());
+                          URL.revokeObjectURL(pm.preview);
+                        }}
+                      />
                       <RemoveButton onClick={() => removePending(pm.id)} label={`Eliminar ${pm.file.name}`} />
                       <div className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
-                        {pm.type === "video" ? (
-                          <Film className="inline h-3 w-3" />
-                        ) : (
-                          <ImagePlus className="inline h-3 w-3" />
-                        )}
+                        <ImagePlus className="inline h-3 w-3" />
                         {` `}
                         {pm.file.name.length > 16
                           ? pm.file.name.slice(0, 14) + "…"
@@ -3167,7 +3148,7 @@ export default function Dashboard() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={`${ACCEPTED_IMAGE},${ACCEPTED_VIDEO}`}
+                accept={ACCEPTED_IMAGE}
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
@@ -3195,15 +3176,15 @@ export default function Dashboard() {
                 <Button
                   size="sm"
                   className="ml-auto gap-1.5 rounded-xl px-6 min-w-[120px] shadow-sm"
-                  disabled={!isPostable || posting}
+                  disabled={!isPostable || isBusy}
                   onClick={handlePost}
                 >
-                  {posting || uploading ? (
+                  {isBusy ? (
                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
                     <Send className="h-3.5 w-3.5" />
                   )}
-                  {uploading
+                  {uploadState === "uploading"
                     ? uploadProgress.total > 1
                       ? `Subiendo ${uploadProgress.current}/${uploadProgress.total}…`
                       : "Subiendo…"
