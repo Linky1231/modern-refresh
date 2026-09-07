@@ -2,7 +2,6 @@
 // funciona 100% en el dispositivo, sin sincronización remota.
 // Al migrar a Lovable Cloud, @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload } from "lucide-react";
 import { PostPoll } from "@/components/PostPoll";
 import {
   updateProfile,
@@ -111,34 +110,11 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Estado local para banner uploads
-  const [savingBanner, setSavingBanner] = useState(false);
-
   const [showFollowList, setShowFollowList] = useState<
     "followers" | "following" | null
   >(null);
 
   const displayName = (currentUser?.name as string | undefined) ?? user?.name ?? "Sin nombre";
-
-  // Banner del perfil (soporte para campo `banner` o `bannerUrl`)
-  const bannerUrl =
-    (currentUser?.bannerUrl as string | undefined) ??
-    (currentUser?.banner as string | undefined)
-      ? (() => {
-          // resolvemos mismo mecanismo que avatarUrl
-          if (!currentUser?.banner) return undefined;
-          if (typeof window === "undefined") return undefined;
-          try {
-            const db = JSON.parse(
-              window.localStorage.getItem("asternal_local_db_v1") ?? "null",
-            ) as { files?: Record<string, string> } | null;
-            const files = db?.files ?? {};
-            return files[currentUser.banner as string] ?? undefined;
-          } catch {
-            return undefined;
-          }
-        })()
-      : undefined;
 
   return (
     <div className="pb-8">
@@ -183,36 +159,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner + Avatar */}
-        <div className="relative mx-auto h-32 w-full overflow-hidden rounded-b-[2rem] sm:rounded-b-2xl bg-slate-200">
-          {bannerUrl ? (
-            <img
-              src={bannerUrl}
-              alt="Banner del perfil"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted">
-              <span className="text-xs text-muted-foreground">Sin banner</span>
-            </div>
-          )}
-
-          {/* Botón cambiar banner */}
-          <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-black/60">
-            {savingBanner ? (
-              <span className="flex h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-1.5"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Cambiar
-              </button>
-            )}
-          </div>
-
+        {/* Banner detrás del avatar */}
+        <div className="relative mx-auto h-32 w-full bg-slate-200">
           <Avatar className="absolute -bottom-8 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
             {currentUser?.avatarUrl && (
               <AvatarImage
