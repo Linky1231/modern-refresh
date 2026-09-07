@@ -159,8 +159,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         className="mx-auto max-w-sm"
       >
         {/* Banner detrás del avatar */}
-        <div className="relative mx-auto w-full rounded-t-2xl bg-slate-200 py-3 sm:py-4">
-          <div className="absolute -bottom-6 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
+        <div className="relative mx-auto w-full bg-slate-200 h-32">
+          <div className="absolute -bottom-8 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
             {currentUser?.avatarUrl && (
               <AvatarImage
                 src={currentUser.avatarUrl}
@@ -190,7 +190,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
           {/* Biografía */}
           {(currentUser?.bio as string | undefined) && (
-            <p className="text-sm text-slate-600 text-center leading-relaxed">
+            <p className="text-sm text-slate-600 text-center leading-relaxed mt-2">
               {(currentUser?.bio as string | undefined) || ""}
             </p>
           )}
