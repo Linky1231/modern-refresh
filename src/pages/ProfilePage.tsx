@@ -160,8 +160,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         className="mx-auto max-w-sm"
       >
         {/* Banner detrás del avatar */}
-        <div className="relative mx-auto w-full bg-slate-200 h-32">
-          <div className="absolute -bottom-8 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
+        <div className="relative mx-auto h-32 w-full bg-slate-200">
+          <Avatar className="absolute -bottom-8 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
             {currentUser?.avatarUrl && (
               <AvatarImage
                 src={currentUser.avatarUrl}
@@ -174,7 +174,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 ? getInitials(displayName)
                 : <User className="h-10 w-10" />}
             </AvatarFallback>
-          </div>
+          </Avatar>
         </div>
 
         {/* Nombre + botón editar (solo propio perfil) */}
