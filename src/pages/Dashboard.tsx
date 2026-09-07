@@ -938,10 +938,14 @@ function FormatToolbar({
     }
   };
 
-  const showHint = (msg: string) => {
+  const showHint = (_msg: string) => {
+    // Kept wired to the same timer plumbing, but currently only used to
+    // preserve existing timings; selection-first messages no longer push the
+    // layout because they are not rendered in the editor card anymore.
     if (hintTimer.current) clearTimeout(hintTimer.current);
-    setHint(msg);
-    hintTimer.current = setTimeout(() => setHint(null), 2500);
+    hintTimer.current = setTimeout(() => {
+      // no-op kept for compatibility with existing code paths
+    }, 2500);
   };
 
   const toolBtnBase =
@@ -998,7 +1002,7 @@ function FormatToolbar({
             className={`${toolBtnBase} ${showColors ? toolBtnActive : ""}`}
             onClick={() => {
               if (showColors) { setShowColors(false); return; }
-              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              if (!hasSelection()) return;
               saveSelection();
               setShowColors(true);
             }}
@@ -1011,7 +1015,7 @@ function FormatToolbar({
             aria-label="Negrita"
             className={`${toolBtnBase} ${selectionHasStyle("fontWeight", "bold") ? toolBtnActive : ""}`}
             onClick={() => {
-              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              if (!hasSelection()) return;
               document.execCommand("bold");
             }}
           >
@@ -1023,7 +1027,7 @@ function FormatToolbar({
             aria-label="Cursiva"
             className={`${toolBtnBase} ${selectionHasStyle("fontStyle", "italic") ? toolBtnActive : ""}`}
             onClick={() => {
-              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              if (!hasSelection()) return;
               document.execCommand("italic");
             }}
           >
@@ -1035,7 +1039,7 @@ function FormatToolbar({
             aria-label="Subrayado"
             className={`${toolBtnBase} ${selectionHasStyle("textDecoration", "underline") ? toolBtnActive : ""}`}
             onClick={() => {
-              if (!hasSelection()) { showHint("Selecciona texto primero"); return; }
+              if (!hasSelection()) return;
               document.execCommand("underline");
             }}
           >
@@ -2718,18 +2722,28 @@ export default function Dashboard() {
         pendingMedia.length === 0 &&
         pendingDocs.length === 0 &&
         !pollDraft) ||
-      posting
+      posting ||
+      uploading
     ) return;
 
     setPosting(true);
     setUploading(true);
+    const start = Date.now();
     try {
+      // Fallback timeout so a stuck network request can't leave the button in a
+      // mixed "sending/uploading" state forever.
+      const timeoutLimit = 25_000;
+
       const totalFiles = pendingMedia.length + pendingDocs.length;
       setUploadProgress({ current: 0, total: totalFiles });
       const uploaded: UploadedMedia[] = [];
       const maxRetries = 2;
       let filesUploaded = 0;
       for (const pm of pendingMedia) {
+        if (Date.now() - start > timeoutLimit) {
+          toast.error("Subida cancelada por timeout. Inténtalo de nuevo.");
+          throw new Error("timeout");
+        }
         let lastError = "";
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
@@ -2775,29 +2789,35 @@ export default function Dashboard() {
         }
       }
 
-      // Upload documents
+      // Documents-only mode: if there's no text/media/video, documents are enough.
       const uploadedDocs: UploadedDoc[] = [];
-      for (const doc of pendingDocs) {
-        let docError = "";
-        for (let attempt = 0; attempt <= 2; attempt++) {
-          try {
-            const path = generateFilePath(user?._id || "", "upload", "media");
-            const result = await fetch(path, {
-              method: "POST",
-              headers: { "Content-Type": doc.file.type || "application/octet-stream" },
-              body: doc.file,
-            });
-            if (!result.ok) { docError = `HTTP ${result.status}`; if (attempt < 2) continue; break; }
-            const json = await result.json();
-            if (json.storageId) {
-              uploadedDocs.push({ storageId: json.storageId, name: doc.name, size: doc.size, mime: doc.file.type || undefined });
-              filesUploaded++;
-              setUploadProgress({ current: filesUploaded, total: totalFiles });
-              break;
+      if (totalFiles > 0) {
+        for (const doc of pendingDocs) {
+          if (Date.now() - start > timeoutLimit) {
+            toast.error("Subida cancelada por timeout. Inténtalo de nuevo.");
+            throw new Error("timeout");
+          }
+          let docError = "";
+          for (let attempt = 0; attempt <= 2; attempt++) {
+            try {
+              const path = generateFilePath(user?._id || "", "upload", "media");
+              const result = await fetch(path, {
+                method: "POST",
+                headers: { "Content-Type": doc.file.type || "application/octet-stream" },
+                body: doc.file,
+              });
+              if (!result.ok) { docError = `HTTP ${result.status}`; if (attempt < 2) continue; break; }
+              const json = await result.json();
+              if (json.storageId) {
+                uploadedDocs.push({ storageId: json.storageId, name: doc.name, size: doc.size, mime: doc.file.type || undefined });
+                filesUploaded++;
+                setUploadProgress({ current: filesUploaded, total: totalFiles });
+                break;
+              }
+            } catch (e) {
+              docError = e instanceof Error ? e.message : "Error de red";
+              if (attempt < 2) continue;
             }
-          } catch (e) {
-            docError = e instanceof Error ? e.message : "Error de red";
-            if (attempt < 2) continue;
           }
         }
       }
@@ -2816,6 +2836,7 @@ export default function Dashboard() {
         poll: pollDraft ?? undefined,
       });
 
+      // Clear everything on success
       pendingMedia.forEach((pm) => URL.revokeObjectURL(pm.preview));
       setPendingMedia([]);
       setPendingDocs([]);
@@ -2827,8 +2848,15 @@ export default function Dashboard() {
       if (editorRef.current) editorRef.current.innerHTML = "";
       // La publicación (y su encuesta) aparece en el feed al instante.
       void refreshPosts();
-    } catch (err) {
-      console.error("Error al crear la publicación:", err);
+      toast.success("Publicación creada");
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "timeout") {
+        // already toasted above
+      } else {
+        const message = err instanceof Error ? err.message : "No se pudo publicar";
+        toast.error(message);
+        console.error("Error al crear la publicación:", err);
+      }
     } finally {
       setUploading(false);
       setPosting(false);
@@ -3048,12 +3076,14 @@ export default function Dashboard() {
                       className="group relative overflow-hidden rounded-xl border border-border/24 bg-muted"
                     >
                       {pm.type === "video" ? (
-                        <VideoThumb src={pm.preview} alt={pm.file.name} />
+                        <div className="h-full max-h-40 w-full">
+                          <VideoThumb src={pm.preview} alt={pm.file.name} />
+                        </div>
                       ) : (
                         <img
                           src={pm.preview}
                           alt={pm.file.name}
-                          className="h-28 w-full object-contain"
+                          className="h-full max-h-40 w-full object-cover rounded-xl"
                         />
                       )}
                       <RemoveButton onClick={() => removePending(pm.id)} label={`Eliminar ${pm.file.name}`} />
