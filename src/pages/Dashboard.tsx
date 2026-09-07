@@ -64,6 +64,7 @@ import {
   Italic,
   Underline,
   UserPlus,
+  Camera,
 } from "lucide-react";
 import { useNavigate } from "@/lib/router-compat";
 import { motion, AnimatePresence } from "framer-motion";
@@ -2454,6 +2455,39 @@ function UserProfileView({ userId, onBack }: { userId: string; onBack: () => voi
   );
 }
 
+// ── Profile/skeleton placeholder used during navigation ─────────────
+function ProfileSkeleton({
+  style,
+}: {
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div className="flex flex-col gap-4" style={style}>
+      <div className="rounded-2xl border border-border/35 bg-card p-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-24 w-24 animate-pulse rounded-full border-2 border-border/30 bg-muted" />
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-20 animate-pulse rounded bg-muted/70" />
+          </div>
+          <div className="h-px w-16 bg-border/60" />
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="h-5 w-8 animate-pulse rounded bg-muted" />
+              <div className="h-2.5 w-14 animate-pulse rounded bg-muted/70" />
+            </div>
+            <div className="h-8 w-px bg-border/60" />
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="h-5 w-8 animate-pulse rounded bg-muted" />
+              <div className="h-2.5 w-12 animate-pulse rounded bg-muted/70" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Dashboard
 // ═══════════════════════════════════════════════════════════════════
@@ -2462,10 +2496,61 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"forYou" | "following" | "popular">("forYou");
   const isAdmin = (user as any)?.role === "admin";
+
+  // ▶ Persistencia de pestañas: la pestaña activa sobrevive a los cambios
+  // de vista (Inicio <-> Perfil) sin re-renders ni saltos de UI.
+  const [tabInitDone, setTabInitDone] = useState(false);
+  const [activeTabSource, setActiveTabSource] = useState<"memory" | "storage">("memory");
+  useEffect(() => {
+    let parsed: typeof activeTab | null = null;
+    try {
+      const raw = window.localStorage.getItem("asternal_active_tab");
+      if (raw === "forYou" || raw === "following" || raw === "popular") parsed = raw;
+    } catch {}
+
+    if (parsed) {
+      setActiveTab(parsed);
+      setActiveTabSource("storage");
+    } else {
+      setActiveTabSource("memory");
+    }
+    setTabInitDone(true);
+  }, []);
+
+  useEffect(() => {
+    if (!tabInitDone) return;
+    try {
+      window.localStorage.setItem("asternal_active_tab", activeTab);
+    } catch {}
+  }, [activeTab, tabInitDone]);
+
   const [currentView, setCurrentView] = useState<"feed" | "profile" | "userProfile" | "editor">("feed");
+
+  // Editor placeholder shown until the real editor is integrated.
+  // Reemplaza temporalmente la ruta /editor para no romper la navegación
+  // mientras el editor de juegos está en desarrollo.
+  function EditorPlaceholder({ onBack }: { onBack: () => void }) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center bg-slate-100 px-6 py-12 text-center dark:bg-slate-950">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Plus className="h-6 w-6" strokeWidth={2.25} />
+        </div>
+        <h3 className="mt-4 text-lg font-semibold text-card-foreground">Editor de juegos</h3>
+        <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+          El editor está en desarrollo. Próximamente podrás crearlo desde aquí.
+        </p>
+        <Button variant="outline" size="sm" className="mt-6" onClick={onBack}>
+          Volver al inicio
+        </Button>
+      </div>
+    );
+  }
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  // Skeleton shown during profile/user-profile load so the screen is never
+  // 100% white between views.
+  const [profileSkeletonKey, setProfileSkeletonKey] = useState(0);
 
   // Fetch posts when activeTab changes. Todo es local, así que leer el feed
   // es instantáneo: refreshPosts() se usa tras cada acción (publicar, me
@@ -2495,6 +2580,20 @@ export default function Dashboard() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [uploadState, setUploadState] = useState<"idle" | "uploading">("idle");
   const isBusy = posting || uploading || uploadState === "uploading";
+
+  // Simple camera placeholder component used by the attachment menu.
+  // En modo local la cámara no está integrada todavía; este componente
+  // sirve como contenedor documentado para el futuro “Tomar foto”.
+  function TakePhotoPlaceholder() {
+    return (
+      <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+        <Camera className="h-8 w-8 text-slate-400" />
+        <p className="text-[11px]">Tomar foto</p>
+        <p className="text-[10px] text-muted-foreground/60">Próximamente</p>
+      </div>
+    );
+  }
+
   // ── PARTE 4 · ENCUESTAS: estado del editor dentro del compositor ──
   // showPollComposer controla si el panel está abierto; pollDraft es el
   // borrador válido (pregunta + 2–5 opciones) que viaja con la publicación.
@@ -2523,6 +2622,7 @@ export default function Dashboard() {
   } | null>(null);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [pendingMentions, setPendingMentions] = useState<PostMention[]>([]);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const pendingMentionRangeRef = useRef<{
     node: Node;
     offset: number;
@@ -2959,6 +3059,15 @@ export default function Dashboard() {
               >
                 <Bell className="h-4 w-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setShowAttachmentMenu((prev) => !prev)}
+                title="Adjuntar"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               {unreadCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
                   {unreadCount > 99 ? "99+" : unreadCount}
@@ -3011,6 +3120,16 @@ export default function Dashboard() {
               transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
             >
               <ProfilePage onBack={() => setCurrentView("feed")} />
+            </motion.div>
+          ) : currentView === "editor" ? (
+            <motion.div
+              key="editor"
+              initial={{ opacity: 0.4 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0.4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <EditorPlaceholder onBack={() => setCurrentView("feed")} />
             </motion.div>
           ) : (<>
         {/* Composer */}
@@ -3358,6 +3477,65 @@ export default function Dashboard() {
         onConfirm={handleConfirmUnfollow}
         onCancel={() => setUnfollowTarget(null)}
       />
+
+      {/* ── Attachment menu (animated) ─────────────────────── */}
+      <AnimatePresence>
+        {showAttachmentMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="fixed left-1/2 top-1/2 z-[70] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white px-1.5 py-1.5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setShowAttachmentMenu(false);
+                // Fototeca: muestra un resumen rápido de los últimos adjuntos
+                // usados. En modo local esto es solo un placeholder por ahora.
+                toast.info("Fototeca próximamente");
+              }}
+              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ImagePlus className="h-4 w-4 shrink-0 text-slate-500" />
+              Fototeca
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAttachmentMenu(false);
+                // Tomar foto: integrar cámara nativa próximamente.
+                toast.info("Tomar foto próximamente");
+              }}
+              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Camera className="h-4 w-4 shrink-0 text-slate-500" />
+              Tomar foto
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAttachmentMenu(false);
+                docInputRef.current?.click();
+              }}
+              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Paperclip className="h-4 w-4 shrink-0 text-slate-500" />
+              Seleccionar archivos
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Backdrop for attachment menu */}
+      {showAttachmentMenu && (
+        <div
+          className="fixed inset-0 z-[60] bg-transparent"
+          onClick={() => setShowAttachmentMenu(false)}
+        />
+      )}
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
                         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 shadow-[0_-6px_20px_-10px_rgba(15,23,42,0.12)] backdrop-blur-md dark:bg-slate-950/90">
