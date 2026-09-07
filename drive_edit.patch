@@ -1,0 +1,31 @@
+*** Begin Patch
+*** Update File: src/pages/Dashboard.tsx
+@@
+-  {/* Publish row — bottom-right inside the editor card */}
++  {/* Publish row */}
+               <div className=\"mt-4 flex items-center justify-between gap-2\">
+                 {(pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft) && (
+                   <span className=\"text-xs text-slate-400 tabular-nums\">
+                     {pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)}{" "}
+                     adjunto{pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0) !== 1 ? "s" : ""} para publicar
+                   </span>
+                 )}
+                 <Button
+                   size="sm"
+                   className=\"ml-auto gap-1.5 rounded-xl px-6 min-w-[120px] shadow-sm\"
+                   disabled={!isPostable || isBusy}
+                   onClick={handlePost}
+                 >
+                   {isBusy ? (
+                     <span className=\"h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent\" />
+                   ) : (
+                     <Send className=\"h-3.5 w-3.5\" />
+                   )}
+-                  {uploadState === "uploading"
++                  {uploading
+                     ? uploadProgress.total > 1
+                       ? `Subiendo ${uploadProgress.current}/${uploadProgress.total}…`
+                       : "Subiendo…"
+                     : "Publicar"}
+                 </Button>
+*** End Patch
