@@ -113,8 +113,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     "followers" | "following" | null
   >(null);
 
-  const displayName = (currentUser?.name as string | undefined) ?? user?.name ?? "Sin nombre";
-
   return (
     <div className="pb-8">
       {/* Header — único nivel, sin duplicar la barra superior */}
