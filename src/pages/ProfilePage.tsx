@@ -20,22 +20,23 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
   Camera,
-  Check,
   User,
   MoreHorizontal,
-  Pencil,
   X,
+  MessageCircle,
+  Heart,
+  FileText,
   Play,
   Share2,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 /** Format large numbers in Spanish */
 function formatCount(n: number): string {
@@ -61,15 +62,28 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+async function fetchProfile(userId: string, setter: (v: any) => void, postsSetter: (v: any[]) => void) {
+  try {
+    const data = await getUserProfile(userId, userId);
+    setter(data);
+    postsSetter(data?.posts || []);
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+  }
+}
+
 interface ProfilePageProps {
   onBack: () => void;
 }
+
+type ProfileTab = "posts" | "replies" | "likes";
 
 export default function ProfilePage({ onBack }: ProfilePageProps) {
   const { user } = useAuth();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPosts, setUserPosts] = useState<any[] | undefined>(undefined);
-  
+  const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
+
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?._id) return;
@@ -81,119 +95,15 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         console.error("Error fetching profile:", error);
       }
     };
-    fetchProfile();
+    if (!user?._id) return;
+    fetchProfile(user._id, setCurrentUser, setUserPosts);
   }, [user?._id]);
 
-  // Inline edit state
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editTitle, setEditTitle] = useState("");
-  const [editBio, setEditBio] = useState("");
-
-  const [savingAvatar, setSavingAvatar] = useState(false);
-  const [savingName, setSavingName] = useState(false);
-  const [savedName, setSavedName] = useState(false);
-  const [savingTitle, setSavingTitle] = useState(false);
-  const [savedTitle, setSavedTitle] = useState(false);
-  const [savingBio, setSavingBio] = useState(false);
-  const [savedBio, setSavedBio] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleEnterEdit = () => {
-    setEditName((currentUser as any)?.name ?? user?.name ?? "");
-    setEditTitle((currentUser as any)?.title ?? "");
-    setEditBio((currentUser as any)?.bio ?? "");
-    setEditing(true);
-  };
-
-  const handleCancelEdit = () => {
-    setEditing(false);
-    setSavedName(false);
-    setSavedTitle(false);
-    setSavedBio(false);
-  };
-
-  const handleSaveName = async () => {
-    const currentName = (currentUser as any)?.name || user?.name || "";
-    if (!editName.trim() || editName.trim() === currentName || savingName) return;
-    setSavingName(true);
-    try {
-      await updateProfile(user?._id || '', { name: editName.trim() });
-      setCurrentUser((prev: any) => ({ ...(prev || {}), name: editName.trim() }));
-      setSavedName(true);
-      setTimeout(() => setSavedName(false), 2000);
-    } catch (err) {
-      console.error("Error al actualizar nombre:", err);
-    } finally {
-      setSavingName(false);
-    }
-  };
-
-  const handleSaveTitle = async () => {
-    const currentTitle = (currentUser as any)?.title ?? "";
-    if (editTitle === currentTitle || savingTitle) return;
-    setSavingTitle(true);
-    try {
-      await updateProfile(user?._id || '', { title: editTitle.trim() || undefined });
-      setCurrentUser((prev: any) => ({ ...(prev || {}), title: editTitle.trim() }));
-      setSavedTitle(true);
-      setTimeout(() => setSavedTitle(false), 2000);
-    } catch (err) {
-      console.error("Error al actualizar título:", err);
-    } finally {
-      setSavingTitle(false);
-    }
-  };
-
-  const handleSaveBio = async () => {
-    const currentBio = (currentUser as any)?.bio ?? "";
-    if (editBio === currentBio || savingBio) return;
-    setSavingBio(true);
-    try {
-      await updateProfile(user?._id || '', { bio: editBio.trim() || undefined });
-      setCurrentUser((prev: any) => ({ ...(prev || {}), bio: editBio.trim() }));
-      setSavedBio(true);
-      setTimeout(() => setSavedBio(false), 2000);
-    } catch (err) {
-      console.error("Error al actualizar bio:", err);
-    } finally {
-      setSavingBio(false);
-    }
-  };
-
-  const handleAvatarUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || savingAvatar) return;
-      if (!file.type.startsWith("image/")) return;
-      if (file.size > 5 * 1024 * 1024) return;
-      setSavingAvatar(true);
-      try {
-        const path = generateFilePath(user?._id || '', file.name, 'avatars');
-        await uploadFile('avatars', file, path);
-        await updateProfile(user?._id || '', { image: path });
-        // Sincronización inmediata del avatar
-        setCurrentUser((prev: any) => ({
-          ...(prev || {}),
-          image: path,
-          avatarUrl: getStorageUrl('avatars', path),
-        }));
-      } catch (err) {
-        console.error("Error al subir avatar:", err);
-      } finally {
-        setSavingAvatar(false);
-        e.target.value = "";
-      }
-    },
-    [savingAvatar, updateProfile, user?._id],
-  );
-
-  const currentTitle = (currentUser as any)?.title ?? "";
-  const currentBio = (currentUser as any)?.bio ?? "";
-  const displayName = (currentUser as any)?.name || user?.name || "Sin nombre";
-
-  const [followStats, setFollowStats] = useState<{ followers: number; following: number } | undefined>(undefined);
+  // Follow stats
+  const [followStats, setFollowStats] = useState<{
+    followers: number;
+    following: number;
+  } | undefined>(undefined);
   useEffect(() => {
     const fetchStats = async () => {
       if (!user?._id) return;
@@ -206,232 +116,177 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     };
     fetchStats();
   }, [user?._id]);
-  const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
 
-  const stagger = (i: number) => ({
-    initial: { opacity: 0, y: 10 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.35, delay: i * 0.06, ease: [0.32, 0.72, 0, 1] as const },
-  });
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const [showFollowList, setShowFollowList] = useState<
+    "followers" | "following" | null
+  >(null);
 
   return (
-    <div className="pb-8">       {/* Header — único nivel, sin duplicar la barra superior */}
-       <div className="mb-4 flex items-center justify-between">
-         <div className="flex items-center gap-2">
-           <button
-             type="button"
-             onClick={onBack}
-             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-           >
-             <ArrowLeft className="h-4 w-4" />
-           </button>
-           <span className="text-sm font-semibold">
-             {editing ? "Editar perfil" : "Mi perfil"}
-           </span>
-         </div>
+    <div className="pb-8">
+      {/* Header — único nivel, sin duplicar la barra superior */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-semibold">Mi perfil</span>
+        </div>
 
-         {editing ? (
-           <button
-             type="button"
-             onClick={handleCancelEdit}
-             className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-           >
-             Cancelar
-           </button>
-         ) : (
-           <DropdownMenu>
-             <DropdownMenuTrigger asChild>
-               <button
-                 type="button"
-                 className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-               >
-                 <MoreHorizontal className="h-4 w-4" />
-               </button>
-             </DropdownMenuTrigger>
-             <DropdownMenuContent align="end" className="w-44">
-               <DropdownMenuItem onClick={handleEnterEdit} className="gap-2 text-sm">
-                 <Pencil className="h-3.5 w-3.5" />
-                 Editar
-               </DropdownMenuItem>
-               <DropdownMenuItem
-                 onClick={() => toast("Esta función estará disponible próximamente")}
-                 className="gap-2 text-sm"
-               >
-                 <Share2 className="h-3.5 w-3.5" />
-                 Compartir perfil
-               </DropdownMenuItem>
-             </DropdownMenuContent>
-           </DropdownMenu>
-         )}
-       </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem
+              onClick={() => toast("Esta función estará disponible próximamente")}
+              className="gap-2 text-sm"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Compartir perfil
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
+      const displayName = (currentUser?.name as string | undefined) ?? user?.name ?? "Sin nombre";
 
-      {/* ── Card 1: Avatar + Name + Title + Follow Stats ──────── */}
-      <motion.div {...stagger(0)} className="rounded-2xl border border-border/35 bg-card px-5 py-7 sm:px-7 sm:py-9">
-        <div className="flex flex-col items-center gap-4">
-          {/* Avatar */}
-          <div className="relative">
-            <Avatar className="h-24 w-24 border-2 border-border/30">
-              {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt={displayName} />}
-              <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
-                {displayName !== "Sin nombre" ? getInitials(displayName) : <User className="h-10 w-10" />}
-              </AvatarFallback>
-            </Avatar>
-            {editing && (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={savingAvatar}
-                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-              >
-                {savingAvatar ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Camera className="h-3.5 w-3.5" />
-                )}
-              </button>
+      {/* ── Banner + Avatar + Name + Title + Bio + Follow stats ─── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mx-auto max-w-sm"
+      >
+        {/* Banner detrás del avatar */}
+        <div className="relative mx-auto w-full rounded-t-2xl bg-slate-200 py-3 sm:py-4">
+          <div className="absolute -bottom-6 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
+            {currentUser?.avatarUrl && (
+              <AvatarImage
+                src={currentUser.avatarUrl}
+                alt={displayName}
+                className="h-full w-full object-cover"
+              />
             )}
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-          </div>          {/* Name — etiqueta igual que los demás campos */}
-           <div className="w-full max-w-sm">
-             {editing ? (
-               <div className="flex h-10 items-center gap-2.5">
-                 <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre</span>
-                 <input
-                   type="text"
-                   value={editName}
-                   onChange={(e) => setEditName(e.target.value)}
-                   maxLength={40}
-                   placeholder="Tu nombre"
-                   className="flex-1 h-10 rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground text-center outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-                 />
-                 <button
-                   type="button"
-                   onClick={handleSaveName}
-                   disabled={!editName.trim() || editName.trim() === (user?.name ?? "") || savingName}
-                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-                 >
-                   {savingName ? (
-                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                   ) : (
-                     <Check className="h-4 w-4" />
-                   )}
-                 </button>
-               </div>
-             ) : (
-               <div className="flex h-10 items-center justify-center">
-                 <p className="truncate text-xl font-extrabold tracking-tight text-card-foreground">{displayName}</p>
-               </div>
-             )}
-           </div>
-
-           {/* Title — misma estructura que Name */}
-           <div className="w-full max-w-sm">
-             {editing ? (
-               <div className="flex h-10 items-center gap-2.5">
-                 <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Título</span>
-                 <input
-                   type="text"
-                   value={editTitle}
-                   onChange={(e) => setEditTitle(e.target.value)}
-                   maxLength={60}
-                   placeholder="Título (opcional)"
-                   className="flex-1 h-10 rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground text-center outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-                 />
-                 <button
-                   type="button"
-                   onClick={handleSaveTitle}
-                   disabled={editTitle === ((currentUser as any)?.title ?? "") || savingTitle}
-                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-                 >
-                   {savingTitle ? (
-                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                   ) : (
-                     <Check className="h-4 w-4" />
-                   )}
-                 </button>
-               </div>
-             ) : currentTitle ? (
-               <div className="flex h-10 items-center justify-center">
-                 <p className="truncate text-sm font-medium italic text-primary/80">{currentTitle}</p>
-               </div>
-             ) : (
-               <div className="flex h-10 items-center justify-center">
-                 <span className="text-sm text-muted-foreground/50 italic">Sin título</span>
-               </div>
-             )}
-           </div>
-
-
-          {/* Separator */}
-          <div className="h-px w-14 bg-border/50" />
-
-          {/* Follow Stats — always rendered to prevent layout shift */}
-          <div className="flex items-center gap-6 text-sm" style={{ minHeight: 40 }}>
-            {followStats ? (
-              <>
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.95 }}
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  onClick={() => setShowFollowList("followers")}
-                  className="flex flex-col items-center gap-0.5"
-                >
-                  <motion.span
-                    key={followStats.followers}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="text-lg font-bold tabular-nums text-card-foreground"
-                  >{formatCount(followStats.followers)}</motion.span>
-                  <span className="text-[11px] text-muted-foreground">seguidores</span>
-                </motion.button>
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.95 }}
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  onClick={() => setShowFollowList("following")}
-                  className="flex flex-col items-center gap-0.5"
-                >
-                  <motion.span
-                    key={followStats.following}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="text-lg font-bold tabular-nums text-card-foreground"
-                  >{formatCount(followStats.following)}</motion.span>
-                  <span className="text-[11px] text-muted-foreground">siguiendo</span>
-                </motion.button>
-              </>
-            ) : (
-              <>
-                <div className="flex flex-col items-center gap-1.5">
-                  <div className="h-5 w-8 animate-pulse rounded bg-muted" />
-                  <div className="h-2.5 w-14 animate-pulse rounded bg-muted" />
-                </div>
-                <div className="flex flex-col items-center gap-1.5">
-                  <div className="h-5 w-8 animate-pulse rounded bg-muted" />
-                  <div className="h-2.5 w-12 animate-pulse rounded bg-muted" />
-                </div>
-              </>
-            )}
+            <AvatarFallback className="flex h-full w-full items-center justify-center bg-primary/10 text-2xl font-bold text-primary">
+              {displayName !== "Sin nombre"
+                ? getInitials(displayName)
+                : <User className="h-10 w-10" />}
+            </AvatarFallback>
           </div>
         </div>
-      </motion.div>       {/* ── Section: Mis publicaciones ──────────────────────── */}
-       {userPosts && userPosts.length > 0 && (
-         <motion.div {...stagger(2)} className="mt-6">
-           <div className="mb-4">
-             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mis publicaciones</p>
 
-          </div>
-          <div className="flex flex-col gap-4">
-            {userPosts.map((post) => (
-              <div key={post._id} className="rounded-2xl border border-border/35 bg-card p-4 sm:p-5">
-                {post.title && <p className="mb-1 text-sm font-bold text-card-foreground">{post.title}</p>}
-                <div className="text-[15px] leading-relaxed text-card-foreground" dangerouslySetInnerHTML={{ __html: post.content || "" }} />
-                {/* PARTE 5 · ENCUESTAS: también visibles en «Mis publicaciones». */}
+        {/* Nombre + botón editar (solo propio perfil) */}
+        <div className="flex flex-col items-center gap-2 px-4 pt-10">
+          <p className="text-xl font-extrabold tracking-tight text-card-foreground text-center">
+            {displayName}
+          </p>
+
+          {(currentUser?.title as string | undefined) && (
+            <p className="text-sm font-medium italic text-primary/80 text-center">
+              {(currentUser?.title as string | undefined) || ""}
+            </p>
+          )}
+
+          {/* Biografía */}
+          {(currentUser?.bio as string | undefined) && (
+            <p className="text-sm text-slate-600 text-center leading-relaxed">
+              {(currentUser?.bio as string | undefined) || ""}
+            </p>
+          )}
+
+          {/* Botón Editar perfil — solo propio perfil, visible directamente */}
+          {user?._id && (
+            <button
+              type="button"
+              onClick={() => setShowEditModal(true)}
+              className="mt-2 border border-slate-300 rounded-full px-4 py-1.5 text-sm font-medium transition-colors hover:bg-slate-100"
+            >
+              Editar perfil
+            </button>
+          )}
+        </div>
+
+        {/* Stats (seguidos / seguidores) */}
+        <div className="mt-6 flex items-center justify-center gap-6 text-sm">
+          <button
+            type="button"
+            onClick={() => setShowFollowList("followers")}
+            className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
+          >
+            <span className="text-lg font-bold tabular-nums text-card-foreground">
+              {formatCount(followStats?.followers ?? 0)}
+            </span>
+            <span className="text-[11px] text-muted-foreground">seguidores</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFollowList("following")}
+            className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
+          >
+            <span className="text-lg font-bold tabular-nums text-card-foreground">
+              {formatCount(followStats?.following ?? 0)}
+            </span>
+            <span className="text-[11px] text-muted-foreground">siguiendo</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* ── Pestañas inferior de contenido del usuario ──────────── */}
+      <div className="mt-6 flex border-b border-border/30">
+        {([
+          ["posts", "Publicaciones"],
+          ["replies", "Respuestas"],
+          ["likes", "Me gusta"],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className={`flex-1 py-3 text-center text-sm transition-colors ${
+              activeTab === id
+                ? "border-b-2 border-primary text-primary font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Contenido de cada pestaña ─────────────────────────── */}
+      <div className="mt-4">
+        {activeTab === "posts" && (
+          <ProfileTabContent
+            posts={userPosts ?? []}
+            currentUserId={user?._id}
+            renderPost={(post) => (
+              <div
+                key={post._id}
+                className="rounded-2xl border border-border/35 bg-card p-4 sm:p-5"
+              >
+                {post.title && (
+                  <p className="mb-1 text-sm font-bold text-card-foreground">
+                    {post.title}
+                  </p>
+                )}
+                <div className="text-[15px] leading-relaxed text-card-foreground">
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: post.content || "",
+                    }}
+                  />
+                </div>
                 {post.poll && (
                   <div className="mt-3">
                     <PostPoll poll={post.poll} userId={user?._id} />
@@ -439,24 +294,33 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                 )}
                 {post.mediaUrls && post.mediaUrls.length > 0 && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    {post.mediaUrls.map((m: { url: string; type: string }, i: number) =>
-                      m.type === "video" ? (
-                        <div key={i} className="relative h-28 w-full rounded-xl overflow-hidden bg-muted">
-                          <video
-                            src={m.url}
-                            className="h-full w-full object-contain"
-                            muted
-                            preload="metadata"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90">
-                              <Play className="ml-0.5 h-3.5 w-3.5" />
+                    {post.mediaUrls.map(
+                      ({ url, type }: { url: string; type: string }, i: number) =>
+                        type === "video" ? (
+                          <div
+                            key={i}
+                            className="relative h-28 w-full rounded-xl overflow-hidden bg-muted"
+                          >
+                            <video
+                              src={url}
+                              className="h-full w-full object-contain"
+                              muted
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90">
+                                <Play className="ml-0.5 h-3.5 w-3.5" />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : (
-                        <img key={i} src={m.url} alt="" className="h-28 w-full rounded-xl object-cover" />
-                      ),
+                        ) : (
+                          <img
+                            key={i}
+                            src={url}
+                            alt=""
+                            className="h-28 w-full rounded-xl object-cover"
+                          />
+                        ),
                     )}
                   </div>
                 )}
@@ -464,11 +328,28 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
                   {post.likes} me gusta · {post.favorites} favoritos
                 </p>
               </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+            )}
+          />
+        )}
 
+        {activeTab === "replies" && (
+          <ProfileEmptyState
+            icon={<MessageCircle className="h-6 w-6 text-muted-foreground/40" />}
+            title="No hay respuestas aún"
+            subtitle="Cuando respondas a otras publicaciones, aparecerán aquí."
+          />
+        )}
+
+        {activeTab === "likes" && (
+          <ProfileEmptyState
+            icon={<Heart className="h-6 w-6 text-muted-foreground/40" />}
+            title="No hay publicaciones favoritas"
+            subtitle="Los posts que marques como favoritos aparecerán aquí."
+          />
+        )}
+      </div>
+
+      {/* ── Seguidores / Siguiendo ─────────────────────────────── */}
       <AnimatePresence>
         {showFollowList && user?._id && (
           <FollowListModalInline
@@ -479,7 +360,283 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           />
         )}
       </AnimatePresence>
+
+      {/* ── Modal de edición de perfil ─────────────────────────── */}
+      <AnimatePresence>
+        {showEditModal && (
+          <EditProfileModal
+            currentUser={currentUser}
+            user={user}
+            onClose={() => setShowEditModal(false)}
+            onSaved={() => {
+              setShowEditModal(false);
+              void fetchProfile(user._id, setCurrentUser, setUserPosts);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function ProfileEmptyState({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      {icon}
+      <p className="mt-3 text-sm text-muted-foreground">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground/70">{subtitle}</p>
+    </div>
+  );
+}
+
+function ProfileTabContent({
+  posts,
+  currentUserId,
+  renderPost,
+}: {
+  posts: any[];
+  currentUserId?: string;
+  renderPost: (post: any) => React.ReactNode;
+}) {
+  return posts.length === 0 ? (
+    <ProfileEmptyState
+      icon={<FileText className="h-6 w-6 text-muted-foreground/40" />}
+      title="No hay publicaciones"
+      subtitle="Cuando publiques algo, aparecerán aquí."
+    />
+  ) : (
+    <div className="flex flex-col gap-4">{posts.map(renderPost)}</div>
+  );
+}
+
+// ── Modal de edición de perfil ─────────────────────────────────
+function EditProfileModal({
+  currentUser,
+  user,
+  onClose,
+  onSaved,
+}: {
+  currentUser: any;
+  user: any;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [title, setTitle] = useState("");
+  const [bio, setBio] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setName(currentUser?.name ?? user?.name ?? "");
+    setTitle(currentUser?.title ?? "");
+    setBio(currentUser?.bio ?? "");
+  }, [currentUser, user]);
+
+  const isNameDirty =
+    name.trim() !== (currentUser?.name ?? user?.name ?? "");
+  const isTitleDirty =
+    title !== (currentUser?.title ?? "");
+  const isBioDirty =
+    bio !== (currentUser?.bio ?? "");
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updateProfile(user?._id || "", {
+        name: name.trim() || undefined,
+        title: title.trim() || undefined,
+        bio: bio.trim() || undefined,
+      });
+      onSaved();
+      toast.success("Perfil actualizado");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast.error("No se pudo actualizar el perfil");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || savingAvatar) return;
+      if (!file.type.startsWith("image/")) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("La imagen es demasiado grande (máx 5 MB)");
+        return;
+      }
+      setSavingAvatar(true);
+      try {
+        const path = generateFilePath(
+          user?._id || "",
+          file.name,
+          "avatars"
+        );
+        await uploadFile("avatars", file, path);
+        await updateProfile(user?._id || "", { image: path });
+        onSaved();
+        toast.success("Foto de perfil actualizada");
+      } catch (error) {
+        console.error("Error uploading avatar:", error);
+        toast.error("No se pudo subir la foto");
+      } finally {
+        setSavingAvatar(false);
+        e.target.value = "";
+      }
+    },
+    [user?._id, onSaved]
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[90] flex z-50 items-center justify-center bg-black/50 pb-32"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.2 }}
+        className="mx-4 w-full max-w-sm overflow-y-auto rounded-2xl border border-border/35 bg-card p-5 pb-32 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header: título + Guardar (top-right) */}
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-sm font-semibold">Editar perfil</span>
+          <div className="flex items-center gap-2">
+            {saving ? (
+              <span className="flex h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={
+                  !isNameDirty &&
+                  !isTitleDirty &&
+                  !isBioDirty &&
+                  !savingAvatar
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+                title="Guardar cambios"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        {/* Avatar + cámara */}
+        <div className="flex flex-col items-center gap-3 mb-4">
+          <div className="relative">
+            <Avatar className="h-24 w-24 border-2 border-border/30">
+              {currentUser?.avatarUrl && (
+                <AvatarImage
+                  src={currentUser.avatarUrl}
+                  alt={name || "Perfil"}
+                  className="h-full w-full object-cover"
+                />
+              )}
+              <AvatarFallback className="flex h-full w-full items-center justify-center bg-primary/10 text-2xl font-bold text-primary">
+                {name ? getInitials(name) : <User className="h-10 w-10" />}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={savingAvatar || saving}
+              className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              {savingAvatar ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Camera className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+          </div>
+          {savingAvatar && (
+            <p className="text-xs text-muted-foreground">Subiendo foto…</p>
+          )}
+        </div>
+
+        {/* Nombre */}
+        <div className="mb-3">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Nombre
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={40}
+            placeholder="Tu nombre"
+            className="h-10 w-full rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          />
+        </div>
+
+        {/* Título */}
+        <div className="mb-3">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Título (opcional)
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={60}
+            placeholder="Título (opcional)"
+            className="h-10 w-full rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          />
+        </div>
+
+        {/* Biografía */}
+        <div className="mb-4">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Biografía / Descripción
+          </label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value.slice(0, 160))}
+            maxLength={160}
+            placeholder="Cuéntanos algo sobre ti…"
+            rows={4}
+            className="min-h-[88px] w-full resize-none rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          />
+          <p className="mt-1 text-right text-[11px] text-muted-foreground/70">
+            {bio.length}/160
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -506,7 +663,10 @@ function FollowListModalInline({
     const fetchList = async () => {
       if (!userId) return;
       try {
-        const data = type === "followers" ? await getFollowers(userId) : await getFollowing(userId);
+        const data =
+          type === "followers"
+            ? await getFollowers(userId)
+            : await getFollowing(userId);
         setList(data as FollowListUser[]);
       } catch (error) {
         console.error("Error fetching follow list:", error);
@@ -521,7 +681,9 @@ function FollowListModalInline({
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
   useEffect(() => {
@@ -575,29 +737,48 @@ function FollowListModalInline({
               const following = isFollowingUser(u._id);
               const busy = inFlight.has(u._id);
               return (
-                <div key={u._id} className="flex items-center gap-3 px-5 py-3">
+                <div
+                  key={u._id}
+                  className="flex items-center gap-3 px-5 py-3"
+                >
                   <Avatar className="h-10 w-10 shrink-0 border border-border/30">
-                    {u.imageUrl && <AvatarImage src={u.imageUrl} alt={u.name} className="object-cover" />}
+                    {u.imageUrl && (
+                      <AvatarImage
+                        src={u.imageUrl}
+                        alt={u.name}
+                        className="object-cover"
+                      />
+                    )}
                     <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                       {getInitials(u.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium text-card-foreground">{u.name}</span>
+                  <span className="text-sm font-medium text-card-foreground">
+                    {u.name}
+                  </span>
                   {currentUserId && currentUserId !== u._id && (
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => {
                         setInFlight((prev) => new Set(prev).add(u._id));
-                        toggleFollow(currentUserId, u._id).then((nowFollowing: boolean) => {
-                          setListStats((prev) => ({ ...prev, [u._id]: nowFollowing }));
-                          setInFlight((prev) => {
-                            const next = new Set(prev);
-                            next.delete(u._id);
-                            return next;
-                          });
-                        }).catch((error: unknown) => {
-                          console.error("Error toggling follow in list:", error);
+                        toggleFollow(currentUserId, u._id).then(
+                          (nowFollowing: boolean) => {
+                            setListStats((prev) => ({
+                              ...prev,
+                              [u._id]: nowFollowing,
+                            }));
+                            setInFlight((prev) => {
+                              const next = new Set(prev);
+                              next.delete(u._id);
+                              return next;
+                            });
+                          }
+                        ).catch((error: unknown) => {
+                          console.error(
+                            "Error toggling follow in list:",
+                            error
+                          );
                           setInFlight((prev) => {
                             const next = new Set(prev);
                             next.delete(u._id);
