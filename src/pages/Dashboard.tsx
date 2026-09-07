@@ -792,7 +792,7 @@ function FeedVideo({
           <Film className="h-8 w-8 text-muted-foreground/40" />
         </div>
       )}
-      {/* Play button — show when video data is ready OR always as fallback */}
+      {/* Play button - show when video data is ready OR always as fallback */}
       <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg transition-transform group-hover:scale-105">
           <Play className="ml-0.5 h-5 w-5" />
@@ -958,7 +958,7 @@ function FormatToolbar({
     <div className="w-full">
       {/* Clean toolbar at the foot of the editor box */}
       <div className="mt-3 flex items-center rounded-xl border border-slate-200 bg-slate-50 px-1.5 py-1 dark:border-slate-700 dark:bg-slate-800/60">
-        {/* Attach / files — left */}
+        {/* Attach / files - left */}
         <div className="flex items-center gap-0.5">
           <button
             type="button"
@@ -994,7 +994,7 @@ function FormatToolbar({
         {/* Divider between attach and text controls */}
         <span className="mx-1.5 h-6 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
 
-        {/* Format — right (B, I, U, color) */}
+        {/* Format - right (B, I, U, color) */}
         <div className="ml-auto flex items-center gap-0.5">
           <button
             type="button"
