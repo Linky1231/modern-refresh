@@ -47,14 +47,14 @@ export function UnfollowConfirmModal({ open, username, onConfirm, onCancel }: Un
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+                className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={onConfirm}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+                className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
               >
                 Dejar de seguir
               </button>
