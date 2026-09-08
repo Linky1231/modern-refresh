@@ -168,8 +168,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner — limpio, sin texto cuando no hay banner */}
-        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
+        {/* Banner — azul de la marca cuando no hay imagen personalizada, soporte sólido para el avatar */}
+        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600">
           {currentUser?.bannerUrl ? (
             <img
               src={currentUser.bannerUrl}
@@ -178,7 +178,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               loading="lazy"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-r from-blue-50 to-indigo-50" />
+            <div className="h-full w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
           )}
         </div>
         {/* Avatar solapando exactamente el centro del borde inferior del banner — h-20 w-20 / -mt-10 = mitad perfecta */}
@@ -209,10 +209,10 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             </p>
           )}
 
-          {/* Biografía — nunca ambos: si hay bio muestra solo bio, si no y es perfil propio muestra + Añadir */}
-          {(currentUser?.bio as string | undefined)?.trim() ? (
+          {/* Biografía — solo uno: si hay texto muestra solo bio, oculta completamente "+ Añadir biografía" */}
+          {currentUser?.bio?.trim() ? (
             <p className="text-sm text-slate-600 text-center leading-relaxed">
-              {(currentUser?.bio as string).trim()}
+              {currentUser.bio.trim()}
             </p>
           ) : isOwnProfile ? (
             <button
@@ -225,9 +225,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           ) : null}
         </div>
 
-        {/* Tarjeta de contadores — estructura en T bien definida */}
-        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-card">
-          <div className="border-t border-slate-200 pt-0" aria-hidden />
+        {/* Tarjeta de contadores — rounded-2xl con divisor vertical perfectamente centrado */}
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-card">
           <div className="flex divide-x divide-slate-200">
             <button
               type="button"
@@ -564,16 +563,16 @@ function EditProfileModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {/* ── BANNER — sin texto placeholder, degradado limpio */}
+          {/* ── BANNER — degradado azul de la marca por defecto */}
           <div className="mb-5">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Banner
             </label>
-            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-gradient-to-r from-blue-600 to-indigo-600">
               {bannerPreview ? (
                 <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full bg-gradient-to-r from-blue-50 to-indigo-50" />
+                <div className="h-full w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
               )}
               <button
                 type="button"
