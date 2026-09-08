@@ -27,6 +27,7 @@ import {
   FileText,
   Play,
   Share2,
+  Pencil,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -140,6 +141,15 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
+            {isOwnProfile && (
+              <DropdownMenuItem
+                onClick={() => setShowEditModal(true)}
+                className="gap-2 text-sm"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Editar perfil
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => toast("Esta función estará disponible próximamente")}
               className="gap-2 text-sm"
@@ -213,38 +223,26 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               + Añadir biografía
             </button>
           ) : null}
-
-          {/* Botón Editar perfil — solo perfil propio, sin línea divisoria gris debajo */}
-          {isOwnProfile && (
-            <button
-              type="button"
-              onClick={() => setShowEditModal(true)}
-              className="border border-slate-300 rounded-full px-4 py-1.5 text-sm font-medium transition-colors hover:bg-slate-100"
-            >
-              Editar perfil
-            </button>
-          )}
         </div>
 
-        {/* Stats — sin línea horizontal, espacio uniforme gap-4 y divisor vertical centrado perfectamente */}
-        <div className="mt-4">
-          <div className="flex items-stretch justify-center">
+        {/* Tarjeta de contadores — estructura en T bien definida */}
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-card">
+          <div className="border-t border-slate-200 pt-0" aria-hidden />
+          <div className="flex divide-x divide-slate-200">
             <button
               type="button"
               onClick={() => setShowFollowList("followers")}
-              className="flex flex-1 flex-col items-center gap-0.5 px-6 py-1 text-sm transition-colors hover:text-foreground"
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 px-6 py-3 text-center text-sm transition-colors hover:bg-muted/40"
             >
               <span className="text-lg font-bold tabular-nums text-card-foreground">
                 {formatCount(followStats?.followers ?? 0)}
               </span>
               <span className="text-[11px] text-muted-foreground">seguidores</span>
             </button>
-            {/* Divisor vertical perfectamente centrado — flex-1 equilibrado en ambos lados */}
-            <div className="w-px shrink-0 self-stretch bg-slate-200" aria-hidden />
             <button
               type="button"
               onClick={() => setShowFollowList("following")}
-              className="flex flex-1 flex-col items-center gap-0.5 px-6 py-1 text-sm transition-colors hover:text-foreground"
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 px-6 py-3 text-center text-sm transition-colors hover:bg-muted/40"
             >
               <span className="text-lg font-bold tabular-nums text-card-foreground">
                 {formatCount(followStats?.following ?? 0)}
