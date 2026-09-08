@@ -71,6 +71,7 @@ import { useNavigate } from "@/lib/router-compat";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { UnfollowConfirmModal } from "@/components/UnfollowConfirmModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -655,67 +656,7 @@ function DeleteConfirmDialog({
   );
 }
 
-// ── Unfollow confirmation dialog ────────────────────────────────────
-function UnfollowConfirmDialog({
-  open,
-  userName,
-  onConfirm,
-  onCancel,
-}: {
-  open: boolean;
-  userName: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 8 }}
-            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            className="mx-4 w-full max-w-sm rounded-2xl border border-border/35 bg-card p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                <UserX className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold">¿Dejar de seguir a @userName?</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Dejarás de ver sus publicaciones en tu pestaña de Seguidos.
-                </p>
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={onCancel}>
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={onConfirm}
-                className="gap-1.5"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Dejar de seguir
-              </Button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
+// UnfollowConfirmDialog movido a @/components/UnfollowConfirmModal (usado en Feed y Perfil)
 
 // ── Feed video thumbnail ───────────────────────────────────────────
 /** Check if media dimensions are non-optimal for feed display. */
@@ -1470,10 +1411,10 @@ function PostCard({
                       setIsFollowingUser(true);
                     }
                   }}
-                  className={`ml-auto text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
+                  className={`ml-auto rounded-full px-3 py-1 text-xs transition-all ${
                     isFollowingUser
-                      ? "border border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
-                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                      ? "border border-slate-200 bg-slate-100 text-slate-700 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                      : "bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm"
                   }`}
                 >
                   {isFollowingUser ? "Siguiendo" : "Seguir"}
@@ -3278,10 +3219,10 @@ export default function Dashboard() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {/* Unfollow dialog */}
-      <UnfollowConfirmDialog
+      {/* Unfollow dialog — coherente con el modal del perfil */}
+      <UnfollowConfirmModal
         open={unfollowTarget !== null}
-        userName={unfollowTarget?.name ?? ""}
+        username={unfollowTarget?.name ?? ""}
         onConfirm={handleConfirmUnfollow}
         onCancel={() => setUnfollowTarget(null)}
       />

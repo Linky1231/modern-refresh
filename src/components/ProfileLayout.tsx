@@ -15,6 +15,7 @@ import {
   isFollowing as checkIsFollowing,
 } from "@/lib/db";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { UnfollowConfirmModal } from "@/components/UnfollowConfirmModal";
 import {
   ArrowLeft,
   Camera,
@@ -80,6 +81,7 @@ export default function ProfileLayout({
   const [isFollowing, setIsFollowing] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
+  const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!profileUserId) return;
@@ -108,14 +110,33 @@ export default function ProfileLayout({
     void fetchAll();
   }, [fetchAll]);
 
-  const handleFollowToggle = async () => {
+  const handleFollowPress = async () => {
     if (!currentUserId || !profileUserId) return;
+    if (isFollowing) {
+      setShowUnfollowConfirm(true);
+      return;
+    }
     try {
       const nowFollowing = await toggleFollow(currentUserId, profileUserId);
       setIsFollowing(nowFollowing);
       const stats = await getFollowStats(profileUserId);
       setFollowStats(stats);
-      toast.success(nowFollowing ? "Siguiendo" : "Dejaste de seguir");
+      toast.success("Siguiendo");
+    } catch (e) {
+      console.error(e);
+      toast.error("No se pudo actualizar el seguimiento");
+    }
+  };
+
+  const handleConfirmUnfollow = async () => {
+    if (!currentUserId || !profileUserId) return;
+    setShowUnfollowConfirm(false);
+    try {
+      const nowFollowing = await toggleFollow(currentUserId, profileUserId);
+      setIsFollowing(nowFollowing);
+      const stats = await getFollowStats(profileUserId);
+      setFollowStats(stats);
+      toast.success("Dejaste de seguir");
     } catch (e) {
       console.error(e);
       toast.error("No se pudo actualizar el seguimiento");
@@ -227,11 +248,11 @@ export default function ProfileLayout({
           {!isOwnProfile && currentUserId && profileUserId !== currentUserId && (
             <button
               type="button"
-              onClick={handleFollowToggle}
-              className={`mt-1 rounded-full px-5 py-1.5 text-sm font-semibold transition-colors ${
+              onClick={handleFollowPress}
+              className={`mt-1 rounded-full px-5 py-1 text-xs transition-all ${
                 isFollowing
-                  ? "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                  ? "border border-slate-200 bg-slate-100 text-slate-700 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                  : "bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm"
               }`}
             >
               {isFollowing ? "Siguiendo" : "Seguir"}
@@ -304,6 +325,14 @@ export default function ProfileLayout({
           />
         )}
       </AnimatePresence>
+
+      {/* Unfollow confirm — perfil ajeno */}
+      <UnfollowConfirmModal
+        open={showUnfollowConfirm}
+        username={displayName}
+        onConfirm={handleConfirmUnfollow}
+        onCancel={() => setShowUnfollowConfirm(false)}
+      />
     </div>
   );
 }
