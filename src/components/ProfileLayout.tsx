@@ -175,8 +175,8 @@ export default function ProfileLayout({
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner — azul suave minimalista por defecto */}
-        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50">
+        {/* Banner — degradado técnico exacto Brand Blue: sutil, integrado con logo Asternal y botón + */}
+        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm border-b border-blue-100">
           {profile?.bannerUrl ? (
             <img
               src={profile.bannerUrl}
@@ -185,7 +185,10 @@ export default function ProfileLayout({
               loading="lazy"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50" />
+            <div
+              className="h-full w-full bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm"
+              style={{ background: "linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(59, 130, 246, 0.08) 100%)" }}
+            />
           )}
         </div>
         {/* Avatar superpuesto — mitad exacta del borde */}
@@ -534,11 +537,14 @@ function EditProfileModal({
         <div className="flex-1 overflow-y-auto p-5">
           <div className="mb-5">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Banner</label>
-            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50">
+            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm">
               {bannerPreview ? (
                 <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50" />
+                <div
+                  className="h-full w-full bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm"
+                  style={{ background: "linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(59, 130, 246, 0.08) 100%)" }}
+                />
               )}
               <button
                 type="button"
