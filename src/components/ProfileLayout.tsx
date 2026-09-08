@@ -16,6 +16,7 @@ import {
 } from "@/lib/db";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { UnfollowConfirmModal } from "@/components/UnfollowConfirmModal";
+import { FollowButton } from "@/components/FollowButton";
 import {
   ArrowLeft,
   Camera,
@@ -244,17 +245,14 @@ export default function ProfileLayout({
           )}
 
           {!isOwnProfile && currentUserId && profileUserId !== currentUserId && (
-            <button
-              type="button"
-              onClick={handleFollowPress}
-              className={`mt-1 rounded-full px-6 py-2 text-sm transition-all shadow-sm ${
-                isFollowing
-                  ? "border border-slate-200 bg-slate-100 text-slate-700 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                  : "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-              }`}
-            >
-              {isFollowing ? "Siguiendo" : "Seguir"}
-            </button>
+            <div className="mt-1">
+              <FollowButton
+                isFollowing={isFollowing}
+                size="lg"
+                onFollow={handleFollowPress}
+                onUnfollowRequest={() => setShowUnfollowConfirm(true)}
+              />
+            </div>
           )}
         </div>
 

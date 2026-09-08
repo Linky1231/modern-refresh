@@ -72,6 +72,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { UnfollowConfirmModal } from "@/components/UnfollowConfirmModal";
+import { FollowButton } from "@/components/FollowButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1398,27 +1399,16 @@ function PostCard({
                 {formatTime(post.createdAt)}
               </span>
               {currentUserId && post.authorId !== currentUserId && (
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.92 }}
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                  onClick={() => {
-                    if (isFollowingUser) {
-                      onRequestUnfollow(post.authorId, post.authorName);
-                    } else {
+                <div className="ml-auto">
+                  <FollowButton
+                    isFollowing={isFollowingUser}
+                    onFollow={() => {
                       onFollow(post.authorId);
                       setIsFollowingUser(true);
-                    }
-                  }}
-                  className={`ml-auto rounded-full px-3 py-1 text-xs transition-all ${
-                    isFollowingUser
-                      ? "border border-slate-200 bg-slate-100 text-slate-700 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                      : "bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm"
-                  }`}
-                >
-                  {isFollowingUser ? "Siguiendo" : "Seguir"}
-                </motion.button>
+                    }}
+                    onUnfollowRequest={() => onRequestUnfollow(post.authorId, post.authorName)}
+                  />
+                </div>
               )}
             </div>
             {post.title && (
