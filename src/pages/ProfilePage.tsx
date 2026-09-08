@@ -168,8 +168,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner — azul de la marca cuando no hay imagen personalizada, soporte sólido para el avatar */}
-        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600">
+        {/* Banner — azul suave minimalista por defecto, no roba protagonismo al avatar */}
+        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50">
           {currentUser?.bannerUrl ? (
             <img
               src={currentUser.bannerUrl}
@@ -178,7 +178,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               loading="lazy"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+            <div className="h-full w-full bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50" />
           )}
         </div>
         {/* Avatar solapando exactamente el centro del borde inferior del banner — h-20 w-20 / -mt-10 = mitad perfecta */}
@@ -209,16 +209,13 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             </p>
           )}
 
-          {/* Biografía — solo uno: si hay texto muestra solo bio, oculta completamente "+ Añadir biografía" */}
           {currentUser?.bio?.trim() ? (
-            <p className="text-sm text-slate-600 text-center leading-relaxed">
-              {currentUser.bio.trim()}
-            </p>
+            <p className="mt-1 text-sm text-slate-600 text-center">{currentUser.bio.trim()}</p>
           ) : isOwnProfile ? (
             <button
               type="button"
               onClick={() => setShowEditModal(true)}
-              className="text-xs text-blue-500 hover:underline cursor-pointer"
+              className="mt-1 text-xs text-blue-500 hover:underline cursor-pointer"
             >
               + Añadir biografía
             </button>
@@ -563,16 +560,16 @@ function EditProfileModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {/* ── BANNER — degradado azul de la marca por defecto */}
+          {/* ── BANNER — degradado suave minimalista por defecto */}
           <div className="mb-5">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Banner
             </label>
-            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-gradient-to-r from-blue-600 to-indigo-600">
+            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50">
               {bannerPreview ? (
                 <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+                <div className="h-full w-full bg-gradient-to-r from-blue-100 via-indigo-50 to-blue-50" />
               )}
               <button
                 type="button"
