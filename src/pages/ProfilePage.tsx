@@ -159,27 +159,30 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner + Avatar — fiel a la captura */}
-        <div className="relative mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-[#dbeafe]">
-          {currentUser?.bannerUrl ? (
-            <img
-              src={currentUser.bannerUrl}
-              alt="Banner del perfil"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#bfdbfe] via-[#dbeafe] to-[#eff6ff]">
-              <span className="text-xs font-medium tracking-wide text-slate-400">Sin banner</span>
-            </div>
-          )}
-          {/* Avatar centrado solapando el borde inferior del banner */}
+        {/* Banner + Avatar — corregido: avatar fuera del overflow-hidden para que no se corte */}
+        <div className="relative mx-auto w-full">
+          <div className="h-[128px] w-full overflow-hidden rounded-2xl bg-[#dbeafe]">
+            {currentUser?.bannerUrl ? (
+              <img
+                src={currentUser.bannerUrl}
+                alt="Banner del perfil"
+                className="h-full w-full object-cover object-center"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#bfdbfe] via-[#dbeafe] to-[#eff6ff]">
+                <span className="text-xs font-medium tracking-wide text-slate-400">Sin banner</span>
+              </div>
+            )}
+          </div>
+          {/* Avatar centrado solapando el borde inferior del banner — fuera del overflow-hidden */}
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
             <Avatar className="h-[84px] w-[84px] border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
               {currentUser?.avatarUrl && (
                 <AvatarImage
                   src={currentUser.avatarUrl}
                   alt={displayName}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover object-center"
                 />
               )}
               <AvatarFallback className="flex h-full w-full items-center justify-center bg-[#eef3ff] text-[32px] font-extrabold leading-none text-[#4a6cf7]">
@@ -190,7 +193,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </div>
 
         {/* Nombre + botón editar (solo propio perfil) */}
-        <div className="flex flex-col items-center gap-2 px-4 pt-10">
+        <div className="flex flex-col items-center gap-2 px-4 pt-12">
           <p className="text-xl font-extrabold tracking-tight text-card-foreground text-center">
             {displayName}
           </p>
