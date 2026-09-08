@@ -159,8 +159,17 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner detrás del avatar */}
-        <div className="relative mx-auto h-32 w-full bg-slate-200">
+        {/* Banner + Avatar */}
+        <div className="relative mx-auto h-36 w-full overflow-hidden rounded-b-2xl bg-muted">
+          {currentUser?.bannerUrl ? (
+            <img
+              src={currentUser.bannerUrl}
+              alt="Banner del perfil"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300" />
+          )}
           <Avatar className="absolute -bottom-8 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
             {currentUser?.avatarUrl && (
               <AvatarImage
@@ -424,71 +433,114 @@ function EditProfileModal({
   const [title, setTitle] = useState("");
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
-  const [savingAvatar, setSavingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     setName(currentUser?.name ?? user?.name ?? "");
     setTitle(currentUser?.title ?? "");
     setBio(currentUser?.bio ?? "");
+    setAvatarPreview(currentUser?.avatarUrl);
+    setBannerPreview(currentUser?.bannerUrl);
+    setAvatarFile(null);
+    setBannerFile(null);
   }, [currentUser, user]);
 
-  const isNameDirty =
-    name.trim() !== (currentUser?.name ?? user?.name ?? "");
-  const isTitleDirty =
-    title !== (currentUser?.title ?? "");
-  const isBioDirty =
-    bio !== (currentUser?.bio ?? "");
+  const isNameDirty = name.trim() !== (currentUser?.name ?? user?.name ?? "");
+  const isTitleDirty = title !== (currentUser?.title ?? "");
+  const isBioDirty = bio !== (currentUser?.bio ?? "");
+  const isAvatarDirty = avatarFile !== null;
+  const isBannerDirty = bannerFile !== null;
+  const hasChanges = isNameDirty || isTitleDirty || isBioDirty || isAvatarDirty || isBannerDirty;
+
+  const handleAvatarSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten imágenes");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen es demasiado grande (máx 5 MB)");
+      return;
+    }
+    setAvatarFile(file);
+    const url = URL.createObjectURL(file);
+    setAvatarPreview(url);
+    e.target.value = "";
+  }, []);
+
+  const handleBannerSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten imágenes");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen es demasiado grande (máx 5 MB)");
+      return;
+    }
+    setBannerFile(file);
+    const url = URL.createObjectURL(file);
+    setBannerPreview(url);
+    e.target.value = "";
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview && avatarPreview.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
+  useEffect(() => {
+    return () => {
+      if (bannerPreview && bannerPreview.startsWith("blob:")) URL.revokeObjectURL(bannerPreview);
+    };
+  }, [bannerPreview]);
 
   const handleSave = async () => {
     if (saving) return;
+    if (!hasChanges) {
+      toast.info("No hay cambios para guardar");
+      return;
+    }
     setSaving(true);
     try {
-      await updateProfile(user?._id || "", {
-        name: name.trim() || undefined,
-        title: title.trim() || undefined,
-        bio: bio.trim() || undefined,
-      });
-      onSaved();
+      let avatarPath: string | undefined;
+      let bannerPath: string | undefined;
+      if (avatarFile) {
+        const path = generateFilePath(user?._id || "", avatarFile.name, "avatars");
+        await uploadFile("avatars", avatarFile, path);
+        avatarPath = path;
+      }
+      if (bannerFile) {
+        const path = generateFilePath(user?._id || "", bannerFile.name, "banners");
+        await uploadFile("banners", bannerFile, path);
+        bannerPath = path;
+      }
+      const updates: Record<string, string | undefined> = {};
+      if (isNameDirty) updates.name = name.trim() || undefined;
+      if (isTitleDirty) updates.title = title.trim() || undefined;
+      if (isBioDirty) updates.bio = bio.trim() || undefined;
+      if (avatarPath) updates.image = avatarPath;
+      if (bannerPath) updates.banner = bannerPath;
+      if (Object.keys(updates).length > 0) {
+        await updateProfile(user?._id || "", updates as any);
+      }
       toast.success("Perfil actualizado");
+      onSaved();
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast.error("No se pudo actualizar el perfil");
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar el perfil");
     } finally {
       setSaving(false);
     }
   };
-
-  const handleAvatarUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || savingAvatar) return;
-      if (!file.type.startsWith("image/")) return;
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("La imagen es demasiado grande (máx 5 MB)");
-        return;
-      }
-      setSavingAvatar(true);
-      try {
-        const path = generateFilePath(
-          user?._id || "",
-          file.name,
-          "avatars"
-        );
-        await uploadFile("avatars", file, path);
-        await updateProfile(user?._id || "", { image: path });
-        onSaved();
-        toast.success("Foto de perfil actualizada");
-      } catch (error) {
-        console.error("Error uploading avatar:", error);
-        toast.error("No se pudo subir la foto");
-      } finally {
-        setSavingAvatar(false);
-        e.target.value = "";
-      }
-    },
-    [user?._id, onSaved]
-  );
 
   return (
     <motion.div
@@ -496,7 +548,7 @@ function EditProfileModal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 pb-32"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
     >
       <motion.div
@@ -504,11 +556,11 @@ function EditProfileModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.2 }}
-        className="mx-4 w-full max-w-sm overflow-y-auto rounded-2xl border border-border/35 bg-card p-5 pb-32 shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-border/35 bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: título + Guardar (top-right) */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-border/20 px-5 py-3 shrink-0">
           <span className="text-sm font-semibold">Editar perfil</span>
           <div className="flex items-center gap-2">
             {saving ? (
@@ -517,12 +569,7 @@ function EditProfileModal({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={
-                  !isNameDirty &&
-                  !isTitleDirty &&
-                  !isBioDirty &&
-                  !savingAvatar
-                }
+                disabled={!hasChanges}
                 className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
               >
                 <Check className="h-3.5 w-3.5" />
@@ -539,92 +586,97 @@ function EditProfileModal({
           </div>
         </div>
 
-        {/* Avatar + cámara */}
-        <div className="flex flex-col items-center gap-3 mb-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24 border-2 border-border/30">
-              {currentUser?.avatarUrl && (
-                <AvatarImage
-                  src={currentUser.avatarUrl}
-                  alt={name || "Perfil"}
-                  className="h-full w-full object-cover"
-                />
-              )}
-              <AvatarFallback className="flex h-full w-full items-center justify-center bg-primary/10 text-2xl font-bold text-primary">
-                {name ? getInitials(name) : <User className="h-10 w-10" />}
-              </AvatarFallback>
-            </Avatar>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={savingAvatar || saving}
-              className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-            >
-              {savingAvatar ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        <div className="flex-1 overflow-y-auto p-5">
+          {/* ── BANNER ── */}
+          <div className="mb-5">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Banner
+            </label>
+            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-muted">
+              {bannerPreview ? (
+                <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
               ) : (
-                <Camera className="h-3.5 w-3.5" />
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+                  <span className="text-xs text-muted-foreground">Sin banner — toca para agregar</span>
+                </div>
               )}
-            </button>
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={saving}
+                className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/75 disabled:opacity-50"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {bannerPreview ? "Cambiar banner" : "Agregar banner"}
+              </button>
+            </div>
+            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerSelect} />
+            {isBannerDirty && <p className="mt-1.5 text-xs text-primary">Nuevo banner listo — pulsa Guardar</p>}
+          </div>
+
+          {/* Avatar + cámara */}
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <div className="relative">
+              <Avatar className="h-24 w-24 border-2 border-border/30">
+                {avatarPreview ? (
+                  <AvatarImage src={avatarPreview} alt={name || "Perfil"} className="h-full w-full object-cover" />
+                ) : null}
+                <AvatarFallback className="flex h-full w-full items-center justify-center bg-primary/10 text-2xl font-bold text-primary">
+                  {name ? getInitials(name) : <User className="h-10 w-10" />}
+                </AvatarFallback>
+              </Avatar>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={saving}
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
+            </div>
+            {isAvatarDirty && <p className="text-xs text-primary">Nueva foto lista — pulsa Guardar</p>}
+          </div>
+
+          {/* Nombre */}
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre</label>
             <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarUpload}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={40}
+              placeholder="Tu nombre"
+              className="h-10 w-full rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
             />
           </div>
-          {savingAvatar && (
-            <p className="text-xs text-muted-foreground">Subiendo foto…</p>
-          )}
-        </div>
 
-        {/* Nombre */}
-        <div className="mb-3">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Nombre
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={40}
-            placeholder="Tu nombre"
-            className="h-10 w-full rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-          />
-        </div>
+          {/* Título */}
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Título (opcional)</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={60}
+              placeholder="Título (opcional)"
+              className="h-10 w-full rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            />
+          </div>
 
-        {/* Título */}
-        <div className="mb-3">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Título (opcional)
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={60}
-            placeholder="Título (opcional)"
-            className="h-10 w-full rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-          />
-        </div>
-
-        {/* Biografía */}
-        <div className="mb-4">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Biografía / Descripción
-          </label>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value.slice(0, 160))}
-            maxLength={160}
-            placeholder="Cuéntanos algo sobre ti…"
-            rows={4}
-            className="min-h-[88px] w-full resize-none rounded-xl border border-border/35 bg-background px-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-          />
-          <p className="mt-1 text-right text-[11px] text-muted-foreground/70">
-            {bio.length}/160
-          </p>
+          {/* Biografía */}
+          <div className="mb-2">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Biografía / Descripción</label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 160))}
+              maxLength={160}
+              placeholder="Cuéntanos algo sobre ti…"
+              rows={4}
+              className="min-h-[88px] w-full resize-none rounded-xl border border-border/35 bg-background px-3 py-2.5 text-sm text-card-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            />
+            <p className="mt-1 text-right text-[11px] text-muted-foreground/70">{bio.length}/160</p>
+          </div>
         </div>
       </motion.div>
     </motion.div>

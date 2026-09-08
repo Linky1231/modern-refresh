@@ -105,6 +105,7 @@ interface LocalUserRow {
   name: string;
   email: string | null;
   image: string | null; // ruta de avatar (se resuelve vía files) o data URL
+  banner: string | null; // ruta de banner (se resuelve vía files) o data URL
   bio: string;
   title: string;
   role: string;
@@ -215,13 +216,18 @@ function findUserByUsername(username: string): LocalUserRow | null {
 
 function ensureUser(id: string, fallback?: Partial<LocalUserRow>): LocalUserRow {
   const existing = findUser(id);
-  if (existing) return existing;
+  if (existing) {
+    // migración suave: banner puede faltar en datos antiguos
+    if (!("banner" in existing)) (existing as LocalUserRow).banner = null;
+    return existing;
+  }
   const row: LocalUserRow = {
     id,
     username: fallback?.username ?? `usuario-${id.slice(0, 6)}`,
     name: fallback?.name ?? "Anónimo",
     email: fallback?.email ?? null,
     image: fallback?.image ?? null,
+    banner: fallback?.banner ?? null,
     bio: fallback?.bio ?? "",
     title: fallback?.title ?? "",
     role: fallback?.role ?? "user",
@@ -352,6 +358,7 @@ export async function registerUser(
     name: displayName,
     email: `${cleanUsername}@local.asternal`,
     image: null,
+    banner: null,
     bio: "",
     title: "",
     role: "user",
@@ -449,13 +456,14 @@ export async function searchUsers(query: string, currentUserId?: string) {
  */
 export async function updateProfile(
   userId: string,
-  updates: { name?: string; bio?: string; title?: string; image?: string },
+  updates: { name?: string; bio?: string; title?: string; image?: string; banner?: string | null },
 ) {
   const user = ensureUser(userId);
   if (updates.name !== undefined) user.name = updates.name.trim();
   if (updates.bio !== undefined) user.bio = updates.bio.slice(0, 200);
   if (updates.title !== undefined) user.title = updates.title.slice(0, 60);
   if (updates.image !== undefined) user.image = updates.image;
+  if (updates.banner !== undefined) user.banner = updates.banner;
   saveDB();
 }
 
@@ -497,6 +505,8 @@ export async function getUserProfile(userId: string, currentUserId?: string) {
     email: user.email,
     image: user.image,
     avatarUrl: user.image ? resolveFileUrl(user.image) : undefined,
+    banner: user.banner ?? null,
+    bannerUrl: user.banner ? resolveFileUrl(user.banner) : undefined,
     bio: user.bio || "",
     title: user.title || "",
     followers,
@@ -1045,6 +1055,7 @@ export async function uploadFile(
   }
   const maxByBucket: Record<string, number> = {
     avatars: 3 * 1024 * 1024,
+    banners: 4 * 1024 * 1024,
     media: 4 * 1024 * 1024,
     documents: 3 * 1024 * 1024,
   };
