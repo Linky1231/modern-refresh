@@ -29,7 +29,7 @@ export function FollowButton({ isFollowing, onFollow, onUnfollowRequest, size = 
       className={`shrink-0 rounded-full transition-colors ${sizeCls} ${
         isFollowing
           ? "border border-slate-200 bg-slate-100 text-slate-700 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-          : "bg-primary text-primary-foreground font-semibold shadow-sm hover:brightness-90"
+          : "bg-primary text-primary-foreground font-semibold shadow-sm hover:bg-primary/90"
       }`}
     >
       {isFollowing ? "Siguiendo" : "Seguir"}

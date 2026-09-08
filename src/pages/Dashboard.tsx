@@ -2029,7 +2029,7 @@ function FollowListModal({
                       className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
                         following
                           ? "border border-slate-300 text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                          : "bg-blue-600 text-white hover:bg-blue-700"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
                       }`}
                     >
                       {busy ? "…" : following ? "Siguiendo" : "Seguir"}
