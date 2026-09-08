@@ -223,28 +223,32 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           )}
         </div>
 
-        {/* Stats (seguidos / seguidores) */}
-        <div className="mt-6 flex items-center justify-center gap-6 text-sm">
-          <button
-            type="button"
-            onClick={() => setShowFollowList("followers")}
-            className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
-          >
-            <span className="text-lg font-bold tabular-nums text-card-foreground">
-              {formatCount(followStats?.followers ?? 0)}
-            </span>
-            <span className="text-[11px] text-muted-foreground">seguidores</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowFollowList("following")}
-            className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
-          >
-            <span className="text-lg font-bold tabular-nums text-card-foreground">
-              {formatCount(followStats?.following ?? 0)}
-            </span>
-            <span className="text-[11px] text-muted-foreground">siguiendo</span>
-          </button>
+        {/* Stats — separador en T con color primario de la app, como marcaste */}
+        <div className="mt-6 border-t border-primary/10 pt-4">
+          <div className="flex items-stretch justify-center">
+            <button
+              type="button"
+              onClick={() => setShowFollowList("followers")}
+              className="flex flex-1 flex-col items-center gap-0.5 px-6 py-1 text-sm transition-colors hover:text-foreground"
+            >
+              <span className="text-lg font-bold tabular-nums text-card-foreground">
+                {formatCount(followStats?.followers ?? 0)}
+              </span>
+              <span className="text-[11px] text-muted-foreground">seguidores</span>
+            </button>
+            {/* Línea vertical separadora — color primario de la app */}
+            <div className="w-px shrink-0 self-stretch bg-primary/20" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setShowFollowList("following")}
+              className="flex flex-1 flex-col items-center gap-0.5 px-6 py-1 text-sm transition-colors hover:text-foreground"
+            >
+              <span className="text-lg font-bold tabular-nums text-card-foreground">
+                {formatCount(followStats?.following ?? 0)}
+              </span>
+              <span className="text-[11px] text-muted-foreground">siguiendo</span>
+            </button>
+          </div>
         </div>
       </motion.div>
 
