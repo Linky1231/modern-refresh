@@ -196,8 +196,8 @@ export default function ProfileLayout({
           </DropdownMenu>
         </div>
 
-        {/* Banner 128px rounded-2xl degradado Brand Blue sutil */}
-        <div className="h-[128px] w-full overflow-hidden rounded-2xl border border-blue-100/60 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm">
+        {/* Banner por defecto — MISMA clase y estilos para Mi perfil y perfil ajeno */}
+        <div className="h-32 w-full overflow-hidden rounded-t-3xl border-b border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15">
           {profile?.bannerUrl ? (
             <img
               src={profile.bannerUrl}
@@ -205,12 +205,7 @@ export default function ProfileLayout({
               className="h-full w-full object-cover object-center"
               loading="lazy"
             />
-          ) : (
-            <div
-              className="h-full w-full bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm"
-              style={{ background: "linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(59, 130, 246, 0.08) 100%)" }}
-            />
-          )}
+          ) : null}
         </div>
 
         {/* Avatar superpuesto — h-20 w-20 (-mt-10) centrado sobre borde inferior */}
@@ -233,26 +228,29 @@ export default function ProfileLayout({
             <p className="text-center text-sm font-medium italic text-primary/80">{profile.title}</p>
           )}
 
-          {profile?.bio?.trim() ? (
-            <p className="mt-0.5 text-center text-sm text-slate-600">{profile.bio.trim()}</p>
-          ) : isOwnProfile ? (
-            <button
-              type="button"
-              onClick={() => setShowEditModal(true)}
-              className="mt-0.5 cursor-pointer text-xs text-blue-500 hover:underline"
-            >
-              + Añadir biografía
-            </button>
-          ) : null}
+          {/* Corrección estricta: si hay bio NUNCA se muestra + Añadir biografía */}
+          {profile?.bio ? (
+            <p className="mt-1 text-center text-sm text-slate-600">{profile.bio}</p>
+          ) : (
+            isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => setShowEditModal(true)}
+                className="mt-1 cursor-pointer text-xs text-blue-500 hover:underline"
+              >
+                + Añadir biografía
+              </button>
+            )
+          )}
 
           {!isOwnProfile && currentUserId && profileUserId !== currentUserId && (
             <button
               type="button"
               onClick={handleFollowPress}
-              className={`mt-1 rounded-full px-5 py-1 text-xs transition-all ${
+              className={`mt-1 rounded-full px-6 py-2 text-sm transition-all shadow-sm ${
                 isFollowing
                   ? "border border-slate-200 bg-slate-100 text-slate-700 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                  : "bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm"
+                  : "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               }`}
             >
               {isFollowing ? "Siguiendo" : "Seguir"}
@@ -568,15 +566,10 @@ function EditProfileModal({
         <div className="flex-1 overflow-y-auto p-5">
           <div className="mb-5">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Banner</label>
-            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm">
+            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15">
               {bannerPreview ? (
                 <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
-              ) : (
-                <div
-                  className="h-full w-full bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm"
-                  style={{ background: "linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(59, 130, 246, 0.08) 100%)" }}
-                />
-              )}
+              ) : null}
               <button
                 type="button"
                 onClick={() => bannerInputRef.current?.click()}
