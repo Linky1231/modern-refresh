@@ -115,9 +115,10 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   >(null);
 
   const displayName = (currentUser?.name as string | undefined) ?? user?.name ?? "Sin nombre";
+  const isOwnProfile = !!user?._id && !!currentUser && currentUser._id === user._id;
 
   return (
-    <div className="pb-8">
+    <div className="pb-24">
       {/* Header — único nivel, sin duplicar la barra superior */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -159,41 +160,39 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner + Avatar — corregido: avatar fuera del overflow-hidden para que no se corte */}
-        <div className="relative mx-auto w-full">
-          <div className="h-[128px] w-full overflow-hidden rounded-2xl bg-[#dbeafe]">
-            {currentUser?.bannerUrl ? (
-              <img
-                src={currentUser.bannerUrl}
-                alt="Banner del perfil"
+        {/* Banner */}
+        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-[#dbeafe]">
+          {currentUser?.bannerUrl ? (
+            <img
+              src={currentUser.bannerUrl}
+              alt="Banner del perfil"
+              className="h-full w-full object-cover object-center"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#bfdbfe] via-[#dbeafe] to-[#eff6ff]">
+              <span className="text-xs font-medium tracking-wide text-slate-400">Sin banner</span>
+            </div>
+          )}
+        </div>
+        {/* Avatar solapando exactamente el borde inferior del banner */}
+        <div className="-mt-10 flex justify-center">
+          <Avatar className="h-[84px] w-[84px] border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
+            {currentUser?.avatarUrl && (
+              <AvatarImage
+                src={currentUser.avatarUrl}
+                alt={displayName}
                 className="h-full w-full object-cover object-center"
-                loading="lazy"
               />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#bfdbfe] via-[#dbeafe] to-[#eff6ff]">
-                <span className="text-xs font-medium tracking-wide text-slate-400">Sin banner</span>
-              </div>
             )}
-          </div>
-          {/* Avatar centrado solapando el borde inferior del banner — fuera del overflow-hidden */}
-          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
-            <Avatar className="h-[84px] w-[84px] border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
-              {currentUser?.avatarUrl && (
-                <AvatarImage
-                  src={currentUser.avatarUrl}
-                  alt={displayName}
-                  className="h-full w-full object-cover object-center"
-                />
-              )}
-              <AvatarFallback className="flex h-full w-full items-center justify-center bg-[#eef3ff] text-[32px] font-extrabold leading-none text-[#4a6cf7]">
-                {displayName !== "Sin nombre" ? getInitials(displayName).slice(0, 1) : <User className="h-10 w-10 text-[#4a6cf7]" />}
-              </AvatarFallback>
-            </Avatar>
-          </div>
+            <AvatarFallback className="flex h-full w-full items-center justify-center bg-[#eef3ff] text-[32px] font-extrabold leading-none text-[#4a6cf7]">
+              {displayName !== "Sin nombre" ? getInitials(displayName).slice(0, 1) : <User className="h-10 w-10 text-[#4a6cf7]" />}
+            </AvatarFallback>
+          </Avatar>
         </div>
 
-        {/* Nombre + botón editar (solo propio perfil) */}
-        <div className="flex flex-col items-center gap-2 px-4 pt-12">
+        {/* Nombre + Biografía + Botón — flujo vertical continuo */}
+        <div className="mt-2 flex flex-col items-center gap-3 px-4">
           <p className="text-xl font-extrabold tracking-tight text-card-foreground text-center">
             {displayName}
           </p>
@@ -204,27 +203,35 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             </p>
           )}
 
-          {/* Biografía */}
-          {(currentUser?.bio as string | undefined) && (
-            <p className="text-sm text-slate-600 text-center leading-relaxed mt-2">
+          {/* Biografía — estado vacío solo en perfil propio; si es otro perfil sin bio, no ocupa espacio */}
+          {(currentUser?.bio as string | undefined) ? (
+            <p className="text-sm text-slate-600 text-center leading-relaxed">
               {(currentUser?.bio as string | undefined) || ""}
             </p>
-          )}
-
-          {/* Botón Editar perfil — solo propio perfil, visible directamente */}
-          {user?._id && (
+          ) : isOwnProfile ? (
             <button
               type="button"
               onClick={() => setShowEditModal(true)}
-              className="mt-2 border border-slate-300 rounded-full px-4 py-1.5 text-sm font-medium transition-colors hover:bg-slate-100"
+              className="text-xs text-blue-500 hover:underline cursor-pointer"
+            >
+              + Añadir biografía
+            </button>
+          ) : null}
+
+          {/* Botón Editar perfil — solo perfil propio, sin línea divisoria gris debajo */}
+          {isOwnProfile && (
+            <button
+              type="button"
+              onClick={() => setShowEditModal(true)}
+              className="border border-slate-300 rounded-full px-4 py-1.5 text-sm font-medium transition-colors hover:bg-slate-100"
             >
               Editar perfil
             </button>
           )}
         </div>
 
-        {/* Stats — separador en T con color primario de la app, como marcaste */}
-        <div className="mt-6 border-t border-primary/10 pt-4">
+        {/* Stats — sin línea gris, separación T con color primario de la app */}
+        <div className="mt-3 pt-1">
           <div className="flex items-stretch justify-center">
             <button
               type="button"
