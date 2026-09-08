@@ -24,8 +24,6 @@ import {
   MoreHorizontal,
   X,
   Check,
-  MessageCircle,
-  Heart,
   FileText,
   Play,
   Share2,
@@ -77,13 +75,13 @@ interface ProfilePageProps {
   onBack: () => void;
 }
 
-type ProfileTab = "posts" | "replies" | "likes";
+
 
 export default function ProfilePage({ onBack }: ProfilePageProps) {
   const { user } = useAuth();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userPosts, setUserPosts] = useState<any[] | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
+
 
   useEffect(() => {
     if (!user?._id) return;
@@ -160,8 +158,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner */}
-        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-[#dbeafe]">
+        {/* Banner — limpio, sin texto cuando no hay banner */}
+        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
           {currentUser?.bannerUrl ? (
             <img
               src={currentUser.bannerUrl}
@@ -170,9 +168,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               loading="lazy"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#bfdbfe] via-[#dbeafe] to-[#eff6ff]">
-              <span className="text-xs font-medium tracking-wide text-slate-400">Sin banner</span>
-            </div>
+            <div className="h-full w-full bg-gradient-to-r from-blue-50 to-indigo-50" />
           )}
         </div>
         {/* Avatar solapando exactamente el borde inferior del banner */}
@@ -203,10 +199,10 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             </p>
           )}
 
-          {/* Biografía — estado vacío solo en perfil propio; si es otro perfil sin bio, no ocupa espacio */}
-          {(currentUser?.bio as string | undefined) ? (
+          {/* Biografía — nunca ambos: si hay bio muestra solo bio, si no y es perfil propio muestra + Añadir */}
+          {(currentUser?.bio as string | undefined)?.trim() ? (
             <p className="text-sm text-slate-600 text-center leading-relaxed">
-              {(currentUser?.bio as string | undefined) || ""}
+              {(currentUser?.bio as string).trim()}
             </p>
           ) : isOwnProfile ? (
             <button
@@ -259,111 +255,75 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </div>
       </motion.div>
 
-      {/* ── Pestañas inferior de contenido del usuario ──────────── */}
-      <div className="mt-6 flex border-b border-border/30">
-        {([
-          ["posts", "Publicaciones"],
-          ["replies", "Respuestas"],
-          ["likes", "Me gusta"],
-        ] as const).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setActiveTab(id)}
-            className={`flex-1 py-3 text-center text-sm transition-colors ${
-              activeTab === id
-                ? "border-b-2 border-primary text-primary font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      {/* ── Publicaciones — única sección visible */}
+      <div className="mt-6 border-b border-border/30 pb-3">
+        <h2 className="text-sm font-semibold">Publicaciones</h2>
       </div>
 
-      {/* ── Contenido de cada pestaña ─────────────────────────── */}
       <div className="mt-4">
-        {activeTab === "posts" && (
-          <ProfileTabContent
-            posts={userPosts ?? []}
-            currentUserId={user?._id}
-            renderPost={(post) => (
-              <div
-                key={post._id}
-                className="rounded-2xl border border-border/35 bg-card p-4 sm:p-5"
-              >
-                {post.title && (
-                  <p className="mb-1 text-sm font-bold text-card-foreground">
-                    {post.title}
-                  </p>
-                )}
-                <div className="text-[15px] leading-relaxed text-card-foreground">
-                  <span
-                    dangerouslySetInnerHTML={{
-                      __html: post.content || "",
-                    }}
-                  />
+        <ProfileTabContent
+          posts={userPosts ?? []}
+          currentUserId={user?._id}
+          renderPost={(post) => (
+            <div
+              key={post._id}
+              className="rounded-2xl border border-border/35 bg-card p-4 sm:p-5"
+            >
+              {post.title && (
+                <p className="mb-1 text-sm font-bold text-card-foreground">
+                  {post.title}
+                </p>
+              )}
+              <div className="text-[15px] leading-relaxed text-card-foreground">
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: post.content || "",
+                  }}
+                />
+              </div>
+              {post.poll && (
+                <div className="mt-3">
+                  <PostPoll poll={post.poll} userId={user?._id} />
                 </div>
-                {post.poll && (
-                  <div className="mt-3">
-                    <PostPoll poll={post.poll} userId={user?._id} />
-                  </div>
-                )}
-                {post.mediaUrls && post.mediaUrls.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {post.mediaUrls.map(
-                      ({ url, type }: { url: string; type: string }, i: number) =>
-                        type === "video" ? (
-                          <div
-                            key={i}
-                            className="relative h-28 w-full rounded-xl overflow-hidden bg-muted"
-                          >
-                            <video
-                              src={url}
-                              className="h-full w-full object-contain"
-                              muted
-                              preload="metadata"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90">
-                                <Play className="ml-0.5 h-3.5 w-3.5" />
-                              </div>
+              )}
+              {post.mediaUrls && post.mediaUrls.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {post.mediaUrls.map(
+                    ({ url, type }: { url: string; type: string }, i: number) =>
+                      type === "video" ? (
+                        <div
+                          key={i}
+                          className="relative h-28 w-full rounded-xl overflow-hidden bg-muted"
+                        >
+                          <video
+                            src={url}
+                            className="h-full w-full object-contain"
+                            muted
+                            preload="metadata"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/90">
+                              <Play className="ml-0.5 h-3.5 w-3.5" />
                             </div>
                           </div>
-                        ) : (
-                          <img
-                            key={i}
-                            src={url}
-                            alt=""
-                            className="h-28 w-full rounded-xl object-cover"
-                          />
-                        ),
-                    )}
-                  </div>
-                )}
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  {post.likes} me gusta · {post.favorites} favoritos
-                </p>
-              </div>
-            )}
-          />
-        )}
-
-        {activeTab === "replies" && (
-          <ProfileEmptyState
-            icon={<MessageCircle className="h-6 w-6 text-muted-foreground/40" />}
-            title="No hay respuestas aún"
-            subtitle="Cuando respondas a otras publicaciones, aparecerán aquí."
-          />
-        )}
-
-        {activeTab === "likes" && (
-          <ProfileEmptyState
-            icon={<Heart className="h-6 w-6 text-muted-foreground/40" />}
-            title="No hay publicaciones favoritas"
-            subtitle="Los posts que marques como favoritos aparecerán aquí."
-          />
-        )}
+                        </div>
+                      ) : (
+                        <img
+                          key={i}
+                          src={url}
+                          alt=""
+                          className="h-28 w-full rounded-xl object-cover"
+                        />
+                      ),
+                  )}
+                </div>
+              )}
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                {post.likes} me gusta · {post.favorites} favoritos
+              </p>
+            </div>
+          )}
+        />
       </div>
 
       {/* ── Seguidores / Siguiendo ─────────────────────────────── */}
@@ -604,18 +564,16 @@ function EditProfileModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {/* ── BANNER ── */}
+          {/* ── BANNER — sin texto placeholder, degradado limpio */}
           <div className="mb-5">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Banner
             </label>
-            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-muted">
+            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-border/35 bg-gradient-to-r from-blue-50 to-indigo-50">
               {bannerPreview ? (
                 <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
-                  <span className="text-xs text-muted-foreground">Sin banner — toca para agregar</span>
-                </div>
+                <div className="h-full w-full bg-gradient-to-r from-blue-50 to-indigo-50" />
               )}
               <button
                 type="button"
