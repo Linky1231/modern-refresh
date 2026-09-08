@@ -52,6 +52,33 @@ function formatCount(n: number): string {
   return Math.round(m) + " M";
 }
 
+// ▶ Banner ÚNICO — misma altura, degradado, bordes y object-fit en TODAS las pantallas
+// (cabecera del perfil y preview del modal de edición usan este mismo componente,
+//  así lo que ves al editar es EXACTAMENTE lo que se ve en el perfil, propio o ajeno)
+function ProfileBanner({
+  src,
+  alt = "Banner del perfil",
+  children,
+}: {
+  src?: string;
+  alt?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="relative h-32 w-full overflow-hidden rounded-t-3xl border-b border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15">
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          className="absolute inset-0 h-full w-full object-contain"
+          loading="lazy"
+        />
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -197,17 +224,8 @@ export default function ProfileLayout({
           </DropdownMenu>
         </div>
 
-        {/* Banner por defecto — MISMA clase y estilos para Mi perfil y perfil ajeno */}
-        <div className="h-32 w-full overflow-hidden rounded-t-3xl border-b border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15">
-          {profile?.bannerUrl ? (
-            <img
-              src={profile.bannerUrl}
-              alt="Banner del perfil"
-              className="h-full w-full object-cover object-center"
-              loading="lazy"
-            />
-          ) : null}
-        </div>
+        {/* Banner — MISMO componente para Mi perfil y perfil ajeno */}
+        <ProfileBanner src={profile?.bannerUrl} />
 
         {/* Avatar superpuesto — h-20 w-20 (-mt-10) centrado sobre borde inferior */}
         <div className="-mt-10 flex justify-center">
@@ -564,10 +582,7 @@ function EditProfileModal({
         <div className="flex-1 overflow-y-auto p-5">
           <div className="mb-5">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Banner</label>
-            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15">
-              {bannerPreview ? (
-                <img src={bannerPreview} alt="Banner" className="h-full w-full object-cover" />
-              ) : null}
+            <ProfileBanner src={bannerPreview}>
               <button
                 type="button"
                 onClick={() => bannerInputRef.current?.click()}
@@ -577,7 +592,7 @@ function EditProfileModal({
                 <Camera className="h-3.5 w-3.5" />
                 {bannerPreview ? "Cambiar banner" : "Agregar banner"}
               </button>
-            </div>
+            </ProfileBanner>
             <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerSelect} />
             {isBannerDirty && <p className="mt-1.5 text-xs text-primary">Nuevo banner listo — pulsa Guardar</p>}
           </div>
