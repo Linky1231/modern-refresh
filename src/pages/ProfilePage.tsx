@@ -117,8 +117,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
   return (
     <div className="pb-24">
-      {/* Header — único nivel, sin duplicar la barra superior */}
-      <div className="mb-4 flex items-center justify-between">
+      {/* Header consolidado — integrado con la nav principal, sin espacio duplicado para maximizar banner */}
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -171,9 +171,9 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             <div className="h-full w-full bg-gradient-to-r from-blue-50 to-indigo-50" />
           )}
         </div>
-        {/* Avatar solapando exactamente el borde inferior del banner */}
+        {/* Avatar solapando exactamente el centro del borde inferior del banner — h-20 w-20 / -mt-10 = mitad perfecta */}
         <div className="-mt-10 flex justify-center">
-          <Avatar className="h-[84px] w-[84px] border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
+          <Avatar className="h-20 w-20 border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
             {currentUser?.avatarUrl && (
               <AvatarImage
                 src={currentUser.avatarUrl}
@@ -226,8 +226,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           )}
         </div>
 
-        {/* Stats — sin línea gris, separación T con color primario de la app */}
-        <div className="mt-3 pt-1">
+        {/* Stats — sin línea horizontal, espacio uniforme gap-4 y divisor vertical centrado perfectamente */}
+        <div className="mt-4">
           <div className="flex items-stretch justify-center">
             <button
               type="button"
@@ -239,8 +239,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               </span>
               <span className="text-[11px] text-muted-foreground">seguidores</span>
             </button>
-            {/* Línea vertical separadora — color primario de la app */}
-            <div className="w-px shrink-0 self-stretch bg-primary/20" aria-hidden />
+            {/* Divisor vertical perfectamente centrado — flex-1 equilibrado en ambos lados */}
+            <div className="w-px shrink-0 self-stretch bg-slate-200" aria-hidden />
             <button
               type="button"
               onClick={() => setShowFollowList("following")}
@@ -255,9 +255,11 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </div>
       </motion.div>
 
-      {/* ── Publicaciones — única sección visible */}
-      <div className="mt-6 border-b border-border/30 pb-3">
-        <h2 className="text-sm font-semibold">Publicaciones</h2>
+      {/* ── Publicaciones — estilo integrado y alineado al feed */}
+      <div className="mt-6 px-4">
+        <h2 className="mb-3 border-b border-slate-100 pb-2 text-base font-semibold text-slate-800">
+          Publicaciones
+        </h2>
       </div>
 
       <div className="mt-4">
