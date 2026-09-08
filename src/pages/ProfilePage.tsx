@@ -159,8 +159,8 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner + Avatar */}
-        <div className="relative mx-auto h-36 w-full overflow-hidden rounded-b-2xl bg-muted">
+        {/* Banner + Avatar — fiel a la captura */}
+        <div className="relative mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-[#dbeafe]">
           {currentUser?.bannerUrl ? (
             <img
               src={currentUser.bannerUrl}
@@ -168,22 +168,25 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300" />
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#bfdbfe] via-[#dbeafe] to-[#eff6ff]">
+              <span className="text-xs font-medium tracking-wide text-slate-400">Sin banner</span>
+            </div>
           )}
-          <Avatar className="absolute -bottom-8 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-2 border-white bg-card shadow-md ring-1 ring-border/30">
-            {currentUser?.avatarUrl && (
-              <AvatarImage
-                src={currentUser.avatarUrl}
-                alt={displayName}
-                className="h-full w-full object-cover"
-              />
-            )}
-            <AvatarFallback className="flex h-full w-full items-center justify-center bg-primary/10 text-2xl font-bold text-primary">
-              {displayName !== "Sin nombre"
-                ? getInitials(displayName)
-                : <User className="h-10 w-10" />}
-            </AvatarFallback>
-          </Avatar>
+          {/* Avatar centrado solapando el borde inferior del banner */}
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
+            <Avatar className="h-[84px] w-[84px] border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
+              {currentUser?.avatarUrl && (
+                <AvatarImage
+                  src={currentUser.avatarUrl}
+                  alt={displayName}
+                  className="h-full w-full object-cover"
+                />
+              )}
+              <AvatarFallback className="flex h-full w-full items-center justify-center bg-[#eef3ff] text-[32px] font-extrabold leading-none text-[#4a6cf7]">
+                {displayName !== "Sin nombre" ? getInitials(displayName).slice(0, 1) : <User className="h-10 w-10 text-[#4a6cf7]" />}
+              </AvatarFallback>
+            </Avatar>
+          </div>
         </div>
 
         {/* Nombre + botón editar (solo propio perfil) */}
