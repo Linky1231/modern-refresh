@@ -1,6 +1,6 @@
 // ▶ Componente base reutilizable para Perfil — usado tanto para "Mi perfil" como para perfil de otros
-// Contiene TODA la interfaz pulida: Banner, Avatar superpuesto, Nombre, Biografía condicional,
-// Tarjeta Seguidores/Siguiendo en T y Lista de Publicaciones. Sincronización visual exacta.
+// Sincronizado 100% con captura: Banner 128px rounded-2xl degradado Brand Blue, Avatar -mt-10 h-20 w-20,
+// Nombre, Bio condicional, Tarjeta contadores en dos tarjetas separadas y lista Publicaciones.
 import { useState, useRef, useCallback, useEffect } from "react";
 import { PostPoll } from "@/components/PostPoll";
 import {
@@ -113,7 +113,6 @@ export default function ProfileLayout({
     try {
       const nowFollowing = await toggleFollow(currentUserId, profileUserId);
       setIsFollowing(nowFollowing);
-      // refresh stats
       const stats = await getFollowStats(profileUserId);
       setFollowStats(stats);
       toast.success(nowFollowing ? "Siguiendo" : "Dejaste de seguir");
@@ -127,56 +126,58 @@ export default function ProfileLayout({
   const title = headerTitle ?? (isOwnProfile ? "Mi perfil" : displayName);
 
   return (
-    <div className="pb-24">
-      {/* Header consolidado */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <span className="text-sm font-semibold">{title}</span>
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            {isOwnProfile && (
-              <DropdownMenuItem onClick={() => setShowEditModal(true)} className="gap-2 text-sm">
-                <Pencil className="h-3.5 w-3.5" />
-                Editar perfil
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => toast("Esta función estará disponible próximamente")}
-              className="gap-2 text-sm"
-            >
-              <Share2 className="h-3.5 w-3.5" />
-              Compartir perfil
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Banner + Avatar + Name + Bio + Follow */}
+    <div className="pb-28">
+      {/* ── Header superior unificado — libre de doble barra, integrado limpio ── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Banner — degradado técnico exacto Brand Blue: sutil, integrado con logo Asternal y botón + */}
-        <div className="mx-auto h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm border-b border-blue-100">
+        {/* Header: ← Mi perfil ··· — sin fondo pill, máximo espacio para banner */}
+        <div className="flex items-center justify-between px-1 py-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition-colors hover:bg-slate-100"
+              aria-label="Volver"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <span className="text-[15px] font-semibold tracking-tight text-slate-800">{title}</span>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                aria-label="Más opciones"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {isOwnProfile && (
+                <DropdownMenuItem onClick={() => setShowEditModal(true)} className="gap-2 text-sm">
+                  <Pencil className="h-3.5 w-3.5" />
+                  Editar perfil
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() => toast("Esta función estará disponible próximamente")}
+                className="gap-2 text-sm"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Compartir perfil
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Banner 128px rounded-2xl — degradado exacto Brand Blue, sutil y elegante */}
+        <div className="h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm border border-blue-100/60">
           {profile?.bannerUrl ? (
             <img
               src={profile.bannerUrl}
@@ -191,7 +192,8 @@ export default function ProfileLayout({
             />
           )}
         </div>
-        {/* Avatar superpuesto — mitad exacta del borde */}
+
+        {/* Avatar superpuesto — h-20 w-20 (-mt-10) centrado exacto sobre borde inferior del banner */}
         <div className="-mt-10 flex justify-center">
           <Avatar className="h-20 w-20 border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
             {profile?.avatarUrl && (
@@ -203,28 +205,27 @@ export default function ProfileLayout({
           </Avatar>
         </div>
 
-        {/* Nombre + Título + Biografía + Acción */}
-        <div className="mt-2 flex flex-col items-center gap-3 px-4">
+        {/* Nombre + Bio condicional + Acción Seguir (solo ajeno) */}
+        <div className="mt-2 flex flex-col items-center gap-2 px-4">
           <p className="text-center text-xl font-extrabold tracking-tight text-card-foreground">{displayName}</p>
 
           {(profile?.title as string | undefined) && (
             <p className="text-center text-sm font-medium italic text-primary/80">{profile.title}</p>
           )}
 
-          {/* Biografía: solo uno — bio o +Añadir (solo propio) */}
+          {/* Biografía exclusiva: bio O +Añadir (solo propio vacío) — NUNCA ambos */}
           {profile?.bio?.trim() ? (
-            <p className="mt-1 text-center text-sm text-slate-600">{profile.bio.trim()}</p>
+            <p className="mt-0.5 text-center text-sm text-slate-600">{profile.bio.trim()}</p>
           ) : isOwnProfile ? (
             <button
               type="button"
               onClick={() => setShowEditModal(true)}
-              className="mt-1 cursor-pointer text-xs text-blue-500 hover:underline"
+              className="mt-0.5 cursor-pointer text-xs text-blue-500 hover:underline"
             >
               + Añadir biografía
             </button>
           ) : null}
 
-          {/* Acción primaria solo para perfil ajeno */}
           {!isOwnProfile && currentUserId && profileUserId !== currentUserId && (
             <button
               type="button"
@@ -240,39 +241,37 @@ export default function ProfileLayout({
           )}
         </div>
 
-        {/* Tarjeta contadores — rounded-2xl, divisor vertical perfectamente centrado */}
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-card">
-          <div className="flex divide-x divide-slate-200">
-            <button
-              type="button"
-              onClick={() => setShowFollowList("followers")}
-              className="flex flex-1 flex-col items-center justify-center gap-0.5 px-6 py-3 text-center text-sm transition-colors hover:bg-muted/40"
-            >
-              <span className="text-lg font-bold tabular-nums text-card-foreground">
-                {formatCount(followStats?.followers ?? 0)}
-              </span>
-              <span className="text-[11px] text-muted-foreground">seguidores</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFollowList("following")}
-              className="flex flex-1 flex-col items-center justify-center gap-0.5 px-6 py-3 text-center text-sm transition-colors hover:bg-muted/40"
-            >
-              <span className="text-lg font-bold tabular-nums text-card-foreground">
-                {formatCount(followStats?.following ?? 0)}
-              </span>
-              <span className="text-[11px] text-muted-foreground">siguiendo</span>
-            </button>
-          </div>
+        {/* Tarjeta contadores — DOS tarjetas separadas como en captura: gap-3, rounded-2xl, py-3 px-4 */}
+        <div className="mt-4 flex gap-3 px-4">
+          <button
+            type="button"
+            onClick={() => setShowFollowList("followers")}
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm transition-colors hover:bg-slate-50"
+          >
+            <span className="font-bold text-slate-800 text-base tabular-nums">
+              {formatCount(followStats?.followers ?? 0)}
+            </span>
+            <span className="text-xs text-slate-500 font-medium">seguidores</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFollowList("following")}
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm transition-colors hover:bg-slate-50"
+          >
+            <span className="font-bold text-slate-800 text-base tabular-nums">
+              {formatCount(followStats?.following ?? 0)}
+            </span>
+            <span className="text-xs text-slate-500 font-medium">siguiendo</span>
+          </button>
         </div>
       </motion.div>
 
-      {/* Publicaciones — estilo integrado */}
-      <div className="mt-6 px-4">
-        <h2 className="mb-3 border-b border-slate-100 pb-2 text-base font-semibold text-slate-800">Publicaciones</h2>
+      {/* Título PUBLICACIONES — px-4 alineado con feed, sutil uppercase como spec */}
+      <div className="mx-auto mt-6 max-w-sm px-4">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Publicaciones</h2>
       </div>
 
-      <div className="mt-4">
+      <div className="mx-auto max-w-sm px-4">
         <ProfileTabContent posts={posts ?? []} currentUserId={currentUserId} />
       </div>
 
@@ -327,9 +326,9 @@ function ProfileTabContent({ posts, currentUserId }: { posts: any[]; currentUser
     );
   }
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {posts.map((post) => (
-        <div key={post._id} className="rounded-2xl border border-border/35 bg-card p-4 sm:p-5">
+        <div key={post._id} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm mb-3">
           {post.title && <p className="mb-1 text-sm font-bold text-card-foreground">{post.title}</p>}
           <div className="text-[15px] leading-relaxed text-card-foreground">
             <span dangerouslySetInnerHTML={{ __html: post.content || "" }} />
@@ -366,7 +365,7 @@ function ProfileTabContent({ posts, currentUserId }: { posts: any[]; currentUser
   );
 }
 
-// ── Modal de edición — reutilizado del perfil pulido
+// ── Modal de edición — Banner arriba, avatar, campos
 function EditProfileModal({
   currentUser,
   user,
