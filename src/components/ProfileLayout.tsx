@@ -52,7 +52,7 @@ function formatCount(n: number): string {
   return Math.round(m) + " M";
 }
 
-// ▶ Banner ÚNICO — misma altura, degradado, bordes y object-fit en TODAS las pantallas
+// ▶ Banner ÚNICO — misma altura, degradado, bordes y ajuste de imagen en TODAS las pantallas
 // (cabecera del perfil y preview del modal de edición usan este mismo componente,
 //  así lo que ves al editar es EXACTAMENTE lo que se ve en el perfil, propio o ajeno)
 function ProfileBanner({
@@ -67,12 +67,21 @@ function ProfileBanner({
   return (
     <div className="relative h-32 w-full overflow-hidden rounded-t-3xl border-b border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15">
       {src ? (
-        <img
-          src={src}
-          alt={alt}
-          className="absolute inset-0 h-full w-full object-contain"
-          loading="lazy"
-        />
+        <>
+          <img
+            src={src}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
+            loading="lazy"
+          />
+          <img
+            src={src}
+            alt={alt}
+            className="absolute inset-0 mx-auto h-full w-full object-contain"
+            loading="lazy"
+          />
+        </>
       ) : null}
       {children}
     </div>
