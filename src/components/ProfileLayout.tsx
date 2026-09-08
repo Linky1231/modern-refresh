@@ -1,6 +1,6 @@
 // ▶ Componente base reutilizable para Perfil — usado tanto para "Mi perfil" como para perfil de otros
-// Sincronizado 100% con captura: Banner 128px rounded-2xl degradado Brand Blue, Avatar -mt-10 h-20 w-20,
-// Nombre, Bio condicional, Tarjeta contadores en dos tarjetas separadas y lista Publicaciones.
+// Refinamiento 5 puntos: header unificado, tarjeta contadores py-3 px-4 con divisor discreto,
+// título PUBLICACIONES px-4 uppercase, tarjetas publicación definidas y pb-28.
 import { useState, useRef, useCallback, useEffect } from "react";
 import { PostPoll } from "@/components/PostPoll";
 import {
@@ -127,14 +127,13 @@ export default function ProfileLayout({
 
   return (
     <div className="pb-28">
-      {/* ── Header superior unificado — libre de doble barra, integrado limpio ── */}
+      {/* ── 1. Header superior unificado — ← y ··· en la misma barra, sin doble header ── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
-        {/* Header: ← Mi perfil ··· — sin fondo pill, máximo espacio para banner */}
         <div className="flex items-center justify-between px-1 py-2">
           <div className="flex items-center gap-2">
             <button
@@ -176,8 +175,8 @@ export default function ProfileLayout({
           </DropdownMenu>
         </div>
 
-        {/* Banner 128px rounded-2xl — degradado exacto Brand Blue, sutil y elegante */}
-        <div className="h-[128px] w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm border border-blue-100/60">
+        {/* Banner 128px rounded-2xl degradado Brand Blue sutil */}
+        <div className="h-[128px] w-full overflow-hidden rounded-2xl border border-blue-100/60 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 backdrop-blur-sm">
           {profile?.bannerUrl ? (
             <img
               src={profile.bannerUrl}
@@ -193,7 +192,7 @@ export default function ProfileLayout({
           )}
         </div>
 
-        {/* Avatar superpuesto — h-20 w-20 (-mt-10) centrado exacto sobre borde inferior del banner */}
+        {/* Avatar superpuesto — h-20 w-20 (-mt-10) centrado sobre borde inferior */}
         <div className="-mt-10 flex justify-center">
           <Avatar className="h-20 w-20 border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
             {profile?.avatarUrl && (
@@ -205,7 +204,7 @@ export default function ProfileLayout({
           </Avatar>
         </div>
 
-        {/* Nombre + Bio condicional + Acción Seguir (solo ajeno) */}
+        {/* Nombre + Bio condicional */}
         <div className="mt-2 flex flex-col items-center gap-2 px-4">
           <p className="text-center text-xl font-extrabold tracking-tight text-card-foreground">{displayName}</p>
 
@@ -213,7 +212,6 @@ export default function ProfileLayout({
             <p className="text-center text-sm font-medium italic text-primary/80">{profile.title}</p>
           )}
 
-          {/* Biografía exclusiva: bio O +Añadir (solo propio vacío) — NUNCA ambos */}
           {profile?.bio?.trim() ? (
             <p className="mt-0.5 text-center text-sm text-slate-600">{profile.bio.trim()}</p>
           ) : isOwnProfile ? (
@@ -241,36 +239,41 @@ export default function ProfileLayout({
           )}
         </div>
 
-        {/* Tarjeta contadores — DOS tarjetas separadas como en captura: gap-3, rounded-2xl, py-3 px-4 */}
-        <div className="mt-4 flex gap-3 px-4">
-          <button
-            type="button"
-            onClick={() => setShowFollowList("followers")}
-            className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm transition-colors hover:bg-slate-50"
-          >
-            <span className="font-bold text-slate-800 text-base tabular-nums">
-              {formatCount(followStats?.followers ?? 0)}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">seguidores</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowFollowList("following")}
-            className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm transition-colors hover:bg-slate-50"
-          >
-            <span className="font-bold text-slate-800 text-base tabular-nums">
-              {formatCount(followStats?.following ?? 0)}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">siguiendo</span>
-          </button>
+        {/* 2. Tarjeta contadores — contenedor único rounded-2xl, py-3 px-4 por celda, divisor discreto border-slate-200/60 */}
+        <div className="mt-4 px-4">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex divide-x divide-slate-200/60">
+              <button
+                type="button"
+                onClick={() => setShowFollowList("followers")}
+                className="flex flex-1 flex-col items-center justify-center gap-0.5 px-4 py-3 text-center transition-colors hover:bg-slate-50"
+              >
+                <span className="font-bold text-slate-800 text-base tabular-nums">
+                  {formatCount(followStats?.followers ?? 0)}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">seguidores</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFollowList("following")}
+                className="flex flex-1 flex-col items-center justify-center gap-0.5 px-4 py-3 text-center transition-colors hover:bg-slate-50"
+              >
+                <span className="font-bold text-slate-800 text-base tabular-nums">
+                  {formatCount(followStats?.following ?? 0)}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">siguiendo</span>
+              </button>
+            </div>
+          </div>
         </div>
       </motion.div>
 
-      {/* Título PUBLICACIONES — px-4 alineado con feed, sutil uppercase como spec */}
-      <div className="mx-auto mt-6 max-w-sm px-4">
+      {/* 3. Título PUBLICACIONES — px-4 alineado, sutil uppercase */}
+      <div className="mx-auto mt-4 max-w-sm px-4">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Publicaciones</h2>
       </div>
 
+      {/* 4. Feed de publicaciones — cada tarjeta definida */}
       <div className="mx-auto max-w-sm px-4">
         <ProfileTabContent posts={posts ?? []} currentUserId={currentUserId} />
       </div>
