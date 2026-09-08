@@ -1,5 +1,10 @@
 // Botón Seguir/Siguiendo reutilizable — usado en publicaciones (sm) y perfil (lg)
-// Estados spec: Seguir = azul bg-blue-600 · Siguiendo = bg-slate-100 + border, hover rojo
+// ▶ El color de fondo hereda del tema de la app: usa el token --primary (el MISMO
+//   azul de marca del botón central '+', del botón Publicar y del logo), no un
+//   azul fijo. Si el tema cambia, el botón cambia con él.
+// Estados:
+//  · Seguir:     bg-primary text-primary-foreground (hover levemente más oscuro)
+//  · Siguiendo:  bg-slate-100 + border-slate-200, hover rojo (acción destructiva)
 import { motion } from "framer-motion";
 
 interface FollowButtonProps {
@@ -21,10 +26,10 @@ export function FollowButton({ isFollowing, onFollow, onUnfollowRequest, size = 
       whileHover={{ scale: size === "lg" ? 1.02 : 1.05 }}
       transition={{ type: "spring", stiffness: 300, damping: 22 }}
       onClick={() => (isFollowing ? onUnfollowRequest() : onFollow())}
-      className={`shrink-0 rounded-full transition-all ${sizeCls} ${
+      className={`shrink-0 rounded-full transition-colors ${sizeCls} ${
         isFollowing
           ? "border border-slate-200 bg-slate-100 text-slate-700 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-          : "bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm"
+          : "bg-primary text-primary-foreground font-semibold shadow-sm hover:brightness-90"
       }`}
     >
       {isFollowing ? "Siguiendo" : "Seguir"}
