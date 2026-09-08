@@ -4,6 +4,7 @@
 // Al migrar la app a Lovable Cloud, la capa @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
 import ProfilePage from "./ProfilePage";
+import ProfileLayout from "@/components/ProfileLayout";
 import PollComposer, { type PollDraft } from "@/components/PollComposer";
 import { PostPoll, type PollViewData } from "@/components/PostPoll";
 import { useAuth } from "@/hooks/use-auth";
@@ -2259,199 +2260,15 @@ function NotificationsPanel({
 // ═══════════════════════════════════════════════════════════════════
 function UserProfileView({ userId, onBack }: { userId: string; onBack: () => void }) {
   const { user } = useAuth();
-  const [userPosts, setUserPosts] = useState<any[] | undefined>(undefined);
-  const [refreshTick, setRefreshTick] = useState(0);
-  useEffect(() => {
-    const fetchUserPosts = async () => {
-      try {
-        const data = await getUserProfile(userId, user?._id);
-        setUserPosts(data?.posts || []);
-      } catch (error) {
-        console.error("Error fetching user posts:", error);
-      }
-    };
-    fetchUserPosts();
-  }, [userId, user?._id, refreshTick]);
-  const userData = userPosts && userPosts.length > 0 ? userPosts[0] : null;
-  const [followStats, setFollowStats] = useState<{ followers: number; following: number } | undefined>(undefined);
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const data = await getFollowStats(userId);
-        setFollowStats(data);
-      } catch (error) {
-        console.error("Error fetching follow stats:", error);
-      }
-    };
-    fetchStats();
-  }, [userId]);
-  const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
-
+  const isOwn = !!user?._id && user._id === userId;
+  // Usa el mismo layout base que Mi perfil — 100% identico visualmente
   return (
-    <div className="min-h-screen bg-background pb-8">
-      {/* Header */}
-      <div className="sticky top-0 z-50 border-b border-border/30 bg-background">
-        <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <span className="text-sm font-semibold">{userData?.authorName ?? "Perfil"}</span>
-          <div className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem
-                  onClick={() => toast("Esta función estará disponible próximamente")}
-                  className="gap-2 text-sm"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                  Compartir perfil
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
-        {userData ? (
-          <div>
-            {/* ── Card 1: Avatar + Name + Title + Follow Stats ── */}
-            <div className="rounded-2xl border border-border/35 bg-card px-6 py-8 sm:px-8 sm:py-10">
-              <div className="flex flex-col items-center gap-5">
-                <Avatar className="h-24 w-24 border-2 border-border/30">
-                  {userData.authorImageUrl && <AvatarImage src={userData.authorImageUrl} alt={userData.authorName} />}
-                  <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
-                    {getInitials(userData.authorName)}
-                  </AvatarFallback>
-                </Avatar>
-                {/* Name */}
-                <p className="text-xl font-extrabold tracking-tight text-card-foreground">{userData.authorName}</p>
-                {/* Title */}
-                {(userData as any).authorTitle && (
-                  <p className="text-sm font-medium italic text-primary/80">{(userData as any).authorTitle}</p>
-                )}
-                {/* Separator */}
-                <div className="h-px w-16 bg-border/60" />
-                {/* Follow Stats — always rendered to prevent layout shift */}
-                <div className="flex items-center gap-8 text-sm" style={{ minHeight: 44 }}>
-                  {followStats ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setShowFollowList("followers")}
-                        className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
-                      >
-                        <motion.span
-                          key={followStats.followers}
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.25 }}
-                          className="text-lg font-bold tabular-nums text-card-foreground"
-                        >{formatCount(followStats.followers)}</motion.span>
-                        <span className="text-[11px] text-muted-foreground">seguidores</span>
-                      </button>
-                      <div className="h-8 w-px bg-border/60" />
-                      <button
-                        type="button"
-                        onClick={() => setShowFollowList("following")}
-                        className="flex flex-col items-center gap-0.5 transition-colors hover:text-foreground"
-                      >
-                        <motion.span
-                          key={followStats.following}
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.25 }}
-                          className="text-lg font-bold tabular-nums text-card-foreground"
-                        >{formatCount(followStats.following)}</motion.span>
-                        <span className="text-[11px] text-muted-foreground">siguiendo</span>
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="h-5 w-8 animate-pulse rounded bg-muted" />
-                        <div className="h-2.5 w-14 animate-pulse rounded bg-muted" />
-                      </div>
-                      <div className="h-8 w-px bg-border/60" />
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="h-5 w-8 animate-pulse rounded bg-muted" />
-                        <div className="h-2.5 w-12 animate-pulse rounded bg-muted" />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Card 2: Bio ───────────────────────────────── */}
-            {(userData as any).authorBio && (
-              <div className="mt-4 rounded-2xl border border-border/35 bg-card px-6 py-5 sm:px-8 sm:py-6">
-                <div className="mb-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Descripción</h3>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{(userData as any).authorBio}</p>
-              </div>
-            )}
-
-            {/* ── Section: Publicaciones ─────────────────────── */}
-            <div className="mt-8 mb-4 border-t border-border/24 pt-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Publicaciones</p>
-            </div>
-            <div className="flex flex-col gap-4 pb-24">
-              {(userPosts ?? []).length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">Este usuario no tiene publicaciones.</p>
-              ) : (
-                (userPosts ?? []).map((post, idx) => (
-                  <PostCard
-                    key={post._id}
-                    post={post as any}
-                    currentUserId={undefined}
-                    onToggleLike={() => {}}
-                    onToggleFavorite={() => {}}
-                    onFollow={() => {}}
-                    onRequestUnfollow={() => {}}
-                    onRequestDelete={() => {}}
-                    onOpenLightbox={() => {}}
-                    onOpenComments={() => {}}
-                    onOpenProfile={() => {}}
-                    postNumber={(userPosts ?? []).length - idx}
-                    refreshTick={refreshTick}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-            <p className="mt-3 text-sm text-muted-foreground">Cargando perfil…</p>
-          </div>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {showFollowList && (
-          <FollowListModal
-            userId={userId}
-            type={showFollowList}
-            onClose={() => setShowFollowList(null)}
-            currentUserId={user?._id}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+    <ProfileLayout
+      profileUserId={userId}
+      currentUserId={user?._id}
+      isOwnProfile={isOwn}
+      onBack={onBack}
+    />
   );
 }
 
