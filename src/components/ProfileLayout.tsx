@@ -248,7 +248,6 @@ export default function ProfileLayout({
             <div className="mt-1">
               <FollowButton
                 isFollowing={isFollowing}
-                size="lg"
                 onFollow={handleFollowPress}
                 onUnfollowRequest={() => setShowUnfollowConfirm(true)}
               />
