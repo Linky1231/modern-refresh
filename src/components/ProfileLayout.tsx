@@ -1,6 +1,6 @@
-// ▶ Componente base reutilizable para Perfil — usado tanto para "Mi perfil" como para perfil de otros
-// Refinamiento 5 puntos: header unificado, tarjeta contadores py-3 px-4 con divisor discreto,
-// título PUBLICACIONES px-4 uppercase, tarjetas publicación definidas y pb-28.
+// ▶ Componente base ÚNICO para Perfil — MISMA pantalla para "Mi perfil" y perfil ajeno/aislado
+// Toda la UI pulida vive aquí: Banner, Avatar, Nombre, Bio, Botón Seguir/+Añadir, Stats, Publicaciones
+// Mi perfil (ProfilePage) y perfil ajeno (UserProfileView) renderizan ESTE MISMO componente -> 100% idénticos
 import { useState, useRef, useCallback, useEffect } from "react";
 import { PostPoll } from "@/components/PostPoll";
 import {
@@ -52,9 +52,9 @@ function formatCount(n: number): string {
   return Math.round(m) + " M";
 }
 
-// ▶ Banner ÚNICO — misma altura, degradado, bordes y ajuste de imagen en TODAS las pantallas
-// (cabecera del perfil y preview del modal de edición usan este mismo componente,
-//  así lo que ves al editar es EXACTAMENTE lo que se ve en el perfil, propio o ajeno)
+// ── Banner ÚNICO — MISMA altura, degradado, bordes y ajuste en TODAS las pantallas
+// Se usa en: cabecera de Mi perfil + cabecera de perfil ajeno/aislado + preview del modal Editar
+// Así lo que ves al editar es EXACTAMENTE lo que ven los demás
 function ProfileBanner({
   src,
   alt = "Banner del perfil",
@@ -185,7 +185,7 @@ export default function ProfileLayout({
 
   return (
     <div className="pb-28">
-      {/* ── 1. Header superior unificado — ← y ··· en la misma barra, sin doble header ── */}
+      {/* ── Header unificado + Banner + Avatar — IDÉNTICO en Mi perfil y en perfil ajeno/aislado ── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -233,10 +233,10 @@ export default function ProfileLayout({
           </DropdownMenu>
         </div>
 
-        {/* Banner — MISMO componente para Mi perfil y perfil ajeno */}
+        {/* Banner — MISMO componente ProfileBanner en todas las vistas */}
         <ProfileBanner src={profile?.bannerUrl} />
 
-        {/* Avatar superpuesto — h-20 w-20 (-mt-10) centrado sobre borde inferior */}
+        {/* Avatar superpuesto — h-20 w-20 -mt-10 centrado sobre borde inferior — IDÉNTICO siempre */}
         <div className="-mt-10 flex justify-center">
           <Avatar className="h-20 w-20 border-[3px] border-white bg-white shadow-md ring-1 ring-slate-200">
             {profile?.avatarUrl && (
@@ -248,15 +248,15 @@ export default function ProfileLayout({
           </Avatar>
         </div>
 
-        {/* Nombre + Bio condicional */}
+        {/* Nombre + Bio/Título + Acción — MISMA estructura, MISMO gap, MISMO px-4 en ambas vistas */}
         <div className="mt-2 flex flex-col items-center gap-2 px-4">
           <p className="text-center text-xl font-extrabold tracking-tight text-card-foreground">{displayName}</p>
 
-          {(profile?.title as string | undefined) && (
+          {profile?.title && (
             <p className="text-center text-sm font-medium italic text-primary/80">{profile.title}</p>
           )}
 
-          {/* Corrección estricta: si hay bio NUNCA se muestra + Añadir biografía */}
+          {/* Bio estricta: si hay bio NUNCA se muestra +Añadir — misma condición en ambas vistas */}
           {profile?.bio ? (
             <p className="mt-1 text-center text-sm text-slate-600">{profile.bio}</p>
           ) : (
@@ -271,6 +271,7 @@ export default function ProfileLayout({
             )
           )}
 
+          {/* Botón Seguir/Siguiendo — solo perfil ajeno, MISMO componente FollowButton, MISMO tamaño lg */}
           {!isOwnProfile && currentUserId && profileUserId !== currentUserId && (
             <div className="mt-1">
               <FollowButton
@@ -283,7 +284,7 @@ export default function ProfileLayout({
           )}
         </div>
 
-        {/* 2. Tarjeta contadores — contenedor único rounded-2xl, py-3 px-4 por celda, divisor discreto border-slate-200/60 */}
+        {/* Tarjeta contadores — contenedor único rounded-2xl, py-3 px-4 por celda, divisor discreto — IDÉNTICA */}
         <div className="mt-4 px-4">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex divide-x divide-slate-200/60">
@@ -312,12 +313,12 @@ export default function ProfileLayout({
         </div>
       </motion.div>
 
-      {/* 3. Título PUBLICACIONES — px-4 alineado, sutil uppercase */}
+      {/* Título PUBLICACIONES — MISMO px-4, MISMO uppercase tracking-wider — IDÉNTICO */}
       <div className="mx-auto mt-4 max-w-sm px-4">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Publicaciones</h2>
       </div>
 
-      {/* 4. Feed de publicaciones — cada tarjeta definida */}
+      {/* Feed — MISMO contenedor max-w-sm px-4 y MISMO estilo de tarjetas */}
       <div className="mx-auto max-w-sm px-4">
         <ProfileTabContent posts={posts ?? []} currentUserId={currentUserId} />
       </div>
@@ -334,7 +335,7 @@ export default function ProfileLayout({
         )}
       </AnimatePresence>
 
-      {/* Edit modal — solo propio */}
+      {/* Edit modal — solo propio, pero usa el MISMO ProfileBanner para preview */}
       <AnimatePresence>
         {showEditModal && isOwnProfile && profile && (
           <EditProfileModal
@@ -420,7 +421,7 @@ function ProfileTabContent({ posts, currentUserId }: { posts: any[]; currentUser
   );
 }
 
-// ── Modal de edición — Banner arriba, avatar, campos
+// ── Modal de edición — Banner usa el MISMO ProfileBanner (h-32 rounded-t-3xl mismo degradado)
 function EditProfileModal({
   currentUser,
   user,
