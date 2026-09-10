@@ -146,6 +146,8 @@ interface LocalDB {
   pollVotes: Array<{ user_id: string; poll_id: string; option_id: string }>;
   /** Archivos subidos en el dispositivo: ruta -> data URL */
   files: Record<string, string>;
+  /** Mapas creados en el editor (modo local) */
+  maps: LocalMapRow[];
 }
 
 function emptyDB(): LocalDB {
@@ -160,6 +162,7 @@ function emptyDB(): LocalDB {
     notifications: [],
     pollVotes: [],
     files: {},
+    maps: [],
   };
 }
 
@@ -1250,4 +1253,129 @@ export async function voteOnPoll(
   db.pollVotes.push({ user_id: userId, poll_id: pollId, option_id: optionId });
   saveDB();
   return { optionId, counts: countPollVotes(pollId) };
+}
+
+// ========================================
+// EDITOR DE MAPAS (local) — capa de datos
+// ▶ [LOVABLE CLOUD] Al migrar, mover a tablas del backend.
+// ========================================
+
+/** Géneros soportados por el creador de mapas. */
+export type MapGenre = "rpg" | "platformer";
+
+/** Fila local de un mapa creado en el editor. */
+export interface LocalMapRow {
+  id: string;
+  owner_id: string;
+  name: string;
+  description: string;
+  genre: MapGenre;
+  width: number;
+  height: number;
+  background: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Vista de mapa para la UI. */
+export interface MapView {
+  _id: string;
+  name: string;
+  description: string;
+  genre: MapGenre;
+  width: number;
+  height: number;
+  background: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+function toMapView(row: LocalMapRow): MapView {
+  return {
+    _id: row.id,
+  name: row.name,
+    description: row.description,
+    genre: row.genre,
+    width: row.width,
+    height: row.height,
+    background: row.background,
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+  };
+}
+
+/** Lista los mapas del usuario, el más reciente primero. */
+export async function getMaps(ownerId: string): Promise<MapView[]> {
+  return getDB()
+    .maps.filter((m) => m.owner_id === ownerId)
+    .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))
+    .map(toMapView);
+}
+
+/** Devuelve un mapa por id (solo del dueño). */
+export async function getMap(ownerId: string, mapId: string): Promise<MapView | null> {
+  const row = getDB().maps.find((m) => m.id === mapId && m.owner_id === ownerId);
+  return row ? toMapView(row) : null;
+}
+
+/** Crea un mapa nuevo con nombre, descripción, género y tamaño del lienzo. */
+export async function createMap(
+  ownerId: string,
+  input: {
+    name: string;
+    description?: string;
+    genre: MapGenre;
+    width: number;
+    height: number;
+    background: string;
+  },
+): Promise<MapView> {
+  const db = getDB();
+  const now = new Date().toISOString();
+  const row: LocalMapRow = {
+    id: uid(),
+    owner_id: ownerId,
+    name: input.name.trim().slice(0, 60) || "Mapa sin título",
+    description: (input.description ?? "").trim().slice(0, 300),
+    genre: input.genre,
+    width: Math.min(200, Math.max(10, Math.round(input.width))),
+    height: Math.min(200, Math.max(10, Math.round(input.height))),
+    background: input.background,
+    created_at: now,
+    updated_at: now,
+  };
+  db.maps.push(row);
+  saveDB();
+  return toMapView(row);
+}
+
+/** Actualiza los detalles editables de un mapa propio. */
+export async function updateMap(
+  ownerId: string,
+  mapId: string,
+  updates: Partial<Pick<LocalMapRow, "name" | "description" | "genre" | "width" | "height" | "background">>,
+): Promise<MapView | null> {
+  const row = getDB().maps.find((m) => m.id === mapId && m.owner_id === ownerId);
+  if (!row) return null;
+  if (updates.name !== undefined) row.name = updates.name.trim().slice(0, 60) || row.name;
+  if (updates.description !== undefined) row.description = updates.description.trim().slice(0, 300);
+  if (updates.genre !== undefined) row.genre = updates.genre;
+  if (updates.width !== undefined) row.width = Math.min(200, Math.max(10, Math.round(updates.width)));
+  if (updates.height !== undefined) row.height = Math.min(200, Math.max(10, Math.round(updates.height)));
+  if (updates.background !== undefined) row.background = updates.background;
+  row.updated_at = new Date().toISOString();
+  saveDB();
+  return toMapView(row);
+}
+
+/** Elimina un mapa propio. */
+export async function deleteMap(ownerId: string, mapId: string): Promise<boolean> {
+  const db = getDB();
+  const before = db.maps.length;
+  db.maps = db.maps.filter((m) => !(m.id === mapId && m.owner_id === ownerId));
+  if (db.maps.length !== before) {
+    saveDB();
+    return true;
+  }
+  return false;
 }

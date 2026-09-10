@@ -4,6 +4,7 @@
 // Al migrar la app a Lovable Cloud, la capa @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
 import ProfilePage from "./ProfilePage";
+import MapEditorPage from "./MapEditorPage";
 import ProfileLayout from "@/components/ProfileLayout";
 import PollComposer, { type PollDraft } from "@/components/PollComposer";
 import { PostPoll, type PollViewData } from "@/components/PostPoll";
@@ -2278,20 +2279,8 @@ export default function Dashboard() {
   // Reemplaza temporalmente la ruta /editor para no romper la navegación
   // mientras el editor de juegos está en desarrollo.
   function EditorPlaceholder({ onBack }: { onBack: () => void }) {
-    return (
-      <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center bg-slate-100 px-6 py-12 text-center dark:bg-slate-950">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Plus className="h-6 w-6" strokeWidth={2.25} />
-        </div>
-        <h3 className="mt-4 text-lg font-semibold text-card-foreground">Editor de juegos</h3>
-        <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-          El editor está en desarrollo. Próximamente podrás crearlo desde aquí.
-        </p>
-        <Button variant="outline" size="sm" className="mt-6" onClick={onBack}>
-          Volver al inicio
-        </Button>
-      </div>
-    );
+    // ▶ El editor ahora abre el CREADOR DE MAPAS (pizarrón) como apartado principal
+    return <MapEditorPage onBack={onBack} />;
   }
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
