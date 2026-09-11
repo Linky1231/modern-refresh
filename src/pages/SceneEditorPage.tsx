@@ -211,12 +211,12 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="pb-28">
+    <div className="flex min-h-[calc(100dvh-3rem)] flex-1 flex-col pb-2">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto max-w-sm"
+        className="mx-auto flex w-full max-w-sm flex-1 flex-col"
       >
         {/* ── Barra superior del motor ── */}
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
@@ -267,9 +267,9 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           </button>
         </div>
 
-        {/* ── Tablero de escenas ── */}
+        {/* ── Tablero de escenas — ocupa TODO el alto restante hasta el pie ── */}
         <div
-          className="mt-3 min-h-[360px] rounded-2xl border border-slate-200 p-4 shadow-sm"
+          className="relative mt-3 flex min-h-[320px] flex-1 flex-col rounded-2xl border border-slate-200 p-4 pb-16 shadow-sm"
           style={BOARD_DOTS}
         >
           {scenes === undefined ? (
@@ -279,7 +279,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
               ))}
             </div>
           ) : list.length === 0 ? (
-            <div className="flex min-h-[328px] flex-col items-center justify-center text-center">
+            <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <Layers className="h-6 w-6" />
               </div>
@@ -289,25 +289,25 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid flex-1 grid-cols-2 content-start gap-3">
               {list.map((s) => (
                 <SceneCard key={s._id} scene={s} {...handlers} />
               ))}
             </div>
           )}
-        </div>
 
-        {/* ── Publicar ── */}
-        <div className="mt-3 flex justify-end">
-          <button
-            type="button"
-            onClick={() => setPublishing(true)}
-            disabled={list.length === 0}
-            className="flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
-          >
-            <Upload className="h-4 w-4" />
-            Publicar
-          </button>
+          {/* ── Publicar (dentro del tablero, abajo a la derecha) ── */}
+          <div className="pointer-events-none absolute bottom-3 right-3">
+            <button
+              type="button"
+              onClick={() => setPublishing(true)}
+              disabled={list.length === 0}
+              className="pointer-events-auto flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+            >
+              <Upload className="h-4 w-4" />
+              Publicar
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -1070,12 +1070,12 @@ function SceneCanvas({
   const cellPx = scene.width > 40 ? 14 : scene.width > 24 ? 18 : 22;
 
   return (
-    <div className="pb-28">
+    <div className="flex min-h-[calc(100dvh-3rem)] flex-1 flex-col pb-2">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto max-w-sm"
+        className="mx-auto flex w-full max-w-sm flex-1 flex-col"
       >
         {/* Header del pizarrón */}
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
@@ -1175,8 +1175,8 @@ function SceneCanvas({
           </div>
         </div>
 
-        {/* Lienzo cuadriculado */}
-        <div className="overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+        {/* Lienzo cuadriculado — se estira hasta el pie de la pantalla */}
+        <div className="flex min-h-[280px] flex-1 flex-col overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
           <div
             className="relative select-none"
             style={{ background: scene.background }}

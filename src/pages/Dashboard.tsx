@@ -2829,7 +2829,7 @@ export default function Dashboard() {
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-2xl px-4 pt-5 pb-24 sm:pt-8 sm:pb-28">
         <AnimatePresence mode="wait" initial={false}>
-          {currentView === "userProfile" ? (
+          {currentView === "userProfile" && viewingUserId && viewingUserId !== user?._id ? (
             <motion.div
               key="userProfile"
               initial={{ opacity: 0, x: 16 }}
@@ -2837,9 +2837,9 @@ export default function Dashboard() {
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
             >
-              <UserProfileView userId={viewingUserId!} onBack={() => { setCurrentView("feed"); setViewingUserId(null); }} />
+              <UserProfileView userId={viewingUserId} onBack={() => { setCurrentView("feed"); setViewingUserId(null); }} />
             </motion.div>
-          ) : currentView === "profile" ? (
+          ) : currentView === "profile" || currentView === "userProfile" ? (
             <motion.div
               key="profile"
               initial={{ opacity: 0, x: 16 }}
@@ -3141,7 +3141,18 @@ export default function Dashboard() {
                   onRequestDelete={setDeleteTarget}
                   onOpenLightbox={openLightbox}
                   onOpenComments={setCommentsModalPost}
-                  onOpenProfile={(userId) => { setViewingUserId(userId); setCurrentView("userProfile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  onOpenProfile={(userId) => {
+                    // Si es MI propio perfil, abre EXACTAMENTE la misma pantalla que la
+                    // pestaña Perfil (ProfilePage) para que ambas sean idénticas.
+                    if (user?._id && userId === user._id) {
+                      setViewingUserId(null);
+                      setCurrentView("profile");
+                    } else {
+                      setViewingUserId(userId);
+                      setCurrentView("userProfile");
+                    }
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   isAdmin={isAdmin}
                   postNumber={posts.length - idx}
                   refreshTick={refreshTick}
