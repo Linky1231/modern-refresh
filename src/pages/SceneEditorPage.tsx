@@ -1,8 +1,13 @@
 // ▶ Editor de Escenas — apartado PRINCIPAL del editor de juegos (Asternal)
 // Sigue el wireframe del motor: barra superior (volver · estadísticas · ajustes),
 // botón "+ Crear Escena", tablero punteado con las escenas del proyecto y un
-// botón Publicar abajo a la derecha. Incluye un SISTEMA DE COPIAS DE SEGURIDAD
-// (crear, restaurar y eliminar) organizado dentro de Ajustes.
+// botón Publicar dentro del tablero. Incluye un SISTEMA DE COPIAS DE SEGURIDAD
+// (crear, restaurar y eliminar) dentro de Ajustes.
+// Interacciones del tablero:
+//   · Tocar la escena (cuerpo)  -> abre el PIZARRÓN para editar el proyecto.
+//   · Lápiz                     -> configura los detalles del mapa (nombre,
+//                                  detalle, tipo de juego, tamaño, fondo).
+//   · Papelera                  -> borra la escena (con confirmación en pantalla).
 // Todo se guarda en el dispositivo (localStorage vía @/lib/db).
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
@@ -20,7 +25,8 @@ import {
   type BackupView,
 } from "@/lib/db";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Plus,
@@ -43,8 +49,8 @@ import {
   CircleDot,
   Swords,
   Gamepad2,
-  HardDriveDownload,
-  ShieldCheck,
+  DatabaseBackup,
+  AlertTriangle,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -128,6 +134,17 @@ const DEFAULT_DRAFT: SceneDraft = {
   background: "#f8fafc",
 };
 
+function draftFromScene(scene: MapView): SceneDraft {
+  return {
+    name: scene.name,
+    description: scene.description,
+    genre: scene.genre,
+    width: scene.width,
+    height: scene.height,
+    background: scene.background,
+  };
+}
+
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("es", { day: "numeric", month: "short" });
 }
@@ -136,6 +153,14 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+interface ConfirmState {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  action: () => Promise<void> | void;
 }
 
 // Fondo de tablero punteado, con la paleta del motor
@@ -156,10 +181,12 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   const [scenes, setScenes] = useState<MapView[] | undefined>(undefined);
   const [backups, setBackups] = useState<BackupView[]>([]);
   const [editingScene, setEditingScene] = useState<MapView | null>(null);
+  const [detailsScene, setDetailsScene] = useState<MapView | null>(null);
   const [creating, setCreating] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
 
   const refresh = useCallback(async () => {
     if (!ownerId) return;
@@ -180,7 +207,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
   if (!ownerId) return null;
 
-  // ── Pizarrón activo ──
+  // ── Pizarrón activo (editar el proyecto de la escena) ──
   if (editingScene) {
     return (
       <SceneCanvas
@@ -195,31 +222,36 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   }
 
   const list = scenes ?? [];
-  const handlers = {
-    onOpen: (s: MapView) => setEditingScene(s),
-    onDelete: async (s: MapView) => {
-      if (!confirm(`¿Eliminar la escena “${s.name}”? Esta acción no se puede deshacer.`)) return;
-      try {
-        await deleteMap(ownerId, s._id);
-        toast.success("Escena eliminada");
-        void refresh();
-      } catch (e) {
-        console.error(e);
-        toast.error("No se pudo eliminar la escena");
-      }
-    },
+
+  const requestDeleteScene = (scene: MapView) => {
+    setConfirmState({
+      title: "¿Borrar escena?",
+      message: `Se eliminará “${scene.name}” del proyecto con todo lo que hayas pintado. Esta acción no se puede deshacer.`,
+      confirmLabel: "Borrar escena",
+      destructive: true,
+      action: async () => {
+        try {
+          await deleteMap(ownerId, scene._id);
+          toast.success("Escena eliminada");
+          void refresh();
+        } catch (e) {
+          console.error(e);
+          toast.error("No se pudo eliminar la escena");
+        }
+      },
+    });
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-3rem)] flex-1 flex-col pb-2">
+    <div className="flex min-h-0 flex-1 flex-col">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto flex w-full max-w-sm flex-1 flex-col"
+        className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col"
       >
         {/* ── Barra superior del motor ── */}
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+        <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
           <button
             type="button"
             onClick={onBack}
@@ -253,7 +285,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         </div>
 
         {/* ── Crear escena ── */}
-        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+        <div className="mt-3 flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Layers className="h-5 w-5" />
           </span>
@@ -267,34 +299,42 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           </button>
         </div>
 
-        {/* ── Tablero de escenas — ocupa TODO el alto restante hasta el pie ── */}
+        {/* ── Tablero de escenas — cabe completo en una sola vista ── */}
         <div
-          className="relative mt-3 flex min-h-[320px] flex-1 flex-col rounded-2xl border border-slate-200 p-4 pb-16 shadow-sm"
+          className="relative mt-3 flex min-h-[240px] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 shadow-sm"
           style={BOARD_DOTS}
         >
-          {scenes === undefined ? (
-            <div className="grid grid-cols-2 gap-3">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
-              ))}
-            </div>
-          ) : list.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Layers className="h-6 w-6" />
+          <div className="flex-1 overflow-y-auto p-4 pb-20">
+            {scenes === undefined ? (
+              <div className="grid grid-cols-2 gap-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
+                ))}
               </div>
-              <p className="mt-3 text-sm font-semibold text-slate-700">Todavía no hay escenas</p>
-              <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-slate-500">
-                Pulsa “Crear Escena” para añadir tu primera escena al tablero.
-              </p>
-            </div>
-          ) : (
-            <div className="grid flex-1 grid-cols-2 content-start gap-3">
-              {list.map((s) => (
-                <SceneCard key={s._id} scene={s} {...handlers} />
-              ))}
-            </div>
-          )}
+            ) : list.length === 0 ? (
+              <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Layers className="h-6 w-6" />
+                </div>
+                <p className="mt-3 text-sm font-semibold text-slate-700">Todavía no hay escenas</p>
+                <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-slate-500">
+                  Pulsa “Crear Escena” para añadir tu primera escena al tablero.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 content-start gap-3">
+                {list.map((s) => (
+                  <SceneCard
+                    key={s._id}
+                    scene={s}
+                    onOpen={() => setEditingScene(s)}
+                    onConfigure={() => setDetailsScene(s)}
+                    onDelete={() => requestDeleteScene(s)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* ── Publicar (dentro del tablero, abajo a la derecha) ── */}
           <div className="pointer-events-none absolute bottom-3 right-3">
@@ -316,6 +356,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         {creating && (
           <SceneDetailsModal
             ownerId={ownerId}
+            mode="create"
             onClose={() => setCreating(false)}
             onCreated={(scene) => {
               setCreating(false);
@@ -326,14 +367,27 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         )}
       </AnimatePresence>
 
+      {/* Modal de detalles del mapa (lápiz) */}
+      <AnimatePresence>
+        {detailsScene && (
+          <SceneDetailsModal
+            key={detailsScene._id}
+            ownerId={ownerId}
+            mode="edit"
+            scene={detailsScene}
+            onClose={() => setDetailsScene(null)}
+            onCreated={() => {
+              setDetailsScene(null);
+              void refresh();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Panel de estadísticas */}
       <AnimatePresence>
         {showStats && (
-          <StatsSheet
-            scenes={list}
-            backups={backups}
-            onClose={() => setShowStats(false)}
-          />
+          <StatsSheet scenes={list} backups={backups} onClose={() => setShowStats(false)} />
         )}
       </AnimatePresence>
 
@@ -343,6 +397,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           <SettingsSheet
             ownerId={ownerId}
             backups={backups}
+            requestConfirm={setConfirmState}
             onChange={() => void refresh()}
             onClose={() => setShowSettings(false)}
           />
@@ -363,6 +418,24 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           />
         )}
       </AnimatePresence>
+
+      {/* Confirmación en pantalla (borrar escena / copias) */}
+      <AnimatePresence>
+        {confirmState && (
+          <ConfirmDialog
+            title={confirmState.title}
+            message={confirmState.message}
+            confirmLabel={confirmState.confirmLabel}
+            destructive={confirmState.destructive}
+            onCancel={() => setConfirmState(null)}
+            onConfirm={async () => {
+              const action = confirmState.action;
+              setConfirmState(null);
+              await action();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -373,21 +446,19 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 function SceneCard({
   scene,
   onOpen,
+  onConfigure,
   onDelete,
 }: {
   scene: MapView;
-  onOpen: (s: MapView) => void;
-  onDelete: (s: MapView) => void;
+  onOpen: () => void;
+  onConfigure: () => void;
+  onDelete: () => void;
 }) {
   const painted = Object.keys(scene.tiles ?? {}).length;
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
-      <button
-        type="button"
-        onClick={() => onOpen(scene)}
-        className="block w-full text-left"
-      >
-        {/* Miniatura */}
+    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+      {/* Cuerpo: abre el pizarrón para editar el proyecto de la escena */}
+      <button type="button" onClick={onOpen} className="block w-full text-left">
         <div
           className="relative flex h-24 items-center justify-center border-b border-slate-100"
           style={{ backgroundColor: scene.background }}
@@ -413,16 +484,18 @@ function SceneCard({
       <div className="absolute right-1.5 top-1.5 flex gap-1">
         <button
           type="button"
-          onClick={() => onOpen(scene)}
-          aria-label="Abrir escena"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm transition-colors hover:text-primary"
+          onClick={onConfigure}
+          aria-label="Configurar detalles del mapa"
+          title="Configurar detalles del mapa"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-primary/10 hover:text-primary"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
         <button
           type="button"
-          onClick={() => onDelete(scene)}
-          aria-label="Eliminar escena"
+          onClick={onDelete}
+          aria-label="Borrar escena"
+          title="Borrar escena"
           className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-red-50 hover:text-red-600"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -433,40 +506,58 @@ function SceneCard({
 }
 
 // ════════════════════════════════════════════════════════════════════
-// Modal: detalle de la escena (nombre, descripción, género, tamaño, fondo)
+// Modal: detalles del mapa (crear Y editar) — nombre, detalle, tipo, tamaño, fondo
 // ════════════════════════════════════════════════════════════════════
 function SceneDetailsModal({
   ownerId,
+  mode,
+  scene,
   onClose,
   onCreated,
 }: {
   ownerId: string;
+  mode: "create" | "edit";
+  scene?: MapView;
   onClose: () => void;
   onCreated: (scene: MapView) => void;
 }) {
-  const [draft, setDraft] = useState<SceneDraft>(DEFAULT_DRAFT);
+  const isEdit = mode === "edit" && !!scene;
+  const [draft, setDraft] = useState<SceneDraft>(scene ? draftFromScene(scene) : DEFAULT_DRAFT);
   const [saving, setSaving] = useState(false);
   const genreTiles = tilesForGenre(draft.genre);
 
   const canSave = draft.name.trim().length > 0;
 
-  const handleCreate = async () => {
+  const handleSubmit = async () => {
     if (!canSave || saving) return;
     setSaving(true);
     try {
-      const scene = await createMap(ownerId, {
-        name: draft.name,
-        description: draft.description,
-        genre: draft.genre,
-        width: draft.width,
-        height: draft.height,
-        background: draft.background,
-      });
-      toast.success("Escena creada — ¡a diseñarla!");
-      onCreated(scene);
+      if (isEdit && scene) {
+        const updated = await updateMap(ownerId, scene._id, {
+          name: draft.name,
+          description: draft.description,
+          genre: draft.genre,
+          width: draft.width,
+          height: draft.height,
+          background: draft.background,
+        });
+        toast.success("Detalles del mapa actualizados");
+        onCreated(updated ?? scene);
+      } else {
+        const created = await createMap(ownerId, {
+          name: draft.name,
+          description: draft.description,
+          genre: draft.genre,
+          width: draft.width,
+          height: draft.height,
+          background: draft.background,
+        });
+        toast.success("Escena creada — ¡a diseñarla!");
+        onCreated(created);
+      }
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : "No se pudo crear la escena");
+      toast.error(e instanceof Error ? e.message : "No se pudieron guardar los cambios");
     } finally {
       setSaving(false);
     }
@@ -475,19 +566,21 @@ function SceneDetailsModal({
   return (
     <ModalShell onClose={onClose}>
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-800">Nueva escena</span>
+        <span className="text-sm font-semibold text-slate-800">
+          {isEdit ? "Detalles del mapa" : "Nueva escena"}
+        </span>
         <div className="flex items-center gap-2">
           {saving ? (
             <span className="flex h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           ) : (
             <button
               type="button"
-              onClick={handleCreate}
+              onClick={handleSubmit}
               disabled={!canSave}
               className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
             >
               <Check className="h-3.5 w-3.5" />
-              Crear
+              {isEdit ? "Guardar" : "Crear"}
             </button>
           )}
           <button
@@ -506,13 +599,13 @@ function SceneDetailsModal({
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
             Nombre de la escena
           </label>
-          <input
+          <Input
             type="text"
             value={draft.name}
             onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             maxLength={60}
             placeholder="Ej: Bosque de Asternal"
-            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
           />
         </div>
 
@@ -521,13 +614,13 @@ function SceneDetailsModal({
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
             Detalle de la escena
           </label>
-          <textarea
+          <Textarea
             value={draft.description}
             onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value.slice(0, 300) }))}
             maxLength={300}
             rows={3}
             placeholder="¿Qué ocurre en esta escena?"
-            className="min-h-[72px] w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            className="min-h-[72px] rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
           />
           <p className="mt-1 text-right text-[11px] text-slate-400">{draft.description.length}/300</p>
         </div>
@@ -651,6 +744,75 @@ function SceneDetailsModal({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// Diálogo de confirmación en pantalla (reemplaza window.confirm)
+// ════════════════════════════════════════════════════════════════════
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  destructive,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.18 }}
+        className="w-full max-w-xs overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col items-center px-5 pb-4 pt-6 text-center">
+          <span
+            className={`flex h-12 w-12 items-center justify-center rounded-full ${
+              destructive ? "bg-red-50 text-red-600" : "bg-primary/10 text-primary"
+            }`}
+          >
+            <AlertTriangle className="h-6 w-6" />
+          </span>
+          <h3 className="mt-3 text-[15px] font-bold text-slate-800">{title}</h3>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{message}</p>
+        </div>
+        <div className="flex gap-2 border-t border-slate-100 p-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-10 flex-1 rounded-xl bg-slate-100 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={`h-10 flex-1 rounded-xl text-xs font-semibold text-white shadow-sm transition-colors ${
+              destructive ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:brightness-110"
+            }`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // Panel: estadísticas del proyecto
 // ════════════════════════════════════════════════════════════════════
 function StatsSheet({
@@ -673,7 +835,11 @@ function StatsSheet({
     { label: "Piezas pintadas", value: totalPieces.toLocaleString("es"), icon: <Pencil className="h-4 w-4" /> },
     { label: "Escenas RPG", value: String(rpg), icon: <Swords className="h-4 w-4" /> },
     { label: "Escenas de Plataformas", value: String(platformer), icon: <Gamepad2 className="h-4 w-4" /> },
-    { label: "Copias de seguridad", value: String(backups.length), icon: <ShieldCheck className="h-4 w-4" /> },
+    {
+      label: "Copias de seguridad",
+      value: String(backups.length),
+      icon: <DatabaseBackup className="h-4 w-4" />,
+    },
   ];
 
   return (
@@ -687,9 +853,7 @@ function StatsSheet({
           {rows.map((r, i) => (
             <div
               key={r.label}
-              className={`flex items-center justify-between px-4 py-3 ${
-                i > 0 ? "border-t border-slate-100" : ""
-              }`}
+              className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-slate-100" : ""}`}
             >
               <span className="flex items-center gap-2.5 text-[13px] font-medium text-slate-600">
                 <span className="text-primary">{r.icon}</span>
@@ -710,11 +874,13 @@ function StatsSheet({
 function SettingsSheet({
   ownerId,
   backups,
+  requestConfirm,
   onChange,
   onClose,
 }: {
   ownerId: string;
   backups: BackupView[];
+  requestConfirm: (state: ConfirmState) => void;
   onChange: () => void;
   onClose: () => void;
 }) {
@@ -736,39 +902,47 @@ function SettingsSheet({
     }
   };
 
-  const handleRestore = async (b: BackupView) => {
-    if (
-      !confirm(
-        `¿Restaurar “${b.name}”? Las escenas actuales del proyecto se reemplazarán por las de esta copia.`,
-      )
-    )
-      return;
-    setBusy(b._id);
-    try {
-      const n = await restoreBackup(ownerId, b._id);
-      toast.success(`Proyecto restaurado · ${n} ${n === 1 ? "escena" : "escenas"}`);
-      onChange();
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "No se pudo restaurar la copia");
-    } finally {
-      setBusy(null);
-    }
+  const handleRestore = (b: BackupView) => {
+    requestConfirm({
+      title: "¿Restaurar esta copia?",
+      message: `Las escenas actuales del proyecto se reemplazarán por las de “${b.name}”.`,
+      confirmLabel: "Restaurar",
+      action: async () => {
+        setBusy(b._id);
+        try {
+          const n = await restoreBackup(ownerId, b._id);
+          toast.success(`Proyecto restaurado · ${n} ${n === 1 ? "escena" : "escenas"}`);
+          onChange();
+        } catch (e) {
+          console.error(e);
+          toast.error(e instanceof Error ? e.message : "No se pudo restaurar la copia");
+        } finally {
+          setBusy(null);
+        }
+      },
+    });
   };
 
-  const handleDelete = async (b: BackupView) => {
-    if (!confirm(`¿Eliminar la copia “${b.name}”?`)) return;
-    setBusy(b._id);
-    try {
-      await deleteBackup(ownerId, b._id);
-      toast.success("Copia eliminada");
-      onChange();
-    } catch (e) {
-      console.error(e);
-      toast.error("No se pudo eliminar la copia");
-    } finally {
-      setBusy(null);
-    }
+  const handleDelete = (b: BackupView) => {
+    requestConfirm({
+      title: "¿Eliminar esta copia?",
+      message: `Se borrará la copia de seguridad “${b.name}”. Tu proyecto actual no se verá afectado.`,
+      confirmLabel: "Eliminar",
+      destructive: true,
+      action: async () => {
+        setBusy(b._id);
+        try {
+          await deleteBackup(ownerId, b._id);
+          toast.success("Copia eliminada");
+          onChange();
+        } catch (e) {
+          console.error(e);
+          toast.error("No se pudo eliminar la copia");
+        } finally {
+          setBusy(null);
+        }
+      },
+    });
   };
 
   return (
@@ -782,7 +956,7 @@ function SettingsSheet({
         {/* Encabezado de la sección */}
         <div className="flex items-center gap-2.5 rounded-2xl bg-primary/5 p-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <ShieldCheck className="h-4 w-4" />
+            <DatabaseBackup className="h-4 w-4" />
           </span>
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-slate-800">Copias de seguridad</p>
@@ -794,13 +968,13 @@ function SettingsSheet({
 
         {/* Crear copia */}
         <div className="mt-3 flex gap-2">
-          <input
+          <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={60}
             placeholder="Nombre (opcional)"
-            className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            className="h-10 min-w-0 flex-1 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
           />
           <button
             type="button"
@@ -811,7 +985,7 @@ function SettingsSheet({
             {busy === "create" ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
             ) : (
-              <HardDriveDownload className="h-3.5 w-3.5" />
+              <DatabaseBackup className="h-3.5 w-3.5" />
             )}
             Crear copia
           </button>
@@ -824,7 +998,7 @@ function SettingsSheet({
 
         {backups.length === 0 ? (
           <div className="flex flex-col items-center rounded-2xl border border-dashed border-slate-300 py-8 text-center">
-            <ShieldCheck className="h-7 w-7 text-slate-300" />
+            <DatabaseBackup className="h-7 w-7 text-slate-300" />
             <p className="mt-2 text-[13px] font-medium text-slate-600">Sin copias todavía</p>
             <p className="mt-1 max-w-[220px] text-[11px] text-slate-500">
               Crea la primera copia de seguridad para proteger tu proyecto.
@@ -833,10 +1007,7 @@ function SettingsSheet({
         ) : (
           <ul className="flex flex-col gap-2">
             {backups.map((b) => (
-              <li
-                key={b._id}
-                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
-              >
+              <li key={b._id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-semibold text-slate-800">{b.name}</p>
@@ -899,7 +1070,9 @@ function PublishModal({
     if (saving) return;
     setSaving(true);
     try {
-      const sceneList = scenes.map((s) => `• ${s.name} (${s.genre === "rpg" ? "RPG" : "Plataformas"})`).join("\n");
+      const sceneList = scenes
+        .map((s) => `• ${s.name} (${s.genre === "rpg" ? "RPG" : "Plataformas"})`)
+        .join("\n");
       const content = [description.trim(), sceneList].filter(Boolean).join("\n\n");
       await createPost(ownerId, content, { title: title.trim() || "Mi proyecto de Asternal" });
       toast.success("Proyecto publicado en tu feed");
@@ -922,22 +1095,22 @@ function PublishModal({
         <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
           Título
         </label>
-        <input
+        <Input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={60}
-          className="mb-3 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          className="mb-3 h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800"
         />
         <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
           Descripción
         </label>
-        <textarea
+        <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 500))}
           rows={3}
           placeholder="Cuéntale a la comunidad de qué va tu juego…"
-          className="min-h-[80px] w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          className="min-h-[80px] rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
         />
         <p className="mt-1 text-right text-[11px] text-slate-400">{description.length}/500</p>
 
@@ -1070,15 +1243,15 @@ function SceneCanvas({
   const cellPx = scene.width > 40 ? 14 : scene.width > 24 ? 18 : 22;
 
   return (
-    <div className="flex min-h-[calc(100dvh-3rem)] flex-1 flex-col pb-2">
+    <div className="flex min-h-0 flex-1 flex-col">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto flex w-full max-w-sm flex-1 flex-col"
+        className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col"
       >
         {/* Header del pizarrón */}
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+        <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
           <button
             type="button"
             onClick={onBack}
@@ -1107,7 +1280,7 @@ function SceneCanvas({
         </div>
 
         {/* Info de la escena */}
-        <div className="mb-2 mt-2 flex items-center gap-2 px-1 text-[11px] font-medium text-slate-500">
+        <div className="mb-2 mt-2 flex shrink-0 items-center gap-2 px-1 text-[11px] font-medium text-slate-500">
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
             {scene.genre === "rpg" ? "RPG" : "Plataformas"}
           </span>
@@ -1118,7 +1291,7 @@ function SceneCanvas({
         </div>
 
         {/* Paleta de herramientas */}
-        <div className="sticky top-0 z-10 -mx-1 mb-2 bg-slate-100/95 px-1 py-2 backdrop-blur-sm">
+        <div className="sticky top-0 z-10 -mx-1 mb-2 shrink-0 bg-slate-100/95 px-1 py-2 backdrop-blur-sm">
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <button
               type="button"
@@ -1175,8 +1348,8 @@ function SceneCanvas({
           </div>
         </div>
 
-        {/* Lienzo cuadriculado — se estira hasta el pie de la pantalla */}
-        <div className="flex min-h-[280px] flex-1 flex-col overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+        {/* Lienzo cuadriculado */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
           <div
             className="relative select-none"
             style={{ background: scene.background }}
@@ -1220,7 +1393,7 @@ function SceneCanvas({
           </div>
         </div>
 
-        <p className="mt-2 px-1 text-[11px] text-slate-500">
+        <p className="mt-2 shrink-0 px-1 text-[11px] text-slate-500">
           Arrastra el dedo o el mouse sobre el pizarrón para pintar. Usa{" "}
           <span className="font-medium text-slate-600">Borrar</span> para quitar casillas.
         </p>

@@ -296,6 +296,14 @@ html {
   outline-offset: 2px;
 }
 
+/* Los campos de formulario ya llevan su propio anillo de foco (Input/Textarea),
+   así que cancelamos el outline global para evitar el doble borde. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 img,
 video {
   transition: opacity 0.3s ease;

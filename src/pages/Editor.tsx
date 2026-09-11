@@ -6,7 +6,7 @@ export default function EditorPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100 px-4 pt-4 dark:bg-slate-950">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-slate-100 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 dark:bg-slate-950">
       <SceneEditorPage onBack={() => navigate("/dashboard")} />
     </div>
   );
