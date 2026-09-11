@@ -1,9 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────
 // PARTE 2 · ENCUESTAS: editor de la encuesta dentro del compositor.
+// Layout ordenado en 3 bloques con aire entre ellos:
+//   1) Encabezado (título + cerrar)
+//   2) Pregunta
+//   3) Opciones (+ añadir)
+//   4) Duración
 // ─────────────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { BarChart3, Plus, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
 
 export interface PollDraft {
   question: string;
@@ -21,6 +27,7 @@ const MAX_OPTIONS = 5;
 const MIN_OPTIONS = 2;
 const MAX_QUESTION = 200;
 const MAX_OPTION_TEXT = 100;
+const DURATIONS: DurationOption[] = ["24 hrs", "3 días", "7 días"];
 
 function draftsEqual(a: PollDraft | null, b: PollDraft | null): boolean {
   if (a === b) return true;
@@ -35,7 +42,6 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [duration, setDuration] = useState<DurationOption>("24 hrs");
   const lastSent = useRef<PollDraft | null>(null);
-  const questionRef = useRef<HTMLInputElement>(null);
 
   const uniqueOptions = options
     .map((o) => o.trim())
@@ -73,101 +79,132 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-      className="rounded-2xl border border-slate-200 bg-slate-100/80 px-3 py-3 shadow-sm sm:px-4"
+      className="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 shadow-sm"
     >
-      {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="text-sm font-semibold text-card-foreground">
-            Encuesta
+      {/* ── Encabezado ──────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <BarChart3 className="h-4 w-4" />
           </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-card-foreground">Encuesta</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Hazle una pregunta a la comunidad
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={onRemove}
           title="Quitar encuesta"
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="Quitar encuesta"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-slate-200/70 hover:text-foreground"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
       {/* ── Pregunta ────────────────────────────────────────── */}
-      <div className="mt-3">
-        <input
-          ref={questionRef}
+      <div className="mt-4">
+        <label
+          htmlFor="poll-question"
+          className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Pregunta
+        </label>
+        <Input
+          id="poll-question"
           type="text"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={MAX_QUESTION}
           placeholder="Escribe tu pregunta…"
-          className="w-full rounded-xl border border-slate-200 bg-card px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+          className="h-11 rounded-xl border-slate-200 bg-white text-sm text-foreground placeholder:text-slate-400"
         />
       </div>
 
       {/* ── Opciones ────────────────────────────────────────── */}
-      <div className="mt-3 flex flex-col gap-2">
-        <AnimatePresence initial={false}>
-          {options.map((opt, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-              className="flex items-center gap-2.5"
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-500 tabular-nums">
-                {i + 1}
-              </span>
-              <input
-                type="text"
-                value={opt}
-                onChange={(e) => setOption(i, e.target.value)}
-                maxLength={MAX_OPTION_TEXT}
-                placeholder={`Opción ${i + 1}`}
-                className="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-foreground outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-              />
-              {options.length > MIN_OPTIONS && (
-                <button
-                  type="button"
-                  onClick={() => removeOption(i)}
-                  title="Quitar opción"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* ── Footer ─────────────────────────────────────────── */}
-      <div className="mt-3 border-t border-border/24 pt-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-right">
-          <span className="text-xs text-slate-400">Duración</span>
+      <div className="mt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Opciones
+          </label>
+          <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
+            {options.length}/{MAX_OPTIONS}
+          </span>
         </div>
+
+        <div className="flex flex-col gap-2.5">
+          <AnimatePresence initial={false}>
+            {options.map((opt, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                className="flex items-center gap-2.5"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-500 tabular-nums">
+                  {i + 1}
+                </span>
+                <Input
+                  type="text"
+                  value={opt}
+                  onChange={(e) => setOption(i, e.target.value)}
+                  maxLength={MAX_OPTION_TEXT}
+                  placeholder={`Opción ${i + 1}`}
+                  className="h-11 flex-1 rounded-xl border-slate-200 bg-white text-sm text-foreground placeholder:text-slate-400"
+                />
+                {options.length > MIN_OPTIONS && (
+                  <button
+                    type="button"
+                    onClick={() => removeOption(i)}
+                    title="Quitar opción"
+                    aria-label={`Quitar opción ${i + 1}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
         <button
           type="button"
           onClick={addOption}
           disabled={options.length >= MAX_OPTIONS}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:pointer-events-none disabled:opacity-40"
+          className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white/60 text-xs font-semibold text-primary transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-40"
         >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Añadir opción</span>
-          <span className="tabular-nums">({options.length}/{MAX_OPTIONS})</span>
+          <Plus className="h-4 w-4" />
+          Añadir opción
         </button>
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1 relative">
-          {["24 hrs", "3 días", "7 días"].map((d) => (
+
+        {question.trim().length > 0 && uniqueOptions.length < MIN_OPTIONS && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Añade al menos {MIN_OPTIONS} opciones para publicar la encuesta.
+          </p>
+        )}
+      </div>
+
+      {/* ── Duración ────────────────────────────────────────── */}
+      <div className="mt-4 border-t border-slate-200/70 pt-4">
+        <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Duración
+        </label>
+        <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
+          {DURATIONS.map((d) => (
             <button
               key={d}
               type="button"
-              onClick={() => setDuration(d as DurationOption)}
-              className={`rounded-md px-2 text-xs font-medium transition-colors ${
+              onClick={() => setDuration(d)}
+              aria-pressed={duration === d}
+              className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${
                 duration === d
-                  ? "bg-slate-100 text-slate-900"
+                  ? "bg-primary/10 font-semibold text-primary"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
               }`}
             >
@@ -175,11 +212,6 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
             </button>
           ))}
         </div>
-        {question.trim().length > 0 && uniqueOptions.length < MIN_OPTIONS && (
-          <p className="text-[10px] text-slate-400">
-            Añade al menos {MIN_OPTIONS} opciones
-          </p>
-        )}
       </div>
     </motion.div>
   );
