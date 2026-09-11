@@ -146,8 +146,10 @@ interface LocalDB {
   pollVotes: Array<{ user_id: string; poll_id: string; option_id: string }>;
   /** Archivos subidos en el dispositivo: ruta -> data URL */
   files: Record<string, string>;
-  /** Mapas creados en el editor (modo local) */
+  /** Escenas/mapas creados en el editor (modo local) */
   maps: LocalMapRow[];
+  /** Copias de seguridad del proyecto creadas desde el editor */
+  backups: LocalBackupRow[];
 }
 
 function emptyDB(): LocalDB {
@@ -163,6 +165,7 @@ function emptyDB(): LocalDB {
     pollVotes: [],
     files: {},
     maps: [],
+    backups: [],
   };
 }
 
@@ -1273,6 +1276,8 @@ export interface LocalMapRow {
   width: number;
   height: number;
   background: string;
+  /** Contenido pintado del pizarrón: "x,y" -> id de pieza. */
+  tiles?: Record<string, string>;
   created_at: string;
   updated_at: string;
 }
@@ -1286,6 +1291,7 @@ export interface MapView {
   width: number;
   height: number;
   background: string;
+  tiles: Record<string, string>;
   createdAt: number;
   updatedAt: number;
 }
@@ -1299,6 +1305,7 @@ function toMapView(row: LocalMapRow): MapView {
     width: row.width,
     height: row.height,
     background: row.background,
+    tiles: row.tiles ?? {},
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
   };
@@ -1341,6 +1348,7 @@ export async function createMap(
     width: Math.min(200, Math.max(10, Math.round(input.width))),
     height: Math.min(200, Math.max(10, Math.round(input.height))),
     background: input.background,
+    tiles: {},
     created_at: now,
     updated_at: now,
   };
@@ -1353,7 +1361,9 @@ export async function createMap(
 export async function updateMap(
   ownerId: string,
   mapId: string,
-  updates: Partial<Pick<LocalMapRow, "name" | "description" | "genre" | "width" | "height" | "background">>,
+  updates: Partial<
+    Pick<LocalMapRow, "name" | "description" | "genre" | "width" | "height" | "background" | "tiles">
+  >,
 ): Promise<MapView | null> {
   const row = getDB().maps.find((m) => m.id === mapId && m.owner_id === ownerId);
   if (!row) return null;
@@ -1363,6 +1373,7 @@ export async function updateMap(
   if (updates.width !== undefined) row.width = Math.min(200, Math.max(10, Math.round(updates.width)));
   if (updates.height !== undefined) row.height = Math.min(200, Math.max(10, Math.round(updates.height)));
   if (updates.background !== undefined) row.background = updates.background;
+  if (updates.tiles !== undefined) row.tiles = updates.tiles;
   row.updated_at = new Date().toISOString();
   saveDB();
   return toMapView(row);
@@ -1378,4 +1389,105 @@ export async function deleteMap(ownerId: string, mapId: string): Promise<boolean
     return true;
   }
   return false;
+}
+
+// ========================================
+// COPIAS DE SEGURIDAD DEL PROYECTO (local)
+// ▶ [LOVABLE CLOUD] Al migrar, mover a una tabla `backups`.
+// ========================================
+
+/** Fila local de una copia de seguridad del proyecto. */
+export interface LocalBackupRow {
+  id: string;
+  owner_id: string;
+  name: string;
+  /** Snapshot JSON de las escenas del proyecto al momento de la copia. */
+  payload: string;
+  created_at: string;
+}
+
+/** Vista de una copia de seguridad para la UI. */
+export interface BackupView {
+  _id: string;
+  name: string;
+  createdAt: number;
+  sceneCount: number;
+  sizeBytes: number;
+}
+
+function toBackupView(row: LocalBackupRow): BackupView {
+  let sceneCount = 0;
+  try {
+    const parsed = JSON.parse(row.payload);
+    if (Array.isArray(parsed)) sceneCount = parsed.length;
+  } catch {
+    sceneCount = 0;
+  }
+  return {
+    _id: row.id,
+    name: row.name,
+    createdAt: new Date(row.created_at).getTime(),
+    sceneCount,
+    sizeBytes: row.payload.length,
+  };
+}
+
+/** Lista las copias de seguridad del usuario, la más reciente primero. */
+export async function getBackups(ownerId: string): Promise<BackupView[]> {
+  return getDB()
+    .backups.filter((b) => b.owner_id === ownerId)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .map(toBackupView);
+}
+
+/** Crea una copia de seguridad con todas las escenas actuales del proyecto. */
+export async function createBackup(ownerId: string, name?: string): Promise<BackupView> {
+  const db = getDB();
+  const scenes = db.maps.filter((m) => m.owner_id === ownerId);
+  const stamp = new Date().toLocaleString("es", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const row: LocalBackupRow = {
+    id: uid(),
+    owner_id: ownerId,
+    name: (name ?? "").trim().slice(0, 60) || `Copia · ${stamp}`,
+    payload: JSON.stringify(scenes),
+    created_at: new Date().toISOString(),
+  };
+  db.backups.push(row);
+  saveDB();
+  return toBackupView(row);
+}
+
+/** Elimina una copia de seguridad propia. */
+export async function deleteBackup(ownerId: string, backupId: string): Promise<boolean> {
+  const db = getDB();
+  const before = db.backups.length;
+  db.backups = db.backups.filter((b) => !(b.id === backupId && b.owner_id === ownerId));
+  if (db.backups.length !== before) {
+    saveDB();
+    return true;
+  }
+  return false;
+}
+
+/** Restaura una copia de seguridad: reemplaza las escenas actuales del proyecto. */
+export async function restoreBackup(ownerId: string, backupId: string): Promise<number> {
+  const db = getDB();
+  const row = db.backups.find((b) => b.id === backupId && b.owner_id === ownerId);
+  if (!row) throw new Error("Copia de seguridad no encontrada");
+  let scenes: LocalMapRow[] = [];
+  try {
+    const parsed = JSON.parse(row.payload);
+    if (Array.isArray(parsed)) scenes = parsed as LocalMapRow[];
+  } catch {
+    throw new Error("La copia de seguridad está dañada");
+  }
+  const restored = scenes.map((s) => ({ ...s, owner_id: ownerId }));
+  db.maps = [...db.maps.filter((m) => m.owner_id !== ownerId), ...restored];
+  saveDB();
+  return restored.length;
 }

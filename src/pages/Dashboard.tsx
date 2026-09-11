@@ -4,7 +4,7 @@
 // Al migrar la app a Lovable Cloud, la capa @/lib/db se reconecta al backend.
 import { useState, useRef, useCallback, useEffect } from "react";
 import ProfilePage from "./ProfilePage";
-import MapEditorPage from "./MapEditorPage";
+import SceneEditorPage from "./SceneEditorPage";
 import ProfileLayout from "@/components/ProfileLayout";
 import PollComposer, { type PollDraft } from "@/components/PollComposer";
 import { PostPoll, type PollViewData } from "@/components/PostPoll";
@@ -2280,7 +2280,7 @@ export default function Dashboard() {
   // mientras el editor de juegos está en desarrollo.
   function EditorPlaceholder({ onBack }: { onBack: () => void }) {
     // ▶ El editor ahora abre el CREADOR DE MAPAS (pizarrón) como apartado principal
-    return <MapEditorPage onBack={onBack} />;
+    return <SceneEditorPage onBack={onBack} />;
   }
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
