@@ -42,7 +42,11 @@ function readCachedUser(): User | null {
   if (typeof window === "undefined") return null;
   try {
     const cached = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    return cached ? (JSON.parse(cached) as User) : null;
+    if (!cached) return null;
+    const parsed = JSON.parse(cached) as User;
+    // La foto no se guarda en la caché (solo rutas o data URLs grandes): se
+    // resuelve de nuevo desde la base local en `syncFromLocal`.
+    return { ...parsed, image: null };
   } catch {
     return null;
   }
@@ -61,7 +65,13 @@ function setUser(user: User | null) {
   setState({ user });
   if (typeof window === "undefined") return;
   if (user) {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    // La foto es un data URL grande: no se duplica en la caché de sesión
+    // (agotaría el almacenamiento del dispositivo). Al recargar se vuelve a
+    // resolver desde la base local, así la foto se ve en toda la app.
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ ...user, image: null }),
+    );
   } else {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }

@@ -79,10 +79,10 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-      className="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 shadow-sm"
+      className="rounded-2xl border border-slate-200/80 bg-slate-50 p-3.5 shadow-sm"
     >
       {/* ── Encabezado ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-3">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <BarChart3 className="h-4 w-4" />
@@ -106,7 +106,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       </div>
 
       {/* ── Pregunta ────────────────────────────────────────── */}
-      <div className="mt-4">
+      <div className="mt-3.5">
         <label
           htmlFor="poll-question"
           className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
@@ -120,13 +120,13 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={MAX_QUESTION}
           placeholder="Escribe tu pregunta…"
-          className="h-11 rounded-xl border-slate-200 bg-white text-sm text-foreground placeholder:text-slate-400"
+          className="h-10 rounded-xl border-slate-200 bg-white text-sm text-foreground placeholder:text-slate-400"
         />
       </div>
 
       {/* ── Opciones ────────────────────────────────────────── */}
-      <div className="mt-4">
-        <div className="mb-2 flex items-center justify-between">
+      <div className="mt-3.5">
+        <div className="mb-1.5 flex items-center justify-between">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Opciones
           </label>
@@ -135,7 +135,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           </span>
         </div>
 
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           <AnimatePresence initial={false}>
             {options.map((opt, i) => (
               <motion.div
@@ -146,7 +146,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
                 transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                 className="flex items-center gap-2.5"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-500 tabular-nums">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-[11px] font-semibold text-slate-500 tabular-nums">
                   {i + 1}
                 </span>
                 <Input
@@ -155,7 +155,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
                   onChange={(e) => setOption(i, e.target.value)}
                   maxLength={MAX_OPTION_TEXT}
                   placeholder={`Opción ${i + 1}`}
-                  className="h-11 flex-1 rounded-xl border-slate-200 bg-white text-sm text-foreground placeholder:text-slate-400"
+                  className="h-10 flex-1 rounded-xl border-slate-200 bg-white text-sm text-foreground placeholder:text-slate-400"
                 />
                 {options.length > MIN_OPTIONS && (
                   <button
@@ -177,7 +177,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
           type="button"
           onClick={addOption}
           disabled={options.length >= MAX_OPTIONS}
-          className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white/60 text-xs font-semibold text-primary transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-40"
+          className="mt-2.5 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white/60 text-xs font-semibold text-primary transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-40"
         >
           <Plus className="h-4 w-4" />
           Añadir opción
@@ -191,7 +191,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
       </div>
 
       {/* ── Duración ────────────────────────────────────────── */}
-      <div className="mt-4 border-t border-slate-200/70 pt-4">
+      <div className="mt-3.5 border-t border-slate-200/70 pt-3.5">
         <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Duración
         </label>
@@ -202,7 +202,7 @@ export default function PollComposer({ onChange, onRemove }: PollComposerProps) 
               type="button"
               onClick={() => setDuration(d)}
               aria-pressed={duration === d}
-              className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${
+              className={`h-8 flex-1 rounded-lg text-xs font-medium transition-colors ${
                 duration === d
                   ? "bg-primary/10 font-semibold text-primary"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"

@@ -883,15 +883,22 @@ function FormatToolbar({
     }
   };
 
-  const showHint = (_msg: string) => {
-    // Kept wired to the same timer plumbing, but currently only used to
-    // preserve existing timings; selection-first messages no longer push the
-    // layout because they are not rendered in the editor card anymore.
+  const showHint = (msg: string) => {
+    // Mensaje informativo bajo la barra: recuerda que primero hay que
+    // seleccionar el texto para poder aplicar el formato.
+    setHint(msg);
     if (hintTimer.current) clearTimeout(hintTimer.current);
-    hintTimer.current = setTimeout(() => {
-      // no-op kept for compatibility with existing code paths
-    }, 2500);
+    hintTimer.current = setTimeout(() => setHint(null), 2500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (hintTimer.current) clearTimeout(hintTimer.current);
+    };
+  }, []);
+
+  /** Aviso común a las herramientas que necesitan una selección previa. */
+  const SELECTION_HINT = "Selecciona primero el texto que quieres editar.";
 
   const toolBtnBase =
     "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-primary disabled:pointer-events-none disabled:opacity-35 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-primary";
@@ -947,7 +954,10 @@ function FormatToolbar({
             className={`${toolBtnBase} ${showColors ? toolBtnActive : ""}`}
             onClick={() => {
               if (showColors) { setShowColors(false); return; }
-              if (!hasSelection()) return;
+              if (!hasSelection()) {
+                showHint(SELECTION_HINT);
+                return;
+              }
               saveSelection();
               setShowColors(true);
             }}
@@ -960,7 +970,10 @@ function FormatToolbar({
             aria-label="Negrita"
             className={`${toolBtnBase} ${selectionHasStyle("fontWeight", "bold") ? toolBtnActive : ""}`}
             onClick={() => {
-              if (!hasSelection()) return;
+              if (!hasSelection()) {
+                showHint(SELECTION_HINT);
+                return;
+              }
               document.execCommand("bold");
             }}
           >
@@ -972,7 +985,10 @@ function FormatToolbar({
             aria-label="Cursiva"
             className={`${toolBtnBase} ${selectionHasStyle("fontStyle", "italic") ? toolBtnActive : ""}`}
             onClick={() => {
-              if (!hasSelection()) return;
+              if (!hasSelection()) {
+                showHint(SELECTION_HINT);
+                return;
+              }
               document.execCommand("italic");
             }}
           >
@@ -984,7 +1000,10 @@ function FormatToolbar({
             aria-label="Subrayado"
             className={`${toolBtnBase} ${selectionHasStyle("textDecoration", "underline") ? toolBtnActive : ""}`}
             onClick={() => {
-              if (!hasSelection()) return;
+              if (!hasSelection()) {
+                showHint(SELECTION_HINT);
+                return;
+              }
               document.execCommand("underline");
             }}
           >
@@ -993,20 +1012,23 @@ function FormatToolbar({
         </div>
       </div>
 
-      {/* Hint below toolbar */}
-      <AnimatePresence>
-        {hint && (
-          <motion.p
-            initial={{ opacity: 0, y: -2 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -2 }}
-            transition={{ duration: 0.15 }}
-            className="mt-2 max-w-full text-[11px] italic break-words text-slate-500"
-          >
-            {hint}
-          </motion.p>
-        )}
-      </AnimatePresence>
+      {/* Hint below toolbar: la altura está reservada para que el mensaje
+          nunca empuje el contenido (sin saltos de layout). */}
+      <div className="mt-1 h-5">
+        <AnimatePresence>
+          {hint && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="max-w-full truncate text-[11px] italic text-slate-500 dark:text-slate-400"
+            >
+              {hint}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Color panel */}
       <AnimatePresence>
@@ -1502,7 +1524,10 @@ function PostCard({
                 }`}
               />
             </motion.span>
-            <span className="tabular-nums">{post.likes > 0 ? post.likes : "Me gusta"}</span>
+            {/* Sin «Me gusta» cuando no se ha dado like: solo el ícono. */}
+            {post.likes > 0 && (
+              <span className="tabular-nums">{post.likes}</span>
+            )}
           </motion.button>
           {/* Favorites */}
           <motion.button

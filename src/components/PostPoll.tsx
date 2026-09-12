@@ -1,5 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────
 // PARTE 3 · ENCUESTAS: visualización + votación dentro de la publicación.
+//
+// Distribución compacta: filas de altura FIJA (h-10) tanto antes como
+// después de votar, para que la publicación nunca cambie de tamaño
+// cuando se resuelve el voto del usuario (sin saltos de layout).
 // ─────────────────────────────────────────────────────────────────────
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, Check } from "lucide-react";
@@ -62,67 +66,67 @@ export function PostPoll({ poll, userId }: PostPollProps) {
 
   return (
     <div className="mx-auto w-full max-w-sm">
-      <div className="flex w-full flex-col rounded-xl border border-border/35 bg-background px-4 py-3.5 shadow-sm">
-      {/* ── Header ────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5">
-        <BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <p className="text-sm font-semibold text-card-foreground min-w-0">
-          {poll.question || "Encuesta"}
-        </p>
-      </div>
+      <div className="flex w-full flex-col rounded-xl border border-border/35 bg-background px-3.5 py-3 shadow-sm">
+        {/* ── Header ────────────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <p className="min-w-0 truncate text-[13px] font-semibold text-card-foreground">
+            {poll.question || "Encuesta"}
+          </p>
+        </div>
 
-      {/* ── Options ────────────────────────────────────────── */}
-      <div className="mt-3 flex flex-col gap-2">
-        {poll.options.map((option) => {
-          const p = pct(option.id);
-          const selected = votedOptionId === option.id;
-          return hasVoted ? (
-            <div
-              key={option.id}
-              className="relative overflow-hidden rounded-lg border border-border/30 bg-card px-3 py-2.5"
-            >
+        {/* ── Options — filas de altura fija (h-10) ─────────── */}
+        <div className="mt-2.5 flex flex-col gap-1.5">
+          {poll.options.map((option) => {
+            const p = pct(option.id);
+            const selected = votedOptionId === option.id;
+            return hasVoted ? (
               <div
-                className="absolute inset-y-0 left-0 rounded-l-lg bg-foreground/40 transition-all duration-500 ease-out"
-                style={{ width: `${Math.max(p, 2)}%` }}
-              />
-              <div className="relative flex items-center justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-card-foreground">
-                  {selected && (
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] text-primary-foreground">
-                      <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                    </span>
-                  )}
-                  <span className="truncate">{option.text}</span>
-                </span>
-                <span className="shrink-0 text-xs font-bold tabular-nums text-card-foreground">
-                  {p}%
-                </span>
+                key={option.id}
+                className="relative h-10 overflow-hidden rounded-lg border border-border/30 bg-card px-3"
+              >
+                <div
+                  className="absolute inset-y-0 left-0 rounded-l-lg bg-foreground/40 transition-all duration-500 ease-out"
+                  style={{ width: `${Math.max(p, 2)}%` }}
+                />
+                <div className="relative flex h-full items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-card-foreground">
+                    {selected && (
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] text-primary-foreground">
+                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                      </span>
+                    )}
+                    <span className="truncate">{option.text}</span>
+                  </span>
+                  <span className="shrink-0 text-xs font-bold tabular-nums text-card-foreground">
+                    {p}%
+                  </span>
+                </div>
               </div>
-            </div>
-          ) : (
-            <button
-              key={option.id}
-              type="button"
-              disabled={voting}
-              onClick={() => handleVote(option.id)}
-              className="poll-vote-btn flex w-full items-center justify-between gap-2 rounded-lg border border-border/40 bg-card px-3 py-2.5 text-left text-[13px] font-medium text-card-foreground disabled:opacity-60 shadow-sm"
-            >
-              <span className="truncate">{option.text}</span>
-              <span className="shrink-0 rounded-md border border-border/40 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                Votar
-              </span>
-            </button>
-          );
-        })}
-      </div>
+            ) : (
+              <button
+                key={option.id}
+                type="button"
+                disabled={voting}
+                onClick={() => handleVote(option.id)}
+                className="poll-vote-btn flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border/40 bg-card px-3 text-left text-[13px] font-medium text-card-foreground shadow-sm disabled:opacity-60"
+              >
+                <span className="truncate">{option.text}</span>
+                <span className="shrink-0 rounded-md border border-border/40 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                  Votar
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* ── Footer ─────────────────────────────────────────── */}
-      <div className="mt-3 flex items-center justify-between border-t border-border/24 pt-2.5">
-        <p className="text-[11px] text-muted-foreground/50 tabular-nums">
-          {totalVotes} {totalVotes === 1 ? "voto" : "votos"} · respuestas anónimas
-        </p>
+        {/* ── Footer ─────────────────────────────────────────── */}
+        <div className="mt-2.5 flex items-center justify-between border-t border-border/24 pt-2">
+          <p className="text-[11px] text-muted-foreground/50 tabular-nums">
+            {totalVotes} {totalVotes === 1 ? "voto" : "votos"} · respuestas anónimas
+          </p>
+        </div>
       </div>
     </div>
-      </div>
   );
 }

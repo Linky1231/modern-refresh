@@ -12,6 +12,7 @@ import {
   getFollowers,
   getFollowing,
   toggleFollow,
+  deletePost,
   isFollowing as checkIsFollowing,
 } from "@/lib/db";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -24,10 +25,12 @@ import {
   MoreHorizontal,
   X,
   Check,
-  FileText,
+  Newspaper,
   Play,
   Share2,
   Pencil,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -119,6 +122,8 @@ export default function ProfileLayout({
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFollowList, setShowFollowList] = useState<"followers" | "following" | null>(null);
   const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false);
+  // Publicación que se quiere borrar desde la sección Publicaciones.
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (!profileUserId) return;
@@ -180,6 +185,19 @@ export default function ProfileLayout({
     }
   };
 
+  const handleConfirmDeletePost = async () => {
+    if (!postToDelete) return;
+    try {
+      await deletePost(postToDelete, profileUserId);
+      setPostToDelete(null);
+      toast.success("Publicación eliminada");
+      void fetchAll();
+    } catch (e) {
+      console.error("Error al eliminar la publicación:", e);
+      toast.error("No se pudo eliminar la publicación");
+    }
+  };
+
   const displayName = (profile?.name as string | undefined) ?? "Sin nombre";
   const title = headerTitle ?? (isOwnProfile ? "Mi perfil" : displayName);
 
@@ -187,8 +205,8 @@ export default function ProfileLayout({
     <div className="pb-28">
       {/* ── Header unificado + Banner + Avatar — IDÉNTICO en Mi perfil y en perfil ajeno/aislado ── */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-sm"
       >
@@ -320,7 +338,12 @@ export default function ProfileLayout({
 
       {/* Feed — MISMO contenedor max-w-sm px-4 y MISMO estilo de tarjetas */}
       <div className="mx-auto max-w-sm px-4">
-        <ProfileTabContent posts={posts ?? []} currentUserId={currentUserId} />
+        <ProfileTabContent
+          posts={posts ?? []}
+          currentUserId={currentUserId}
+          canDelete={isOwnProfile && !!currentUserId && currentUserId === profileUserId}
+          onRequestDelete={setPostToDelete}
+        />
       </div>
 
       {/* Follow list */}
@@ -357,25 +380,91 @@ export default function ProfileLayout({
         onConfirm={handleConfirmUnfollow}
         onCancel={() => setShowUnfollowConfirm(false)}
       />
+
+      {/* Confirmación de borrado — misma experiencia que en el feed */}
+      <AnimatePresence>
+        {postToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setPostToDelete(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 8 }}
+              transition={{ duration: 0.22 }}
+              className="w-full max-w-sm rounded-2xl border border-border/35 bg-card p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Eliminar publicación</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    ¿Estás seguro de que quieres eliminar esta publicación? Esta
+                    acción no se puede deshacer.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPostToDelete(null)}
+                  className="h-9 rounded-lg border border-border/50 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeletePost}
+                  className="flex h-9 items-center gap-1.5 rounded-lg bg-destructive px-3 text-xs font-semibold text-destructive-foreground transition-colors hover:brightness-110"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function ProfileEmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+// Estado vacío de la sección Publicaciones — MISMO icono y estilos que la
+// sección de publicaciones del feed (caja rounded-2xl + Newspaper primario).
+function ProfileEmptyState({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      {icon}
-      <p className="mt-3 text-sm text-muted-foreground">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground/70">{subtitle}</p>
+      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+        <Newspaper className="h-6 w-6 text-primary" strokeWidth={1.8} />
+      </div>
+      <p className="text-base font-medium text-slate-900 dark:text-white">{title}</p>
+      <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">{subtitle}</p>
     </div>
   );
 }
 
-function ProfileTabContent({ posts, currentUserId }: { posts: any[]; currentUserId?: string }) {
+function ProfileTabContent({
+  posts,
+  currentUserId,
+  canDelete,
+  onRequestDelete,
+}: {
+  posts: any[];
+  currentUserId?: string;
+  /** Permite borrar la publicación desde esta sección (solo mis posts). */
+  canDelete?: boolean;
+  onRequestDelete?: (postId: string) => void;
+}) {
   if (posts.length === 0) {
     return (
       <ProfileEmptyState
-        icon={<FileText className="h-6 w-6 text-muted-foreground/40" />}
         title="No hay publicaciones"
         subtitle="Cuando publiques algo, aparecerán aquí."
       />
@@ -412,9 +501,22 @@ function ProfileTabContent({ posts, currentUserId }: { posts: any[]; currentUser
               )}
             </div>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {post.likes} me gusta · {post.favorites} favoritos
-          </p>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="text-[11px] text-muted-foreground">
+              {post.likes} me gusta · {post.favorites} favoritos
+            </p>
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onRequestDelete?.(post._id)}
+                title="Eliminar publicación"
+                aria-label="Eliminar publicación"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

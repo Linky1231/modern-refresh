@@ -426,7 +426,15 @@ export async function getCurrentUser() {
   }
   if (!cached?._id) return null;
   const row = findUser(cached._id);
-  return row;
+  if (!row) return null;
+  // La foto y el banner se guardan como ruta local: se resuelven aquí a una
+  // URL usable (data URL) para que la foto de perfil se vea en TODA la app
+  // (compositor, publicaciones, menciones), no solo en el perfil.
+  return {
+    ...row,
+    image: row.image ? resolveFileUrl(row.image) || null : null,
+    banner: row.banner ? resolveFileUrl(row.banner) || null : null,
+  };
 }
 
 // ========================================
@@ -452,7 +460,8 @@ export async function searchUsers(query: string, currentUserId?: string) {
     .map((u) => ({
       _id: u.id,
       name: u.name || "Anónimo",
-      image: u.image,
+      // Igual que en el perfil: la ruta local se resuelve a una URL usable.
+      image: u.image ? resolveFileUrl(u.image) || null : null,
     }));
 }
 
