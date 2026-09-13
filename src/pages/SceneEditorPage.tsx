@@ -25,6 +25,8 @@ import {
   type BackupView,
 } from "@/lib/db";
 import { useAuth } from "@/hooks/use-auth";
+// ▶ Editor de NIVELES (avanzado): capa de objetos + assets de Google.
+import LevelEditor from "./editor/LevelEditor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -210,7 +212,8 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   // ── Pizarrón activo (editar el proyecto de la escena) ──
   if (editingScene) {
     return (
-      <SceneCanvas
+      <LevelEditor
+        key={editingScene._id}
         scene={editingScene}
         ownerId={ownerId}
         onBack={() => {
@@ -1157,7 +1160,8 @@ function PublishModal({
 }
 
 // ════════════════════════════════════════════════════════════════════
-// Pizarrón: lienzo cuadriculado para pintar la escena
+// Pizarrón clásico: solo terreno (queda como referencia; el editor
+// activo es ./editor/LevelEditor con la capa de objetos y los assets).
 // ════════════════════════════════════════════════════════════════════
 function SceneCanvas({
   scene,
