@@ -1275,34 +1275,6 @@ export async function voteOnPoll(
 /** Géneros soportados por el creador de mapas. */
 export type MapGenre = "rpg" | "platformer";
 
-/**
- * Objeto (asset) colocado sobre el pizarrón de una escena.
- * Las coordenadas y el tamaño se miden en casillas del tablero.
- */
-export interface MapObject {
-  id: string;
-  /** Id del asset dentro de la biblioteca (motor, Google o Drive). */
-  assetId: string;
-  name: string;
-  /** URL de la imagen (data URL del motor o URL remota de Google/Drive). */
-  url: string;
-  /** Biblioteca de origen: "engine" | "google" | "drive". */
-  source: string;
-  /** Esquina superior izquierda, en casillas. */
-  x: number;
-  y: number;
-  /** Ancho y alto, en casillas. */
-  w: number;
-  h: number;
-  /** Rotación en grados. */
-  rotation: number;
-  /** Espejo horizontal. */
-  flipX: boolean;
-  opacity: number;
-  /** Orden de dibujo: cuanto mayor, más arriba. */
-  z: number;
-}
-
 /** Fila local de un mapa creado en el editor. */
 export interface LocalMapRow {
   id: string;
@@ -1315,8 +1287,6 @@ export interface LocalMapRow {
   background: string;
   /** Contenido pintado del pizarrón: "x,y" -> id de pieza. */
   tiles?: Record<string, string>;
-  /** Capa de objetos: assets colocados encima del terreno. */
-  objects?: MapObject[];
   created_at: string;
   updated_at: string;
 }
@@ -1331,8 +1301,6 @@ export interface MapView {
   height: number;
   background: string;
   tiles: Record<string, string>;
-  /** Capa de objetos colocada sobre el terreno. */
-  objects: MapObject[];
   createdAt: number;
   updatedAt: number;
 }
@@ -1347,7 +1315,6 @@ function toMapView(row: LocalMapRow): MapView {
     height: row.height,
     background: row.background,
     tiles: row.tiles ?? {},
-    objects: row.objects ?? [],
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
   };
@@ -1391,7 +1358,6 @@ export async function createMap(
     height: Math.min(200, Math.max(10, Math.round(input.height))),
     background: input.background,
     tiles: {},
-    objects: [],
     created_at: now,
     updated_at: now,
   };
@@ -1405,10 +1371,7 @@ export async function updateMap(
   ownerId: string,
   mapId: string,
   updates: Partial<
-    Pick<
-      LocalMapRow,
-      "name" | "description" | "genre" | "width" | "height" | "background" | "tiles" | "objects"
-    >
+    Pick<LocalMapRow, "name" | "description" | "genre" | "width" | "height" | "background" | "tiles">
   >,
 ): Promise<MapView | null> {
   const row = getDB().maps.find((m) => m.id === mapId && m.owner_id === ownerId);
@@ -1420,7 +1383,6 @@ export async function updateMap(
   if (updates.height !== undefined) row.height = Math.min(200, Math.max(10, Math.round(updates.height)));
   if (updates.background !== undefined) row.background = updates.background;
   if (updates.tiles !== undefined) row.tiles = updates.tiles;
-  if (updates.objects !== undefined) row.objects = updates.objects;
   row.updated_at = new Date().toISOString();
   saveDB();
   return toMapView(row);
