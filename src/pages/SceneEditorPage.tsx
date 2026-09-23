@@ -50,10 +50,12 @@ import {
   Gamepad2,
   DatabaseBackup,
   AlertTriangle,
+  Locate,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { usePan } from "@/hooks/use-pan";
 import LevelEditor from "./editor/LevelEditor";
 
 // ── Paletas de piezas por género ───────────────────────────────────
@@ -187,6 +189,10 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   const [showSettings, setShowSettings] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+
+  // El tablero de escenas se puede arrastrar libremente a cualquier posición.
+  const [boardEl, setBoardEl] = useState<HTMLDivElement | null>(null);
+  const board = usePan({ element: boardEl, enabled: true });
 
   const refresh = useCallback(async () => {
     if (!ownerId) return;
@@ -344,10 +350,19 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
         {/* ── Tablero de escenas — cabe completo en una sola vista ── */}
         <div
-          className="relative mt-3 mb-4 flex min-h-[240px] max-h-[60vh] flex-1 flex-col overflow-hidden rounded-2xl border border-border/35 shadow-soft"
-          style={BOARD_DOTS}
+          ref={setBoardEl}
+          className="relative mt-3 mb-4 min-h-[240px] max-h-[60vh] flex-1 select-none overflow-hidden rounded-2xl border border-border/35 shadow-soft"
+          style={{ ...BOARD_DOTS, ...board.interaction }}
+          {...board.viewportProps}
         >
-          <div className="flex-1 overflow-y-auto p-4 pb-20">
+          {/* El tablero vive en su propio plano: se puede mover a cualquier posición. */}
+          <div
+            className="absolute left-0 top-0 w-full p-4 pb-20"
+            style={{
+              transform: `translate(${board.offset.x}px, ${board.offset.y}px)`,
+              willChange: "transform",
+            }}
+          >
             {scenes === undefined ? (
               <div className="grid grid-cols-2 gap-3">
                 {[0, 1, 2, 3].map((i) => (
@@ -376,6 +391,24 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
                   />
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* ── Pista de arrastre + recentrar el tablero ── */}
+          <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex items-center gap-2">
+            <span className="hidden rounded-xl border border-border/40 bg-card/90 px-3 py-2 text-[11px] font-medium text-muted-foreground shadow-soft backdrop-blur-sm sm:inline-flex">
+              Arrastra para mover el tablero
+            </span>
+            {!board.isCentered && (
+              <button
+                type="button"
+                onClick={board.reset}
+                title="Centrar el tablero"
+                className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-xl border border-border/40 bg-card px-3 text-[11px] font-bold text-foreground shadow-soft transition-transform active:scale-95"
+              >
+                <Locate className="h-3.5 w-3.5 text-primary" />
+                Centrar
+              </button>
             )}
           </div>
 

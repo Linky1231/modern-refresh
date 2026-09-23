@@ -19,9 +19,11 @@ import {
   Eraser,
   FlipHorizontal2,
   FlipVertical2,
+  Hand,
   Hash,
   Layers,
   Loader2,
+  Locate,
   Menu,
   MessageSquare,
   Paintbrush,
@@ -47,6 +49,7 @@ import {
   type AssetView,
   type MapView,
 } from "@/lib/db";
+import { usePan } from "@/hooks/use-pan";
 import { countPaintedPixels, pixelsToDataUrl } from "@/lib/textures";
 import {
   ASSET_CATEGORIES,
@@ -65,7 +68,7 @@ import {
 import TextureStudio, { type SeedTexture } from "./TextureStudio";
 
 type Layer = "map" | "ui";
-type Tool = "paint" | "erase" | "adjust";
+type Tool = "paint" | "erase" | "adjust" | "move";
 
 interface LevelEditorProps {
   scene: MapView;
@@ -128,6 +131,11 @@ export default function LevelEditor({
   const [fps, setFps] = useState(60);
 
   const painting = useRef(false);
+
+  // El lienzo (el mapa) se arrastra libremente a cualquier posición: con la
+  // herramienta Mover, con el fondo, con el botón central o con Alt.
+  const [canvasEl, setCanvasEl] = useState<HTMLDivElement | null>(null);
+  const pan = usePan({ element: canvasEl, enabled: tool === "move" });
 
   const loadAssets = useCallback(async () => {
     try {
@@ -209,7 +217,7 @@ export default function LevelEditor({
   // ── Pintado ────────────────────────────────────────────────────
   const paintAt = useCallback(
     (x: number, y: number) => {
-      if (preview) return;
+      if (preview || tool === "move") return;
       const key = cellKey(x, y, layer);
       setGrid((prev) => {
         if (tool === "erase") {
@@ -239,7 +247,7 @@ export default function LevelEditor({
   };
 
   const handleEnter = (x: number, y: number) => {
-    if (!painting.current || tool === "adjust") return;
+    if (!painting.current || tool === "adjust" || tool === "move") return;
     paintAt(x, y);
   };
 
@@ -357,8 +365,20 @@ export default function LevelEditor({
     >
       {/* ══ Zona del lienzo (todo el chrome flota aquí, encima de la ventana) ══ */}
       <div className="relative min-h-0 flex-1">
-      <div className="absolute inset-0 overflow-auto overscroll-contain">
-        <div className="flex min-h-full w-full flex-col items-center justify-center px-3 pb-20 pt-16">
+      <div
+        ref={setCanvasEl}
+        className="absolute inset-0 select-none overflow-hidden"
+        style={pan.interaction}
+        {...pan.viewportProps}
+      >
+        {/* El mapa vive en su propio plano: se puede colocar en cualquier posición. */}
+        <div
+          className="absolute left-1/2 top-1/2 flex w-fit flex-col items-center"
+          style={{
+            transform: `translate(calc(-50% + ${pan.offset.x}px), calc(-50% + ${pan.offset.y}px))`,
+            willChange: "transform",
+          }}
+        >
           <div className="w-fit">
             <div className="flex">
               {/* Regla de filas */}
@@ -392,6 +412,8 @@ export default function LevelEditor({
                     <div
                       key={key}
                       onPointerDown={(e) => {
+                        // Con la mano activa (o Alt, o el botón central) el gesto es del lienzo.
+                        if (e.button !== 0 || tool === "move" || e.altKey) return;
                         e.preventDefault();
                         handleDown(x, y);
                       }}
@@ -559,6 +581,7 @@ export default function LevelEditor({
               { id: "paint" as Tool, label: "Pintar", icon: <Paintbrush className="h-4 w-4" /> },
               { id: "erase" as Tool, label: "Borrar", icon: <Eraser className="h-4 w-4" /> },
               { id: "adjust" as Tool, label: "Ajustar", icon: <Wrench className="h-4 w-4" /> },
+              { id: "move" as Tool, label: "Mover el mapa", icon: <Hand className="h-4 w-4" /> },
             ]
           ).map((t) => (
             <button
@@ -574,6 +597,20 @@ export default function LevelEditor({
               {t.icon}
             </button>
           ))}
+          {!pan.isCentered && (
+            <>
+              <span className="mx-0.5 h-5 w-px bg-border/60" />
+              <button
+                type="button"
+                onClick={pan.reset}
+                title="Centrar el mapa"
+                aria-label="Centrar el mapa"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Locate className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
       )}
 
