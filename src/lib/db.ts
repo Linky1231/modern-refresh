@@ -150,6 +150,8 @@ interface LocalDB {
   maps: LocalMapRow[];
   /** Copias de seguridad del proyecto creadas desde el editor */
   backups: LocalBackupRow[];
+  /** Recursos (texturas) creados en el editor de niveles */
+  assets: LocalAssetRow[];
 }
 
 function emptyDB(): LocalDB {
@@ -166,6 +168,7 @@ function emptyDB(): LocalDB {
     files: {},
     maps: [],
     backups: [],
+    assets: [],
   };
 }
 
@@ -1499,4 +1502,167 @@ export async function restoreBackup(ownerId: string, backupId: string): Promise<
   db.maps = [...db.maps.filter((m) => m.owner_id !== ownerId), ...restored];
   saveDB();
   return restored.length;
+}
+
+// ========================================
+// RECURSOS DEL EDITOR DE NIVELES (local)
+// Texturas pixel art creadas por el usuario.
+// ▶ [LOVABLE CLOUD] Al migrar, mover a una tabla `assets`.
+// ========================================
+
+/** Categorías de recursos del editor de niveles. */
+export type AssetCategory = "bloque" | "deco" | "actor" | "util" | "item" | "arma";
+
+/** Fila local de un recurso (textura) creado o copiado en el editor. */
+export interface LocalAssetRow {
+  id: string;
+  owner_id: string;
+  name: string;
+  category: AssetCategory;
+  /** Rejilla de píxeles: cada fila es una cadena de índices de paleta en base36. */
+  pixels: string[];
+  palette: string[];
+  size: number;
+  /** Id del recurso original cuando esta fila es una copia con cambios. */
+  origin_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Vista de un recurso para la UI. */
+export interface AssetView {
+  _id: string;
+  name: string;
+  category: AssetCategory;
+  pixels: string[];
+  palette: string[];
+  size: number;
+  originId: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+function toAssetView(row: LocalAssetRow): AssetView {
+  return {
+    _id: row.id,
+    name: row.name,
+    category: row.category,
+    pixels: row.pixels ?? [],
+    palette: row.palette ?? [],
+    size: row.size ?? row.pixels?.length ?? 16,
+    originId: row.origin_id ?? null,
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+  };
+}
+
+/** Lista los recursos del usuario (los nuevos primero). */
+export async function getAssets(
+  ownerId: string,
+  category?: AssetCategory,
+): Promise<AssetView[]> {
+  return getDB()
+    .assets.filter((a) => a.owner_id === ownerId && (!category || a.category === category))
+    .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))
+    .map(toAssetView);
+}
+
+/** Cuenta los recursos por categoría (para el panel de datos). */
+export async function getAssetStats(ownerId: string) {
+  const rows = getDB().assets.filter((a) => a.owner_id === ownerId);
+  const byCategory: Record<AssetCategory, number> = {
+    bloque: 0,
+    deco: 0,
+    actor: 0,
+    util: 0,
+    item: 0,
+    arma: 0,
+  };
+  for (const row of rows) {
+    if (row.category in byCategory) byCategory[row.category] += 1;
+  }
+  return { total: rows.length, byCategory };
+}
+
+/** Crea un recurso nuevo con su textura. */
+export async function createAsset(
+  ownerId: string,
+  input: {
+    name: string;
+    category: AssetCategory;
+    pixels: string[];
+    palette: string[];
+    size: number;
+    originId?: string | null;
+  },
+): Promise<AssetView> {
+  const db = getDB();
+  const now = new Date().toISOString();
+  const row: LocalAssetRow = {
+    id: uid(),
+    owner_id: ownerId,
+    name: input.name.trim().slice(0, 40) || "Recurso",
+    category: input.category,
+    pixels: input.pixels,
+    palette: input.palette,
+    size: input.size,
+    origin_id: input.originId ?? null,
+    created_at: now,
+    updated_at: now,
+  };
+  db.assets.push(row);
+  saveDB();
+  return toAssetView(row);
+}
+
+/** Actualiza nombre o textura de un recurso propio. */
+export async function updateAsset(
+  ownerId: string,
+  assetId: string,
+  updates: Partial<Pick<LocalAssetRow, "name" | "pixels" | "palette" | "size" | "category">>,
+): Promise<AssetView | null> {
+  const row = getDB().assets.find((a) => a.id === assetId && a.owner_id === ownerId);
+  if (!row) return null;
+  if (updates.name !== undefined) row.name = updates.name.trim().slice(0, 40) || row.name;
+  if (updates.pixels !== undefined) row.pixels = updates.pixels;
+  if (updates.palette !== undefined) row.palette = updates.palette;
+  if (updates.size !== undefined) row.size = updates.size;
+  if (updates.category !== undefined) row.category = updates.category;
+  row.updated_at = new Date().toISOString();
+  saveDB();
+  return toAssetView(row);
+}
+
+/**
+ * Crea una COPIA de un recurso aplicando cambios. El recurso original
+ * nunca se modifica: la copia queda enlazada por `origin_id`.
+ */
+export async function duplicateAsset(
+  ownerId: string,
+  assetId: string,
+  changes?: { name?: string; pixels?: string[]; palette?: string[]; size?: number },
+): Promise<AssetView> {
+  const db = getDB();
+  const original = db.assets.find((a) => a.id === assetId && a.owner_id === ownerId);
+  if (!original) throw new Error("Recurso original no encontrado");
+  return createAsset(ownerId, {
+    name: changes?.name ?? `${original.name} (copia)`,
+    category: original.category,
+    pixels: changes?.pixels ?? original.pixels,
+    palette: changes?.palette ?? original.palette,
+    size: changes?.size ?? original.size,
+    originId: original.id,
+  });
+}
+
+/** Elimina un recurso propio. */
+export async function deleteAsset(ownerId: string, assetId: string): Promise<boolean> {
+  const db = getDB();
+  const before = db.assets.length;
+  db.assets = db.assets.filter((a) => !(a.id === assetId && a.owner_id === ownerId));
+  if (db.assets.length !== before) {
+    saveDB();
+    return true;
+  }
+  return false;
 }
