@@ -167,7 +167,7 @@ interface ConfirmState {
 
 // Fondo de tablero punteado, con la paleta del motor
 const BOARD_DOTS: React.CSSProperties = {
-  backgroundColor: "#ffffff",
+  backgroundColor: "var(--card)",
   backgroundImage:
     "radial-gradient(circle, color-mix(in srgb, var(--primary) 22%, transparent) 1px, transparent 1px)",
   backgroundSize: "18px 18px",
@@ -351,7 +351,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         {/* ── Tablero de escenas — cabe completo en una sola vista ── */}
         <div
           ref={setBoardEl}
-          className="relative mt-3 mb-4 min-h-[240px] max-h-[60vh] flex-1 select-none overflow-hidden rounded-2xl border border-border/35 shadow-soft"
+          className="relative mt-3 mb-4 min-h-[240px] flex-1 select-none overflow-hidden rounded-2xl border border-border/50 shadow-soft"
           style={{ ...BOARD_DOTS, ...board.interaction }}
           {...board.viewportProps}
         >
