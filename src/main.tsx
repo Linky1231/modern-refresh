@@ -6,11 +6,51 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 
-// Lazy load route components for better code splitting
-const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
-const EditorPage = lazy(() => import("./pages/Editor.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+// ── Rutas cargadas bajo demanda ─────────────────────────────────────
+// Si el grafo de módulos se queda obsoleto (un archivo renombrado o borrado
+// mientras la pestaña del preview sigue abierta), el import dinámico falla con
+// "Failed to fetch dynamically imported module". En ese caso recargamos una
+// sola vez para que el navegador pida el grafo actual; la marca en
+// sessionStorage evita bucles de recarga si el chunk sigue sin existir.
+const CHUNK_RETRY_KEY = "asternal:chunk-retry";
+
+function chunkRetryFlag(): string | null {
+  try {
+    return sessionStorage.getItem(CHUNK_RETRY_KEY);
+  } catch {
+    // Sin acceso a sessionStorage no podemos recordar el intento: no recargamos.
+    return "1";
+  }
+}
+
+function withChunkRetry<T>(load: () => Promise<T>): Promise<T> {
+  return load().then(
+    (module) => {
+      try {
+        sessionStorage.removeItem(CHUNK_RETRY_KEY);
+      } catch {
+        /* ignorar */
+      }
+      return module;
+    },
+    (error: unknown) => {
+      if (!chunkRetryFlag()) {
+        try {
+          sessionStorage.setItem(CHUNK_RETRY_KEY, "1");
+        } catch {
+          /* ignorar */
+        }
+        window.location.reload();
+      }
+      throw error;
+    },
+  );
+}
+
+const AuthPage = lazy(() => withChunkRetry(() => import("./pages/Auth.tsx")));
+const Dashboard = lazy(() => withChunkRetry(() => import("./pages/Dashboard.tsx")));
+const EditorPage = lazy(() => withChunkRetry(() => import("./pages/Editor.tsx")));
+const NotFound = lazy(() => withChunkRetry(() => import("./pages/NotFound.tsx")));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -69,6 +109,13 @@ class RootErrorBoundary extends React.Component<
                 {this.state.stack}
               </pre>
             )}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.99]"
+            >
+              Recargar la página
+            </button>
           </div>
         </div>
       );

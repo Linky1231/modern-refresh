@@ -348,7 +348,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           </button>
         </div>
 
-        {/* ── Tablero de escenas — cabe completo en una sola vista ── */}
+        {/* ── Tablero de escenas — ocupa todo el alto disponible y se arrastra ── */}
         <div
           ref={setBoardEl}
           className="relative mt-3 mb-4 min-h-[240px] flex-1 select-none overflow-hidden rounded-2xl border border-border/50 shadow-soft"
