@@ -62,9 +62,9 @@ interface TextureStudioProps {
 }
 
 const CHECKER: React.CSSProperties = {
-  backgroundColor: "#0f172a",
+  backgroundColor: "var(--card)",
   backgroundImage:
-    "linear-gradient(45deg, #1e293b 25%, transparent 25%), linear-gradient(-45deg, #1e293b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e293b 75%), linear-gradient(-45deg, transparent 75%, #1e293b 75%)",
+    "linear-gradient(45deg, var(--muted) 25%, transparent 25%), linear-gradient(-45deg, var(--muted) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--muted) 75%), linear-gradient(-45deg, transparent 75%, var(--muted) 75%)",
   backgroundSize: "16px 16px",
   backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0",
 };
@@ -263,15 +263,15 @@ export default function TextureStudio({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[120] flex flex-col bg-slate-950 text-slate-100"
+      className="fixed inset-0 z-[120] flex flex-col bg-background text-foreground"
     >
       {/* ── Cabecera ── */}
-      <header className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2.5">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border/40 bg-card px-3 py-2.5">
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar el estudio de texturas"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
@@ -284,9 +284,9 @@ export default function TextureStudio({
             }}
             maxLength={40}
             placeholder={`${CATEGORY_LABEL[category]} sin nombre`}
-            className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+            className="w-full bg-transparent text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground"
           />
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-muted-foreground">
             {asset
               ? `Editando · ${asset.name}`
               : seed
@@ -302,7 +302,7 @@ export default function TextureStudio({
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Opciones del recurso"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-slate-200 transition-colors hover:bg-white/10"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <MoreVertical className="h-4 w-4" />
           </button>
@@ -315,7 +315,7 @@ export default function TextureStudio({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -6, scale: 0.97 }}
                   transition={{ duration: 0.16 }}
-                  className="absolute right-0 top-11 z-20 w-72 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl"
+                  className="absolute right-0 top-11 z-20 w-72 overflow-hidden rounded-2xl border border-border/40 bg-popover shadow-lift"
                 >
                   <button
                     type="button"
@@ -324,14 +324,14 @@ export default function TextureStudio({
                       setMenuOpen(false);
                       void applyToOriginal();
                     }}
-                    className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5 disabled:opacity-40"
+                    className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-40"
                   >
-                    <Copy className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                    <Copy className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span>
-                      <span className="block text-[13px] font-semibold text-white">
+                      <span className="block text-[13px] font-semibold text-foreground">
                         Aplicar al asset original
                       </span>
-                      <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-400">
+                      <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
                         {asset
                           ? "Guarda una copia con los cambios y deja el recurso original intacto."
                           : "Abre primero un recurso guardado para poder crear su variante."}
@@ -344,14 +344,14 @@ export default function TextureStudio({
                       setMenuOpen(false);
                       void saveAsNew();
                     }}
-                    className="flex w-full items-start gap-3 border-t border-white/5 px-4 py-3 text-left transition-colors hover:bg-white/5"
+                    className="flex w-full items-start gap-3 border-t border-border/30 px-4 py-3 text-left transition-colors hover:bg-muted"
                   >
-                    <FilePlus2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                    <FilePlus2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span>
-                      <span className="block text-[13px] font-semibold text-white">
+                      <span className="block text-[13px] font-semibold text-foreground">
                         Guardar nuevo recurso
                       </span>
-                      <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-400">
+                      <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
                         Guarda este lienzo como un recurso independiente.
                       </span>
                     </span>
@@ -364,10 +364,10 @@ export default function TextureStudio({
                       setPixels(emptyPixels(size));
                       setDirty(true);
                     }}
-                    className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-left transition-colors hover:bg-white/5"
+                    className="flex w-full items-center gap-3 border-t border-border/30 px-4 py-3 text-left text-destructive transition-colors hover:bg-destructive/10"
                   >
-                    <Trash2 className="h-4 w-4 shrink-0 text-rose-400" />
-                    <span className="text-[13px] font-semibold text-white">Vaciar lienzo</span>
+                    <Trash2 className="h-4 w-4 shrink-0 text-destructive" />
+                    <span className="text-[13px] font-semibold">Vaciar lienzo</span>
                   </button>
                 </motion.div>
               </>
@@ -379,10 +379,10 @@ export default function TextureStudio({
           type="button"
           onClick={() => void handleSave()}
           disabled={busy}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-cyan-500 px-3.5 text-[13px] font-bold text-slate-950 transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-[13px] font-bold text-primary-foreground shadow-soft transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
         >
           {busy ? (
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-900/40 border-t-slate-900" />
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
           ) : (
             <Save className="h-3.5 w-3.5" />
           )}
@@ -391,7 +391,7 @@ export default function TextureStudio({
       </header>
 
       {/* ── Herramientas ── */}
-      <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-white/10 px-3 py-2">
+      <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border/40 bg-card px-3 py-2">
         {(
           [
             { id: "pencil" as Tool, label: "Lápiz", icon: <Pencil className="h-4 w-4" /> },
@@ -406,14 +406,14 @@ export default function TextureStudio({
             title={t.label}
             aria-label={t.label}
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
-              tool === t.id ? "bg-cyan-500 text-slate-950" : "bg-white/5 text-slate-300 hover:bg-white/10"
+              tool === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
             }`}
           >
             {t.icon}
           </button>
         ))}
 
-        <span className="mx-1 h-6 w-px shrink-0 bg-white/10" />
+        <span className="mx-1 h-6 w-px shrink-0 bg-border" />
 
         <button
           type="button"
@@ -421,7 +421,7 @@ export default function TextureStudio({
           disabled={!canUndo}
           title="Deshacer"
           aria-label="Deshacer"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-35"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted disabled:opacity-35"
         >
           <Undo2 className="h-4 w-4" />
         </button>
@@ -431,13 +431,13 @@ export default function TextureStudio({
           title="Cuadrícula"
           aria-label="Cuadrícula"
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
-            showGrid ? "bg-cyan-500/20 text-cyan-300" : "bg-white/5 text-slate-300 hover:bg-white/10"
+            showGrid ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
           }`}
         >
           <Grid3x3 className="h-4 w-4" />
         </button>
 
-        <span className="mx-1 h-6 w-px shrink-0 bg-white/10" />
+        <span className="mx-1 h-6 w-px shrink-0 bg-border" />
 
         <div className="flex shrink-0 items-center gap-1.5">
           {TEXTURE_SIZES.map((s) => (
@@ -446,7 +446,7 @@ export default function TextureStudio({
               type="button"
               onClick={() => changeSize(s)}
               className={`h-8 min-w-8 rounded-lg px-2 text-[11px] font-bold tabular-nums transition-colors ${
-                size === s ? "bg-white text-slate-900" : "bg-white/5 text-slate-300 hover:bg-white/10"
+                size === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {s}
@@ -459,7 +459,7 @@ export default function TextureStudio({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 sm:flex-row sm:items-start">
         <div className="mx-auto w-full max-w-[420px] shrink-0 sm:mx-0">
           <div
-            className="relative aspect-square w-full touch-none overflow-hidden rounded-2xl border border-white/10 select-none"
+            className="relative aspect-square w-full touch-none overflow-hidden rounded-2xl border border-border/40 select-none"
             style={CHECKER}
           >
             <div
@@ -482,26 +482,26 @@ export default function TextureStudio({
                       handlePointerDown(x, y);
                     }}
                     onPointerEnter={() => handlePointerEnter(x, y)}
-                    className={showGrid ? "border-[0.5px] border-white/5" : ""}
+                    className={showGrid ? "border-[0.5px] border-border/20" : ""}
                     style={{ backgroundColor: color }}
                   />
                 );
               })}
             </div>
           </div>
-          <p className="mt-2 text-center text-[11px] text-slate-400">
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
             Arrastra el dedo o el ratón para dibujar la textura.
           </p>
         </div>
 
         <div className="w-full min-w-0 space-y-3">
           {/* Paleta */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-border/40 bg-muted/40 p-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-semibold tracking-wider text-slate-300 uppercase">
+              <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                 Color
               </span>
-              <span className="text-[11px] text-slate-400">{activeColor}</span>
+              <span className="text-[11px] text-muted-foreground">{activeColor}</span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {palette.map((c, i) => (
@@ -511,12 +511,12 @@ export default function TextureStudio({
                   onClick={() => setColorIndex(i)}
                   title={c}
                   className={`h-7 w-7 rounded-lg border transition-transform hover:scale-110 ${
-                    colorIndex === i ? "border-cyan-300 ring-2 ring-cyan-400/40" : "border-white/20"
+                    colorIndex === i ? "border-primary ring-2 ring-primary/30" : "border-border"
                   }`}
                   style={{ backgroundColor: c }}
                 />
               ))}
-              <label className="flex h-7 items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 px-2 text-[11px] text-slate-300">
+              <label className="flex h-7 items-center gap-1.5 rounded-lg border border-border bg-card px-2 text-[11px] text-muted-foreground">
                 <input
                   type="color"
                   value={activeColor}
@@ -529,8 +529,8 @@ export default function TextureStudio({
           </div>
 
           {/* Vista previa */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-            <span className="text-[11px] font-semibold tracking-wider text-slate-300 uppercase">
+          <div className="rounded-2xl border border-border/40 bg-muted/40 p-3">
+            <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
               Vista previa en el nivel
             </span>
             <div className="mt-2 flex items-end gap-4">
@@ -541,17 +541,17 @@ export default function TextureStudio({
                     alt="Vista previa de la textura"
                     width={px}
                     height={px}
-                    className="rounded-md bg-slate-800 [image-rendering:pixelated]"
+                    className="rounded-md bg-muted [image-rendering:pixelated]"
                     style={{ width: px, height: px }}
                   />
-                  <span className="text-[10px] text-slate-500">{px / 16}x</span>
+                  <span className="text-[10px] text-muted-foreground">{px / 16}x</span>
                 </div>
               ))}
             </div>
           </div>
 
           {dirty && (
-            <p className="flex items-center gap-1.5 text-[11px] text-cyan-300">
+            <p className="flex items-center gap-1.5 text-[11px] text-primary">
               <Check className="h-3.5 w-3.5" /> Cambios sin guardar
             </p>
           )}

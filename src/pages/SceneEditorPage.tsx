@@ -294,17 +294,17 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col sm:max-w-2xl lg:max-w-3xl"
       >
         {/* ── Barra superior del motor ── */}
-        <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+        <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border/35 bg-card p-1.5 shadow-soft">
           <button
             type="button"
             onClick={onBack}
             aria-label="Volver"
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
           >
             <ArrowLeft className="h-[18px] w-[18px]" />
           </button>
-          <div className="h-6 w-px bg-slate-200" />
-          <span className="min-w-0 flex-1 truncate pl-1 text-[13px] font-semibold tracking-tight text-slate-800">
+          <div className="h-6 w-px bg-border" />
+          <span className="min-w-0 flex-1 truncate pl-1 text-[13px] font-semibold tracking-tight text-foreground">
             Editor de escenas
           </span>
           <button
@@ -312,7 +312,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             onClick={() => setShowStats(true)}
             aria-label="Estadísticas del proyecto"
             title="Estadísticas"
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-primary/10 hover:text-primary"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
           >
             <BarChart3 className="h-[18px] w-[18px]" />
           </button>
@@ -321,14 +321,14 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             onClick={() => setShowSettings(true)}
             aria-label="Ajustes y copias de seguridad"
             title="Ajustes"
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-primary/10 hover:text-primary"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
           >
             <Settings className="h-[18px] w-[18px]" />
           </button>
         </div>
 
         {/* ── Crear escena ── */}
-        <div className="mt-3 flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+        <div className="mt-3 flex shrink-0 items-center gap-2 rounded-2xl border border-border/35 bg-card p-1.5 shadow-soft">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Layers className="h-5 w-5" />
           </span>
@@ -344,14 +344,14 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
         {/* ── Tablero de escenas — cabe completo en una sola vista ── */}
         <div
-          className="relative mt-3 mb-4 flex min-h-[240px] max-h-[60vh] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 shadow-sm"
+          className="relative mt-3 mb-4 flex min-h-[240px] max-h-[60vh] flex-1 flex-col overflow-hidden rounded-2xl border border-border/35 shadow-soft"
           style={BOARD_DOTS}
         >
           <div className="flex-1 overflow-y-auto p-4 pb-20">
             {scenes === undefined ? (
               <div className="grid grid-cols-2 gap-3">
                 {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
+                  <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
                 ))}
               </div>
             ) : list.length === 0 ? (
@@ -359,8 +359,8 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Layers className="h-6 w-6" />
                 </div>
-                <p className="mt-3 text-sm font-semibold text-slate-700">Todavía no hay escenas</p>
-                <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-slate-500">
+                <p className="mt-3 text-sm font-semibold text-foreground">Todavía no hay escenas</p>
+                <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-muted-foreground">
                   Pulsa “Crear Escena” para añadir tu primera escena al tablero.
                 </p>
               </div>
@@ -499,11 +499,11 @@ function SceneCard({
 }) {
   const painted = Object.keys(scene.tiles ?? {}).length;
   return (
-    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+    <div className="relative overflow-hidden rounded-xl border border-border/35 bg-card shadow-soft transition-shadow hover:shadow-lift">
       {/* Cuerpo: abre el pizarrón para editar el proyecto de la escena */}
       <button type="button" onClick={onOpen} className="block w-full text-left">
         <div
-          className="relative flex h-24 items-center justify-center border-b border-slate-100"
+          className="relative flex h-24 items-center justify-center border-b border-border/40"
           style={{ backgroundColor: scene.background }}
         >
           {scene.genre === "rpg" ? (
@@ -511,13 +511,13 @@ function SceneCard({
           ) : (
             <Gamepad2 className="h-6 w-6 text-primary/70" />
           )}
-          <span className="absolute left-2 top-2 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
+          <span className="absolute left-2 top-2 rounded-full bg-card/85 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
             {scene.genre === "rpg" ? "RPG" : "Plataformas"}
           </span>
         </div>
         <div className="px-2.5 py-2">
-          <p className="truncate text-[13px] font-semibold text-slate-800">{scene.name}</p>
-          <p className="mt-0.5 text-[11px] text-slate-500">
+          <p className="truncate text-[13px] font-semibold text-foreground">{scene.name}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
             {scene.width}×{scene.height} · {painted} piezas
           </p>
         </div>
@@ -530,7 +530,7 @@ function SceneCard({
           onClick={onConfigure}
           aria-label="Configurar detalles del mapa"
           title="Configurar detalles del mapa"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-primary/10 hover:text-primary"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-muted-foreground shadow-soft backdrop-blur-sm transition-colors hover:bg-primary/10 hover:text-primary"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
@@ -539,7 +539,7 @@ function SceneCard({
           onClick={onDelete}
           aria-label="Borrar escena"
           title="Borrar escena"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-red-50 hover:text-red-600"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-muted-foreground shadow-soft backdrop-blur-sm transition-colors hover:bg-destructive/10 hover:text-destructive"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -608,8 +608,8 @@ function SceneDetailsModal({
 
   return (
     <ModalShell onClose={onClose}>
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-800">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-5 py-3">
+        <span className="text-sm font-semibold text-foreground">
           {isEdit ? "Detalles del mapa" : "Nueva escena"}
         </span>
         <div className="flex items-center gap-2">
@@ -629,7 +629,7 @@ function SceneDetailsModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Cancelar
           </button>
@@ -639,7 +639,7 @@ function SceneDetailsModal({
       <div className="flex-1 overflow-y-auto p-5">
         {/* Nombre */}
         <div className="mb-3">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Nombre de la escena
           </label>
           <Input
@@ -648,13 +648,13 @@ function SceneDetailsModal({
             onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             maxLength={60}
             placeholder="Ej: Bosque de Asternal"
-            className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
+            className="h-10 rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
           />
         </div>
 
         {/* Detalle */}
         <div className="mb-3">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Detalle de la escena
           </label>
           <Textarea
@@ -663,14 +663,14 @@ function SceneDetailsModal({
             maxLength={300}
             rows={3}
             placeholder="¿Qué ocurre en esta escena?"
-            className="min-h-[72px] rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
+            className="min-h-[72px] rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
           />
-          <p className="mt-1 text-right text-[11px] text-slate-400">{draft.description.length}/300</p>
+          <p className="mt-1 text-right text-[11px] text-muted-foreground">{draft.description.length}/300</p>
         </div>
 
         {/* Género */}
         <div className="mb-3">
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Tipo de juego
           </label>
           <div className="flex flex-col gap-2">
@@ -682,7 +682,7 @@ function SceneDetailsModal({
                 className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all ${
                   draft.genre === g.id
                     ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                    : "border-slate-200 bg-white hover:border-primary/30"
+                    : "border-border/40 bg-card hover:border-primary/30"
                 }`}
               >
                 <div
@@ -693,8 +693,8 @@ function SceneDetailsModal({
                   {g.icon}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-800">{g.label}</p>
-                  <p className="mt-0.5 text-xs leading-snug text-slate-500">{g.desc}</p>
+                  <p className="text-sm font-semibold text-foreground">{g.label}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{g.desc}</p>
                 </div>
               </button>
             ))}
@@ -703,7 +703,7 @@ function SceneDetailsModal({
 
         {/* Tamaño del tablero */}
         <div className="mb-3">
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Tamaño del tablero
           </label>
           <div className="flex items-center gap-2">
@@ -715,7 +715,7 @@ function SceneDetailsModal({
               onChange={(e) => setDraft((d) => ({ ...d, width: Number(e.target.value) }))}
               className="h-1.5 flex-1 accent-[var(--primary)]"
             />
-            <span className="w-16 text-center text-xs font-semibold tabular-nums text-slate-700">
+            <span className="w-16 text-center text-xs font-semibold tabular-nums text-foreground">
               {draft.width}×{draft.height}
             </span>
           </div>
@@ -732,7 +732,7 @@ function SceneDetailsModal({
                 className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
                   draft.width === p.w && draft.height === p.h
                     ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-slate-200 bg-white text-slate-500 hover:border-primary/30"
+                    : "border-border/40 bg-card text-muted-foreground hover:border-primary/30"
                 }`}
               >
                 {p.label}
@@ -743,7 +743,7 @@ function SceneDetailsModal({
 
         {/* Fondo */}
         <div className="mb-2">
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Fondo
           </label>
           <div className="flex flex-wrap gap-2">
@@ -753,7 +753,7 @@ function SceneDetailsModal({
                 type="button"
                 onClick={() => setDraft((d) => ({ ...d, background: b.id }))}
                 className={`h-8 w-8 rounded-full border-2 transition-transform ${
-                  draft.background === b.id ? "scale-110 border-primary" : "border-slate-200 hover:scale-105"
+                  draft.background === b.id ? "scale-110 border-primary" : "border-border hover:scale-105"
                 }`}
                 style={{ backgroundColor: b.id }}
                 aria-label={b.label}
@@ -764,15 +764,15 @@ function SceneDetailsModal({
         </div>
 
         {/* Piezas del género elegido */}
-        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="mt-3 rounded-xl border border-border/40 bg-muted/50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Piezas disponibles ({genreTiles.length})
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {genreTiles.map((t) => (
               <span
                 key={t.id}
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium text-slate-700"
+                className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium text-foreground"
                 style={{ backgroundColor: `${t.color}33` }}
               >
                 <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: t.color }} />
@@ -810,7 +810,7 @@ function ConfirmDialog({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/45 p-4"
       onClick={onCancel}
     >
       <motion.div
@@ -818,33 +818,35 @@ function ConfirmDialog({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.18 }}
-        className="w-full max-w-xs overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+        className="w-full max-w-xs overflow-hidden rounded-2xl border border-border/35 bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center px-5 pb-4 pt-6 text-center">
           <span
             className={`flex h-12 w-12 items-center justify-center rounded-full ${
-              destructive ? "bg-red-50 text-red-600" : "bg-primary/10 text-primary"
+              destructive ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
             }`}
           >
             <AlertTriangle className="h-6 w-6" />
           </span>
-          <h3 className="mt-3 text-[15px] font-bold text-slate-800">{title}</h3>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{message}</p>
+          <h3 className="mt-3 text-[15px] font-bold text-foreground">{title}</h3>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{message}</p>
         </div>
-        <div className="flex gap-2 border-t border-slate-100 p-3">
+        <div className="flex gap-2 border-t border-border/40 p-3">
           <button
             type="button"
             onClick={onCancel}
-            className="h-10 flex-1 rounded-xl bg-slate-100 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
+            className="h-10 flex-1 rounded-xl bg-muted text-xs font-medium text-foreground transition-colors hover:bg-muted/70"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`h-10 flex-1 rounded-xl text-xs font-semibold text-white shadow-sm transition-colors ${
-              destructive ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:brightness-110"
+            className={`h-10 flex-1 rounded-xl text-xs font-semibold shadow-soft transition-colors ${
+              destructive
+                ? "bg-destructive text-destructive-foreground hover:brightness-110"
+                : "bg-primary text-primary-foreground hover:brightness-110"
             }`}
           >
             {confirmLabel}
@@ -887,22 +889,21 @@ function StatsSheet({
 
   return (
     <ModalShell onClose={onClose}>
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-800">Estadísticas del proyecto</span>
+      <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-5 py-3">
+        <span className="text-sm font-semibold text-foreground">Estadísticas del proyecto</span>
         <CloseButton onClick={onClose} />
       </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
+      <div className="flex-1 overflow-y-auto p-4">          <div className="overflow-hidden rounded-2xl border border-border/35">
           {rows.map((r, i) => (
             <div
               key={r.label}
-              className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-slate-100" : ""}`}
+              className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-border/30" : ""}`}
             >
-              <span className="flex items-center gap-2.5 text-[13px] font-medium text-slate-600">
+              <span className="flex items-center gap-2.5 text-[13px] font-medium text-muted-foreground">
                 <span className="text-primary">{r.icon}</span>
                 {r.label}
               </span>
-              <span className="text-sm font-bold tabular-nums text-slate-800">{r.value}</span>
+              <span className="text-sm font-bold tabular-nums text-foreground">{r.value}</span>
             </div>
           ))}
         </div>
@@ -990,8 +991,8 @@ function SettingsSheet({
 
   return (
     <ModalShell onClose={onClose}>
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-800">Ajustes del proyecto</span>
+      <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-5 py-3">
+        <span className="text-sm font-semibold text-foreground">Ajustes del proyecto</span>
         <CloseButton onClick={onClose} />
       </div>
 
@@ -1002,8 +1003,8 @@ function SettingsSheet({
             <DatabaseBackup className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold text-slate-800">Copias de seguridad</p>
-            <p className="text-[11px] leading-snug text-slate-500">
+            <p className="text-[13px] font-semibold text-foreground">Copias de seguridad</p>
+            <p className="text-[11px] leading-snug text-muted-foreground">
               Guarda el estado del proyecto y restáuralo cuando lo necesites.
             </p>
           </div>
@@ -1017,7 +1018,7 @@ function SettingsSheet({
             onChange={(e) => setName(e.target.value)}
             maxLength={60}
             placeholder="Nombre (opcional)"
-            className="h-10 min-w-0 flex-1 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
+            className="h-10 min-w-0 flex-1 rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
           />
           <button
             type="button"
@@ -1035,26 +1036,26 @@ function SettingsSheet({
         </div>
 
         {/* Lista organizada de copias */}
-        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Copias guardadas ({backups.length})
         </p>
 
         {backups.length === 0 ? (
-          <div className="flex flex-col items-center rounded-2xl border border-dashed border-slate-300 py-8 text-center">
-            <DatabaseBackup className="h-7 w-7 text-slate-300" />
-            <p className="mt-2 text-[13px] font-medium text-slate-600">Sin copias todavía</p>
-            <p className="mt-1 max-w-[220px] text-[11px] text-slate-500">
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-border py-8 text-center">
+            <DatabaseBackup className="h-7 w-7 text-muted-foreground/50" />
+            <p className="mt-2 text-[13px] font-medium text-foreground">Sin copias todavía</p>
+            <p className="mt-1 max-w-[220px] text-[11px] text-muted-foreground">
               Crea la primera copia de seguridad para proteger tu proyecto.
             </p>
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
             {backups.map((b) => (
-              <li key={b._id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <li key={b._id} className="rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-slate-800">{b.name}</p>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
+                    <p className="truncate text-[13px] font-semibold text-foreground">{b.name}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {formatDate(b.createdAt)} · {b.sceneCount}{" "}
                       {b.sceneCount === 1 ? "escena" : "escenas"} · {formatSize(b.sizeBytes)}
                     </p>
@@ -1066,7 +1067,7 @@ function SettingsSheet({
                       disabled={busy === b._id}
                       aria-label="Restaurar copia"
                       title="Restaurar"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-50"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                     </button>
@@ -1076,7 +1077,7 @@ function SettingsSheet({
                       disabled={busy === b._id}
                       aria-label="Eliminar copia"
                       title="Eliminar"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -1130,12 +1131,12 @@ function PublishModal({
 
   return (
     <ModalShell onClose={onClose}>
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-800">Publicar proyecto</span>
+      <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-5 py-3">
+        <span className="text-sm font-semibold text-foreground">Publicar proyecto</span>
         <CloseButton onClick={onClose} />
       </div>
       <div className="flex-1 overflow-y-auto p-4">
-        <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Título
         </label>
         <Input
@@ -1143,9 +1144,9 @@ function PublishModal({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={60}
-          className="mb-3 h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800"
+          className="mb-3 h-10 rounded-xl border-border/40 bg-background text-sm text-foreground"
         />
-        <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Descripción
         </label>
         <Textarea
@@ -1153,31 +1154,31 @@ function PublishModal({
           onChange={(e) => setDescription(e.target.value.slice(0, 500))}
           rows={3}
           placeholder="Cuéntale a la comunidad de qué va tu juego…"
-          className="min-h-[80px] rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400"
+          className="min-h-[80px] rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
         />
-        <p className="mt-1 text-right text-[11px] text-slate-400">{description.length}/500</p>
+        <p className="mt-1 text-right text-[11px] text-muted-foreground">{description.length}/500</p>
 
-        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="mt-3 rounded-xl border border-border/40 bg-muted/50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Se incluirán {scenes.length} {scenes.length === 1 ? "escena" : "escenas"}
           </p>
           <ul className="mt-2 flex flex-col gap-1">
             {scenes.slice(0, 5).map((s) => (
-              <li key={s._id} className="truncate text-[12px] text-slate-600">
+              <li key={s._id} className="truncate text-[12px] text-muted-foreground">
                 • {s.name}
               </li>
             ))}
             {scenes.length > 5 && (
-              <li className="text-[12px] text-slate-400">y {scenes.length - 5} más…</li>
+              <li className="text-[12px] text-muted-foreground/70">y {scenes.length - 5} más…</li>
             )}
           </ul>
         </div>
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t border-slate-200 px-4 py-3">
+      <div className="flex shrink-0 justify-end gap-2 border-t border-border/40 px-4 py-3">
         <button
           type="button"
           onClick={onClose}
-          className="h-10 rounded-xl bg-slate-100 px-4 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
+          className="h-10 rounded-xl bg-muted px-4 text-xs font-medium text-foreground transition-colors hover:bg-muted/70"
         >
           Cancelar
         </button>
@@ -1215,7 +1216,7 @@ function ModalShell({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4"
       onClick={onClose}
     >
       <motion.div
@@ -1223,7 +1224,7 @@ function ModalShell({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.2 }}
-        className="flex max-h-[85vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-border/35 bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
@@ -1238,7 +1239,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-label="Cerrar"
-      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
       <X className="h-4 w-4" />
     </button>

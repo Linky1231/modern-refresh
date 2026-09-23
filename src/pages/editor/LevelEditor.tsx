@@ -79,6 +79,14 @@ interface LevelEditorProps {
 
 const GENRE_LABEL: Record<string, string> = { rpg: "RPG", platformer: "Plataformas" };
 
+// Superficie del lienzo: la misma textura punteada suave del tablero de escenas.
+const CANVAS_BG: React.CSSProperties = {
+  backgroundColor: "var(--primary-soft)",
+  backgroundImage:
+    "radial-gradient(circle, color-mix(in srgb, var(--primary) 20%, transparent) 1px, transparent 1px)",
+  backgroundSize: "18px 18px",
+};
+
 export default function LevelEditor({
   scene,
   ownerId,
@@ -344,7 +352,8 @@ export default function LevelEditor({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25 }}
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#43cde9] shadow-sm"
+      style={CANVAS_BG}
+      className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/35 shadow-soft"
     >
       {/* ══ Zona del lienzo (todo el chrome flota aquí, encima de la ventana) ══ */}
       <div className="relative min-h-0 flex-1">
@@ -357,7 +366,7 @@ export default function LevelEditor({
                 {Array.from({ length: rows }, (_, y) => (
                   <span
                     key={y}
-                    className="flex items-center justify-end pr-1 text-[10px] font-semibold text-slate-900/45 tabular-nums"
+                    className="flex items-center justify-end pr-1 text-[10px] font-semibold text-muted-foreground/80 tabular-nums"
                     style={{ height: cellPx }}
                   >
                     {y}
@@ -366,7 +375,7 @@ export default function LevelEditor({
               </div>
               {/* Rejilla */}
               <div
-                className="grid rounded-sm bg-white/15 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]"
+                className="grid overflow-hidden rounded-lg bg-card shadow-soft ring-1 ring-border/50"
                 style={{
                   gridTemplateColumns: `repeat(${cols}, ${cellPx}px)`,
                   gridTemplateRows: `repeat(${rows}, ${cellPx}px)`,
@@ -387,7 +396,7 @@ export default function LevelEditor({
                         handleDown(x, y);
                       }}
                       onPointerEnter={() => handleEnter(x, y)}
-                      className="relative border-[0.5px] border-slate-900/10"
+                      className="relative border-[0.5px] border-border/40"
                       style={{ touchAction: "none" }}
                     >
                       {url && (
@@ -400,7 +409,7 @@ export default function LevelEditor({
                         />
                       )}
                       {unknown && (
-                        <span className="pointer-events-none absolute inset-0 bg-violet-600/50" />
+                        <span className="pointer-events-none absolute inset-0 bg-destructive/40" />
                       )}
                     </div>
                   );
@@ -412,7 +421,7 @@ export default function LevelEditor({
               {Array.from({ length: cols }, (_, x) => (
                 <span
                   key={x}
-                  className="text-center text-[10px] font-semibold text-slate-900/45 tabular-nums"
+                  className="text-center text-[10px] font-semibold text-muted-foreground/80 tabular-nums"
                   style={{ width: cellPx }}
                 >
                   {x}
@@ -422,7 +431,7 @@ export default function LevelEditor({
           </div>
 
           {tooManyCells && (
-            <p className="mt-4 max-w-xs rounded-xl bg-slate-900/70 px-3 py-2 text-center text-[11px] leading-relaxed text-white">
+            <p className="mt-4 max-w-xs rounded-xl border border-border/40 bg-card/95 px-3 py-2 text-center text-[11px] leading-relaxed text-foreground">
               Nivel muy grande ({width}×{height}): se muestran las primeras {rows} filas.
             </p>
           )}
@@ -437,7 +446,7 @@ export default function LevelEditor({
             type="button"
             onClick={onBack}
             aria-label="Volver a las escenas"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f3b57] text-white shadow-md transition-transform active:scale-95"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -445,18 +454,18 @@ export default function LevelEditor({
             type="button"
             onClick={onOpenSettings}
             aria-label="Ajustes y copias de seguridad"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md transition-transform active:scale-95"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card shadow-soft transition-transform active:scale-95"
           >
             <img src="/logo.png" alt="Asternal" className="h-6 w-6 rounded-full object-contain" />
           </button>
         </div>
 
-        <div className="pointer-events-auto flex items-center overflow-hidden rounded-xl border border-slate-900/10 bg-[#1f3b57] shadow-md">
+        <div className="pointer-events-auto flex items-center overflow-hidden rounded-xl border border-border/40 bg-card shadow-soft">
           <button
             type="button"
             onClick={() => setLayer("map")}
             className={`px-3 py-2 text-xs font-bold transition-colors ${
-              layer === "map" ? "bg-[#7ddc7a] text-slate-900" : "text-white/70 hover:text-white"
+              layer === "map" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Mapa
@@ -465,7 +474,7 @@ export default function LevelEditor({
             type="button"
             onClick={() => setLayer("ui")}
             className={`flex items-center gap-1 px-3 py-2 text-xs font-bold transition-colors ${
-              layer === "ui" ? "bg-[#7ddc7a] text-slate-900" : "text-white/70 hover:text-white"
+              layer === "ui" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             IU
@@ -481,7 +490,7 @@ export default function LevelEditor({
               setSheetOpen(true);
             }}
             aria-label="Buscar recursos"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f3b57] text-white shadow-md transition-transform active:scale-95"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
           >
             <Search className="h-4 w-4" />
           </button>
@@ -489,7 +498,7 @@ export default function LevelEditor({
             type="button"
             onClick={() => setShowNotes(true)}
             aria-label="Notas del nivel"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f3b57] text-white shadow-md transition-transform active:scale-95"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
           >
             <MessageSquare className="h-4 w-4" />
           </button>
@@ -497,7 +506,7 @@ export default function LevelEditor({
             type="button"
             onClick={() => setShowMenu(true)}
             aria-label="Menú del editor"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-800 shadow-md transition-transform active:scale-95"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
           >
             <Menu className="h-4 w-4" />
           </button>
@@ -526,15 +535,15 @@ export default function LevelEditor({
       {/* ══ Capa actual + acceso a la ventana de recursos ══ */}
       {!preview && (
       <div className="absolute inset-x-0 bottom-2 z-30 flex items-center justify-between px-3">
-        <span className="rounded-lg bg-[#7ddc7a] px-3 py-1.5 text-[11px] font-bold text-slate-900 shadow-md">
+        <span className="rounded-lg border border-primary/25 bg-card/90 px-3 py-1.5 text-[11px] font-bold text-primary shadow-soft backdrop-blur-sm">
           Layer1 · {layer === "map" ? "Mapa" : "IU"}
         </span>
         <button
           type="button"
           onClick={() => setSheetOpen((v) => !v)}
           aria-label="Abrir o cerrar la ventana de recursos"
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-md transition-all active:scale-95 ${
-            sheetOpen ? "bg-[#7ddc7a] text-slate-900" : "bg-slate-900/85 text-white"
+          className={`flex h-11 w-11 items-center justify-center rounded-2xl border shadow-soft transition-all active:scale-95 ${
+            sheetOpen ? "border-primary bg-primary text-primary-foreground" : "border-border/40 bg-card text-foreground"
           }`}
         >
           <Box className="h-5 w-5" />
@@ -544,7 +553,7 @@ export default function LevelEditor({
 
       {/* ══ Herramientas ══ */}
       {!preview && (
-        <div className="absolute bottom-16 left-3 z-30 flex items-center gap-1 rounded-xl bg-slate-900/80 p-1 shadow-md backdrop-blur-sm">
+        <div className="absolute bottom-16 left-3 z-30 flex items-center gap-1 rounded-xl border border-border/40 bg-card/90 p-1 shadow-soft backdrop-blur-sm">
           {(
             [
               { id: "paint" as Tool, label: "Pintar", icon: <Paintbrush className="h-4 w-4" /> },
@@ -559,7 +568,7 @@ export default function LevelEditor({
               title={t.label}
               aria-label={t.label}
               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                tool === t.id ? "bg-[#7ddc7a] text-slate-900" : "text-white/70 hover:bg-white/10"
+                tool === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {t.icon}
@@ -569,7 +578,7 @@ export default function LevelEditor({
       )}
 
       {selected && !preview && (
-        <div className="absolute bottom-16 left-1/2 z-30 -translate-x-1/2 rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-medium text-white shadow-md backdrop-blur-sm">
+        <div className="absolute bottom-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-border/40 bg-card/90 px-3 py-1 text-[11px] font-medium text-foreground shadow-soft backdrop-blur-sm">
           {selected.name}
         </div>
       )}
@@ -577,13 +586,13 @@ export default function LevelEditor({
       {/* ══ Vista previa (Correr) ══ */}
       {preview && (
         <div className="absolute inset-x-0 top-0 z-40 flex items-center justify-between gap-2 p-2">
-          <span className="rounded-lg bg-slate-900/85 px-3 py-1.5 text-[11px] font-bold text-white shadow-md">
+          <span className="rounded-lg border border-border/40 bg-card/95 px-3 py-1.5 text-[11px] font-bold text-foreground shadow-soft">
             Vista previa
           </span>
           <button
             type="button"
             onClick={() => setPreview(false)}
-            className="flex items-center gap-1.5 rounded-full bg-rose-600 px-3 py-2 text-[11px] font-bold text-white shadow-md transition-transform active:scale-95"
+            className="flex items-center gap-1.5 rounded-full bg-destructive px-3 py-2 text-[11px] font-bold text-destructive-foreground shadow-soft transition-transform active:scale-95"
           >
             <Square className="h-3.5 w-3.5" />
             Detener
@@ -591,7 +600,7 @@ export default function LevelEditor({
         </div>
       )}
 
-      <span className="pointer-events-none absolute bottom-16 right-3 z-20 text-right text-[10px] leading-tight font-semibold text-slate-900/50 tabular-nums">
+      <span className="pointer-events-none absolute bottom-16 right-3 z-20 text-right text-[10px] leading-tight font-semibold text-muted-foreground/80 tabular-nums">
         FPS: {fps}
       </span>
       </div>
@@ -601,7 +610,7 @@ export default function LevelEditor({
         initial={false}
         animate={{ height: preview ? 0 : sheetOpen ? "46%" : 46 }}
         transition={{ type: "spring", stiffness: 320, damping: 34 }}
-        className="relative z-40 shrink-0 overflow-hidden rounded-t-3xl bg-[#12161f] shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.6)]"
+        className="relative z-40 shrink-0 overflow-hidden rounded-t-3xl border-t border-border/40 bg-card shadow-lift"
       >
         <button
           type="button"
@@ -609,7 +618,7 @@ export default function LevelEditor({
           aria-label="Abrir o cerrar la ventana de recursos"
           className="flex w-full items-center justify-center py-2"
         >
-          <span className="h-1.5 w-12 rounded-full bg-white/25" />
+          <span className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
         </button>
 
         {sheetOpen ? (
@@ -622,15 +631,15 @@ export default function LevelEditor({
                   onClick={() => setCategory(c.id)}
                   className={`relative shrink-0 pb-2 text-sm transition-colors ${
                     category === c.id
-                      ? "font-bold text-white"
-                      : "font-medium text-slate-400 hover:text-slate-200"
+                      ? "font-bold text-foreground"
+                      : "font-medium text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {c.label}
                   {category === c.id && (
                     <motion.span
                       layoutId="levelAssetTab"
-                      className="absolute inset-x-0 -bottom-0.5 h-[2px] rounded-full bg-[#7ddc7a]"
+                      className="absolute inset-x-0 -bottom-0.5 h-[2px] rounded-full bg-primary"
                     />
                   )}
                 </button>
@@ -638,14 +647,14 @@ export default function LevelEditor({
             </div>
 
             {searchOpen && (
-              <div className="mx-4 mt-2 flex shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <div className="mx-4 mt-2 flex shrink-0 items-center gap-2 rounded-xl border border-border/40 bg-muted/60 px-3 py-2">
+                <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <input
                   autoFocus
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar recurso…"
-                  className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-slate-500"
+                  className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
                 />
                 <button
                   type="button"
@@ -654,7 +663,7 @@ export default function LevelEditor({
                     setQuery("");
                   }}
                   aria-label="Cerrar la búsqueda"
-                  className="text-slate-400 hover:text-white"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -668,9 +677,9 @@ export default function LevelEditor({
                   type="button"
                   onClick={openNewResource}
                   aria-label={`Crear un recurso de ${CATEGORY_LABEL[category]}`}
-                  className="relative flex aspect-square items-center justify-center rounded-xl bg-[#2b8cff] transition-transform active:scale-95"
+                  className="relative flex aspect-square items-center justify-center rounded-xl border border-dashed border-primary/40 bg-primary-soft transition-colors hover:bg-primary/10 active:scale-95"
                 >
-                  <Plus className="h-6 w-6 text-white" strokeWidth={2.6} />
+                  <Plus className="h-6 w-6 text-primary" strokeWidth={2.6} />
                 </button>
 
                 {/* Recursos del usuario */}
@@ -699,7 +708,7 @@ export default function LevelEditor({
                   ))}
               </div>
 
-              <p className="mt-3 text-center text-[11px] text-slate-500">
+              <p className="mt-3 text-center text-[11px] text-muted-foreground">
                 {userAssetsForCategory.length === 0 && !query
                   ? `Aún no tienes recursos de ${CATEGORY_LABEL[category]}. Pulsa “+” para dibujar su textura.`
                   : `${userAssetsForCategory.length} recurso(s) tuyos · toca el engranaje para editarlos`}
@@ -707,7 +716,7 @@ export default function LevelEditor({
             </div>
           </div>
         ) : (
-          <p className="px-4 pb-3 text-[11px] text-slate-400">
+          <p className="px-4 pb-3 text-[11px] text-muted-foreground">
             Recursos · {assets.length} guardados · pulsa para abrir la ventana
           </p>
         )}
@@ -1085,13 +1094,15 @@ function FloatingAction({
       aria-label={label}
     >
       <span
-        className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-md transition-transform active:scale-95 ${
-          highlight ? "bg-amber-300 text-slate-900" : "bg-white text-slate-800"
+        className={`flex h-10 w-10 items-center justify-center rounded-xl border shadow-soft transition-transform active:scale-95 ${
+          highlight
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border/40 bg-card text-foreground"
         }`}
       >
         {children}
       </span>
-      <span className="rounded bg-[#1f3b57] px-1.5 py-0.5 text-[9px] font-bold text-white">
+      <span className="rounded border border-border/40 bg-card/90 px-1.5 py-0.5 text-[9px] font-bold text-foreground">
         {label}
       </span>
     </button>
@@ -1113,8 +1124,8 @@ function AssetTile({
 }) {
   return (
     <div
-      className={`relative aspect-square rounded-xl border bg-slate-800/80 transition-colors ${
-        selected ? "border-[#7ddc7a] ring-2 ring-[#7ddc7a]/40" : "border-white/10 hover:border-white/25"
+      className={`relative aspect-square rounded-xl border bg-muted/70 transition-colors ${
+        selected ? "border-primary ring-2 ring-primary/25" : "border-border/40 hover:border-primary/40"
       }`}
     >
       <button
@@ -1127,7 +1138,7 @@ function AssetTile({
         {url ? (
           <img src={url} alt="" className="max-h-full max-w-full [image-rendering:pixelated]" />
         ) : (
-          <Square className="h-4 w-4 text-slate-500" />
+          <Square className="h-4 w-4 text-muted-foreground" />
         )}
       </button>
       <button
@@ -1137,7 +1148,7 @@ function AssetTile({
           onMenu();
         }}
         aria-label={`Opciones de ${name}`}
-        className="absolute right-0.5 bottom-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#2b8cff] text-white shadow transition-transform active:scale-90"
+        className="absolute right-0.5 bottom-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow transition-transform active:scale-90"
       >
         <Settings className="h-3 w-3" />
       </button>
@@ -1162,7 +1173,7 @@ function EditorDialog({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <motion.div
