@@ -1644,7 +1644,7 @@ function MentionPicker({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/30 bg-background px-4 py-3">
+      <div className="mx-auto w-full max-w-2xl flex items-center gap-3 border-b border-border/30 bg-background px-4 py-3">
         <button
           type="button"
           onClick={onClose}
@@ -1656,7 +1656,7 @@ function MentionPicker({
       </div>
 
       {/* Search */}
-      <div className="border-b border-border/24 px-4 py-3">
+      <div className="mx-auto w-full max-w-2xl border-b border-border/24 px-4 py-3">
         <div className="flex items-center gap-2 rounded-xl border border-border/30 bg-muted/50 px-3 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
@@ -1677,7 +1677,7 @@ function MentionPicker({
       </div>
 
       {/* User list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto">
         {allUsers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Search className="h-8 w-8 text-muted-foreground/30" />
@@ -1811,7 +1811,7 @@ function CommentsModal({
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
       {/* Header */}
-      <div className="border-b border-border/30 bg-background px-4 py-3 sm:px-5 sm:py-4">
+      <div className="mx-auto w-full max-w-2xl border-b border-border/30 bg-background px-4 py-3 sm:px-5 sm:py-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -1839,7 +1839,7 @@ function CommentsModal({
       </div>
 
       {/* Comments list */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-5">
+      <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto px-4 py-3 sm:px-5">
         {topLevelComments.length > 0 && (
           <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Comentarios</p>
         )}
@@ -1878,7 +1878,7 @@ function CommentsModal({
       </div>
 
       {/* Comment input (fixed at bottom) */}
-      <div className="border-t border-border/30 bg-background px-4 py-3 sm:px-5">
+      <div className="mx-auto w-full max-w-2xl border-t border-border/30 bg-background px-4 py-3 sm:px-5">
         <AnimatePresence>
           {replyTo && (
             <motion.div
@@ -1993,7 +1993,7 @@ function FollowListModal({
       transition={{ duration: 0.25 }}
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
-      <div className="border-b border-border/30 bg-background px-4 py-3">
+      <div className="mx-auto w-full max-w-2xl border-b border-border/30 bg-background px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -2007,7 +2007,7 @@ function FollowListModal({
           </h3>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto">
         {list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <User className="h-8 w-8 text-muted-foreground/30" />
@@ -3348,14 +3348,14 @@ export default function Dashboard() {
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/70 bg-white/95 shadow-[0_-6px_20px_-10px_rgba(15,23,42,0.12)] backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
-        <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="mx-auto flex max-w-2xl items-center justify-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
           <button
             type="button"
             aria-label="Inicio"
             title="Inicio"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             className={cn(
-              "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-sm font-medium transition-colors",
+              "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-sm font-medium transition-colors sm:max-w-[10rem]",
               currentView === "feed"
                 ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
                 : "bg-slate-100 text-slate-500 hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200",
@@ -3381,7 +3381,7 @@ export default function Dashboard() {
             title="Perfil"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             className={cn(
-              "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-sm font-medium transition-colors",
+              "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-sm font-medium transition-colors sm:max-w-[10rem]",
               currentView === "profile"
                 ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
                 : "bg-slate-100 text-slate-500 hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200",

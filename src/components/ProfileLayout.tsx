@@ -68,7 +68,7 @@ function ProfileBanner({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="relative h-32 w-full overflow-hidden rounded-t-3xl border-b border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15">
+    <div className="relative h-32 w-full overflow-hidden rounded-t-3xl border-b border-blue-100 bg-gradient-to-r from-blue-500/15 via-blue-600/10 to-indigo-500/15 sm:h-44">
       {src ? (
         <>
           <img
@@ -202,13 +202,13 @@ export default function ProfileLayout({
   const title = headerTitle ?? (isOwnProfile ? "Mi perfil" : displayName);
 
   return (
-    <div className="pb-28">
+    <div className="pb-4">
       {/* ── Header unificado + Banner + Avatar — IDÉNTICO en Mi perfil y en perfil ajeno/aislado ── */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto max-w-sm"
+        className="mx-auto w-full max-w-2xl"
       >
         <div className="flex items-center justify-between px-1 py-2">
           <div className="flex items-center gap-2">
@@ -332,12 +332,12 @@ export default function ProfileLayout({
       </motion.div>
 
       {/* Título PUBLICACIONES — MISMO px-4, MISMO uppercase tracking-wider — IDÉNTICO */}
-      <div className="mx-auto mt-4 max-w-sm px-4">
+      <div className="mx-auto mt-4 w-full max-w-2xl px-4">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Publicaciones</h2>
       </div>
 
-      {/* Feed — MISMO contenedor max-w-sm px-4 y MISMO estilo de tarjetas */}
-      <div className="mx-auto max-w-sm px-4">
+      {/* Feed — MISMO contenedor max-w-2xl px-4 y MISMO estilo de tarjetas */}
+      <div className="mx-auto w-full max-w-2xl px-4">
         <ProfileTabContent
           posts={posts ?? []}
           currentUserId={currentUserId}
@@ -440,12 +440,14 @@ export default function ProfileLayout({
 // sección de publicaciones del feed (caja rounded-2xl + Newspaper primario).
 function ProfileEmptyState({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
-        <Newspaper className="h-6 w-6 text-primary" strokeWidth={1.8} />
+    <div className="rounded-2xl bg-white px-6 py-8 shadow-md dark:bg-slate-900">
+      <div className="flex flex-col items-center justify-center text-center">
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+          <Newspaper className="h-6 w-6 text-primary" strokeWidth={1.8} />
+        </div>
+        <p className="text-base font-medium text-slate-900 dark:text-white">{title}</p>
+        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">{subtitle}</p>
       </div>
-      <p className="text-base font-medium text-slate-900 dark:text-white">{title}</p>
-      <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">{subtitle}</p>
     </div>
   );
 }
@@ -523,7 +525,7 @@ function ProfileTabContent({
   );
 }
 
-// ── Modal de edición — Banner usa el MISMO ProfileBanner (h-32 rounded-t-3xl mismo degradado)
+// ── Modal de edición — Banner usa el MISMO ProfileBanner (misma altura y degradado)
 function EditProfileModal({
   currentUser,
   user,

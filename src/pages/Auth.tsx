@@ -23,7 +23,14 @@ function resolveRedirectAfterAuth(
   returnTo: string | null,
   fallback = "/dashboard",
 ) {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
+  // Al iniciar sesión siempre se entra a la pantalla de inicio (feed).
+  // El editor de escenas se abre solo desde dentro de la app, así que
+  // nunca puede ser el destino posterior a la autenticación.
+  if (
+    returnTo?.startsWith("/") &&
+    !returnTo.startsWith("//") &&
+    returnTo !== "/editor"
+  ) {
     return returnTo;
   }
   return fallback;

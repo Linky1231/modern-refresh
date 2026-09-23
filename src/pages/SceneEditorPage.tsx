@@ -248,7 +248,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col"
+        className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col sm:max-w-2xl lg:max-w-3xl"
       >
         {/* ── Barra superior del motor ── */}
         <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
@@ -1248,7 +1248,7 @@ function SceneCanvas({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col"
+        className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col sm:max-w-2xl lg:max-w-3xl"
       >
         {/* Header del pizarrón */}
         <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
@@ -1351,7 +1351,7 @@ function SceneCanvas({
         {/* Lienzo cuadriculado */}
         <div className="flex min-h-0 flex-1 flex-col overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
           <div
-            className="relative select-none"
+            className="relative mx-auto w-fit select-none"
             style={{ background: scene.background }}
             onPointerLeave={() => {
               painting.current = false;
