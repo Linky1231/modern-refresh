@@ -69,6 +69,7 @@ import {
   Camera,
 } from "lucide-react";
 import { useNavigate } from "@/lib/router-compat";
+import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -2120,34 +2121,62 @@ function NotificationsPanel({
     items: notifications.filter((n) => n.type === group.type),
   })).filter((group) => group.items.length > 0);
 
+  // Panel lateral derecho: bloquea el scroll de fondo y se cierra con Esc.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <>
+    <div className="fixed inset-0 z-[65]">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-40 bg-black/10"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <motion.div
-        initial={{ opacity: 0, y: -8, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -8, scale: 0.98 }}
-        transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-        className="fixed right-3 top-14 z-50 flex max-h-[70vh] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-border/35 bg-card shadow-lift"
+      <motion.aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Notificaciones"
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+        className="absolute inset-y-0 right-0 flex h-full w-full max-w-sm flex-col border-l border-border/40 bg-card shadow-lift sm:max-w-md"
       >
-        <div className="flex items-center justify-between border-b border-border/24 px-4 py-3">
-          <h3 className="text-sm font-bold text-card-foreground">Notificaciones</h3>
+        <div className="flex items-center justify-between border-b border-border/24 px-4 py-3.5">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" />
+            <h3 className="text-base font-bold text-card-foreground">
+              Notificaciones
+            </h3>
+            {notifications.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                {notifications.length}
+              </span>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Cerrar notificaciones"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {loading && notifications.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
@@ -2207,8 +2236,8 @@ function NotificationsPanel({
             </div>
           )}
         </div>
-      </motion.div>
-    </>
+      </motion.aside>
+    </div>
   );
 }
 
@@ -3039,12 +3068,16 @@ export default function Dashboard() {
 
               {/* Publish row — bottom-right inside the editor card */}
               <div className="mt-4 flex items-center justify-between gap-2">
-                {(pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft) && (
+                {pendingMedia.length > 0 || pendingDocs.length > 0 || pollDraft ? (
                   <span className="text-xs text-slate-400 tabular-nums">
                     {pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0)}{" "}
                     adjunto{pendingMedia.length + pendingDocs.length + (pollDraft ? 1 : 0) !== 1 ? "s" : ""} para publicar
                   </span>
-                )}
+                ) : !isPostable ? (
+                  <span className="hidden text-xs text-slate-400 sm:inline">
+                    Escribe algo o adjunta contenido para publicar.
+                  </span>
+                ) : null}
                 <Button
                   size="sm"
                   className="ml-auto gap-1.5 rounded-xl px-6 min-w-[120px] shadow-sm"
@@ -3106,7 +3139,7 @@ export default function Dashboard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="rounded-2xl bg-white px-6 py-12 shadow-md dark:bg-slate-900"
+                className="rounded-2xl bg-white px-6 py-8 shadow-md dark:bg-slate-900"
               >
                 <div className="flex flex-col items-center text-center">
                   <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
@@ -3130,6 +3163,18 @@ export default function Dashboard() {
                       <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
                         Sigue a otras personas para ver sus publicaciones aquí.
                       </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 gap-1.5 rounded-xl"
+                        onClick={() => {
+                          setActiveTab("popular");
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Explorar personas
+                      </Button>
                     </>
                   )}
                   {activeTab === "popular" && (
@@ -3302,17 +3347,22 @@ export default function Dashboard() {
       )}
 
       {/* ── Bottom Navigation Bar ─────────────────────────── */}
-                        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 shadow-[0_-6px_20px_-10px_rgba(15,23,42,0.12)] backdrop-blur-md dark:bg-slate-950/90">
-        <div className="mx-auto flex max-w-2xl items-end gap-2.5 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1.5">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/70 bg-white/95 shadow-[0_-6px_20px_-10px_rgba(15,23,42,0.12)] backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
           <button
             type="button"
             aria-label="Inicio"
             title="Inicio"
             onClick={() => { setCurrentView("feed"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "feed" ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900" : "hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200")}
+            className={cn(
+              "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-sm font-medium transition-colors",
+              currentView === "feed"
+                ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
+                : "bg-slate-100 text-slate-500 hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200",
+            )}
           >
+            <Home className="h-5 w-5" />
             <span className="text-balance">Inicio</span>
-            <Home className="ml-1.5 h-5 w-5" />
           </button>
 
           <button
@@ -3320,7 +3370,7 @@ export default function Dashboard() {
             aria-label="Abrir el editor de juegos"
             title="Abrir el editor de juegos"
             onClick={() => navigate("/editor")}
-            className="mt-1 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-white transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95 dark:ring-slate-950"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-white transition-transform hover:scale-105 hover:shadow-xl hover:shadow-primary/40 active:scale-95 dark:ring-slate-950"
           >
             <Plus className="h-5 w-5" strokeWidth={2.25} />
           </button>
@@ -3330,9 +3380,14 @@ export default function Dashboard() {
             aria-label="Perfil"
             title="Perfil"
             onClick={() => { setCurrentView("profile"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className={"flex h-12 flex-1 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors " + (currentView === "profile" ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900" : "hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200")}
+            className={cn(
+              "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-sm font-medium transition-colors",
+              currentView === "profile"
+                ? "bg-white text-primary shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
+                : "bg-slate-100 text-slate-500 hover:bg-white hover:text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-200",
+            )}
           >
-            <User className="mr-1.5 h-5 w-5" />
+            <User className="h-5 w-5" />
             <span className="text-balance">Perfil</span>
           </button>
         </div>

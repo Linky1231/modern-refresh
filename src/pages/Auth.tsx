@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowLeft, Loader2, UserPlus, LogIn, Eye, EyeOff } from "lucide-react";
+import { Loader2, UserPlus, LogIn, Eye, EyeOff } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "@/lib/router-compat";
 import { motion, AnimatePresence } from "framer-motion";
@@ -90,8 +90,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
-  const switchMode = () => {
-    const newMode = mode === "login" ? "register" : "login";
+  const selectMode = (newMode: "login" | "register") => {
+    if (newMode === mode) return;
     setMode(newMode);
     setError(null);
     setUsername("");
@@ -101,8 +101,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     // Update URL without full navigation
     const params = new URLSearchParams(window.location.search);
     params.set("mode", newMode);
-    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}?${params.toString()}`,
+    );
   };
+
+  const switchMode = () => selectMode(mode === "login" ? "register" : "login");
 
   return (
     <motion.div
@@ -111,20 +117,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
     >
-      {/* ── Back button ────────────────────────────── */}
-      <div className="fixed top-0 left-0 right-0 z-50">
-        <div className="mx-auto flex h-14 max-w-2xl items-center px-4">
-          <button
-            onClick={() => navigate("/")}
-            aria-label="Volver al inicio"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center px-4 pt-14">
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
           {/* ── Logo & Brand ─────────────────────────── */}
           <motion.div
@@ -155,6 +148,42 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             transition={{ duration: 0.5, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
           >
             <Card className="border-border/30 shadow-md shadow-primary/5">
+              {/* ── Selector de modo: Iniciar sesión / Crear cuenta ── */}
+              <div className="px-4">
+                <div
+                  role="tablist"
+                  aria-label="Elige iniciar sesión o crear una cuenta"
+                  className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "login"}
+                    onClick={() => selectMode("login")}
+                    className={`rounded-lg py-2 text-sm transition-colors ${
+                      mode === "login"
+                        ? "bg-card font-semibold text-foreground shadow-sm"
+                        : "font-medium text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Iniciar sesión
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "register"}
+                    onClick={() => selectMode("register")}
+                    className={`rounded-lg py-2 text-sm transition-colors ${
+                      mode === "register"
+                        ? "bg-card font-semibold text-foreground shadow-sm"
+                        : "font-medium text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Crear cuenta
+                  </button>
+                </div>
+              </div>
+
               <AnimatePresence mode="wait">
                 {mode === "login" ? (
                   <motion.div

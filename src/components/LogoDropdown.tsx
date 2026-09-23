@@ -1,4 +1,4 @@
-// simple logo dropdown component that can be used to go to the landing page or sign out for the user
+// simple logo dropdown component that can be used to go to the app start or sign out for the user
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +27,7 @@ export function LogoDropdown() {
   };
 
   const handleGoHome = () => {
-    navigate("/");
+    navigate("/dashboard");
   };
 
   return (
@@ -46,7 +46,7 @@ export function LogoDropdown() {
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuItem onClick={handleGoHome} className="cursor-pointer">
           <Home className="mr-2 h-4 w-4" />
-          Landing Page
+          Inicio
         </DropdownMenuItem>
         {isAuthenticated && (
           <>
