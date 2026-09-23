@@ -48,7 +48,7 @@ import {
   CircleDot,
   Swords,
   Gamepad2,
-  DatabaseBackup,
+  ArchiveRestore,
   AlertTriangle,
   Locate,
   X,
@@ -916,7 +916,7 @@ function StatsSheet({
     {
       label: "Copias de seguridad",
       value: String(backups.length),
-      icon: <DatabaseBackup className="h-4 w-4" />,
+      icon: <ArchiveRestore className="h-4 w-4" />,
     },
   ];
 
@@ -1024,48 +1024,55 @@ function SettingsSheet({
 
   return (
     <ModalShell onClose={onClose}>
-      <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-5 py-3">
-        <span className="text-sm font-semibold text-foreground">Ajustes del proyecto</span>
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-border/40 px-5 py-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Settings className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+          Ajustes del proyecto
+        </span>
         <CloseButton onClick={onClose} />
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Encabezado de la sección */}
-        <div className="flex items-center gap-2.5 rounded-2xl bg-primary/5 p-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <DatabaseBackup className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[13px] font-semibold text-foreground">Copias de seguridad</p>
-            <p className="text-[11px] leading-snug text-muted-foreground">
-              Guarda el estado del proyecto y restáuralo cuando lo necesites.
-            </p>
+        {/* Sección: copias de seguridad (el campo y su botón viven dentro) */}
+        <div className="rounded-2xl border border-border/35 bg-primary/5 p-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <ArchiveRestore className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-foreground">Copias de seguridad</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                Guarda el estado del proyecto y restáuralo cuando lo necesites.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Crear copia */}
-        <div className="mt-3 flex gap-2">
-          <Input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={60}
-            placeholder="Nombre (opcional)"
-            className="h-10 min-w-0 flex-1 rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
-          />
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={busy === "create"}
-            className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
-          >
-            {busy === "create" ? (
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            ) : (
-              <DatabaseBackup className="h-3.5 w-3.5" />
-            )}
-            Crear copia
-          </button>
+          {/* Crear copia */}
+          <div className="mt-3 flex gap-2">
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={60}
+              placeholder="Nombre (opcional)"
+              className="h-10 min-w-0 flex-1 rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
+            />
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={busy === "create"}
+              className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {busy === "create" ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <ArchiveRestore className="h-3.5 w-3.5" />
+              )}
+              Crear copia
+            </button>
+          </div>
         </div>
 
         {/* Lista organizada de copias */}
@@ -1075,7 +1082,7 @@ function SettingsSheet({
 
         {backups.length === 0 ? (
           <div className="flex flex-col items-center rounded-2xl border border-dashed border-border py-8 text-center">
-            <DatabaseBackup className="h-7 w-7 text-muted-foreground/50" />
+            <ArchiveRestore className="h-7 w-7 text-muted-foreground/50" />
             <p className="mt-2 text-[13px] font-medium text-foreground">Sin copias todavía</p>
             <p className="mt-1 max-w-[220px] text-[11px] text-muted-foreground">
               Crea la primera copia de seguridad para proteger tu proyecto.
