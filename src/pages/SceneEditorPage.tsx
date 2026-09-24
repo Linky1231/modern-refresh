@@ -1,6 +1,6 @@
 // ▶ Editor de Escenas — apartado PRINCIPAL del editor de juegos (Asternal)
 // Sigue el wireframe del motor: barra superior (volver · estadísticas · ajustes),
-// fila "+ Crear Escena" con el icono de capas (menú de Copia de seguridad),
+// fila "+ Crear Escena" con el icono de capas (abre Copia de seguridad),
 // tablero punteado con las escenas del proyecto y un botón Publicar dentro.
 // El SISTEMA DE COPIAS DE SEGURIDAD (crear, restaurar y eliminar) vive en el
 // icono de capas; Ajustes solo muestra información del proyecto.
@@ -27,12 +27,6 @@ import {
 } from "@/lib/db";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
@@ -343,32 +337,21 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
         {/* ── Crear escena ── */}
         <div className="mt-3 flex shrink-0 items-center gap-2 rounded-2xl border border-border/35 bg-card p-1.5 shadow-soft">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Opciones del proyecto"
-                title="Copia de seguridad"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 active:scale-[0.97]"
-              >
-                <Layers className="h-5 w-5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-60">
-              <DropdownMenuItem
-                onSelect={() => setShowBackups(true)}
-                className="gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium"
-              >
-                <ArchiveRestore className="h-4 w-4 text-primary" />
-                <span className="flex-1">Copia de seguridad</span>
-                {backups.length > 0 && (
-                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
-                    {backups.length}
-                  </span>
-                )}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* El icono de capas ES la entrada a las copias de seguridad. */}
+          <button
+            type="button"
+            onClick={() => setShowBackups(true)}
+            aria-label="Copia de seguridad"
+            title="Copia de seguridad"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 active:scale-[0.97]"
+          >
+            <Layers className="h-5 w-5" />
+            {backups.length > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-primary-foreground">
+                {backups.length}
+              </span>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => setCreating(true)}
