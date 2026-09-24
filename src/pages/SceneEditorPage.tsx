@@ -7,10 +7,11 @@
 // Interacciones del tablero:
 //   · Tocar la escena (cuerpo)  -> abre el PIZARRÓN para editar el proyecto.
 //   · Lápiz                     -> configura los detalles del mapa (nombre,
-//                                  detalle, tipo de juego, tamaño, fondo).
+//                                  detalle, tipo de juego, tamaño cuadrado y
+//                                  color). La descripción se ve en la tarjeta.
 //   · Papelera                  -> borra la escena (con confirmación en pantalla).
 // Todo se guarda en el dispositivo (localStorage vía @/lib/db).
-import { useState, useRef, useCallback, useEffect, type ChangeEvent } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, memo, type ChangeEvent } from "react";
 import {
   getMaps,
   createMap,
@@ -22,6 +23,8 @@ import {
   deleteBackup,
   restoreBackup,
   createPost,
+  MAP_SIDE_DEFAULT,
+  MAP_SIDE_MIN,
   type MapView,
   type MapGenre,
   type BackupView,
@@ -96,11 +99,15 @@ function tilesForGenre(genre: MapGenre): TileDef[] {
   return genre === "rpg" ? RPG_TILES : PLATFORMER_TILES;
 }
 
+// Colores de fondo listos para usar; además se puede elegir cualquiera con el
+// selector de color personalizado.
 const BACKGROUNDS = [
   { id: "#f8fafc", label: "Claro" },
   { id: "#eef2ff", label: "Azulado" },
   { id: "#ecfdf5", label: "Verdoso" },
   { id: "#fefce8", label: "Amarillento" },
+  { id: "#fee2e2", label: "Rojizo" },
+  { id: "#f5f3ff", label: "Lila" },
   { id: "#1e293b", label: "Noche" },
 ];
 
@@ -120,14 +127,12 @@ const GENRES: Array<{ id: MapGenre; label: string; desc: string; icon: React.Rea
 ];
 
 // ── Tipos internos ──────────────────────────────────────────────────
-type TileGrid = Record<string, string>; // "x,y" -> tileId
-
 interface SceneDraft {
   name: string;
   description: string;
   genre: MapGenre;
-  width: number;
-  height: number;
+  /** Lado del tablero: los mapas son CUADRADOS (ancho === alto). */
+  side: number;
   background: string;
 }
 
@@ -135,8 +140,7 @@ const DEFAULT_DRAFT: SceneDraft = {
   name: "",
   description: "",
   genre: "rpg",
-  width: 24,
-  height: 16,
+  side: MAP_SIDE_DEFAULT,
   background: "#f8fafc",
 };
 
@@ -145,10 +149,31 @@ function draftFromScene(scene: MapView): SceneDraft {
     name: scene.name,
     description: scene.description,
     genre: scene.genre,
-    width: scene.width,
-    height: scene.height,
+    // Los mapas antiguos rectangulares se leen por su lado mayor.
+    side: Math.max(scene.width, scene.height),
     background: scene.background,
   };
+}
+
+/** Tamaños cuadrados listos para usar. */
+const SIZE_PRESETS = [
+  { label: "Pequeño", side: 16 },
+  { label: "Mediano", side: MAP_SIDE_DEFAULT },
+  { label: "Grande", side: 40 },
+];
+
+/**
+ * Tope del control deslizante. El motor admite más, pero un tablero enorme
+ * (60×60 = 3600 casillas) hace lento el editor de niveles.
+ */
+const SIZE_SLIDER_MAX = 48;
+
+/** Convierte cualquier color guardado en un #rrggbb válido para el selector. */
+function toHexColor(value: string): string {
+  const v = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(v)) return v;
+  if (/^#[0-9a-f]{3}$/i.test(v)) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+  return "#f8fafc";
 }
 
 function formatDate(ts: number) {
@@ -205,9 +230,28 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   const [publishing, setPublishing] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
 
-  // El tablero de escenas se puede arrastrar libremente a cualquier posición.
+  // El tablero de escenas se puede arrastrar a cualquier posición, pero nunca
+  // tanto como para perder las escenas de vista: siempre queda un trozo del
+  // tablero dentro, así que los mapas no pueden «desaparecer».
   const [boardEl, setBoardEl] = useState<HTMLDivElement | null>(null);
-  const board = usePan({ element: boardEl, enabled: true });
+  const planeEl = useRef<HTMLDivElement | null>(null);
+  const boardLimits = useCallback(() => {
+    const view = boardEl;
+    const content = planeEl.current;
+    if (!view || !content) return null;
+    const keep = 120;
+    const vw = view.clientWidth;
+    const vh = view.clientHeight;
+    const cw = content.offsetWidth;
+    const ch = content.offsetHeight;
+    return {
+      minX: Math.min(0, keep - cw),
+      maxX: Math.max(0, vw - keep),
+      minY: Math.min(0, keep - ch),
+      maxY: Math.max(0, vh - keep),
+    };
+  }, [boardEl]);
+  const board = usePan({ element: boardEl, enabled: true, limits: boardLimits });
   const ownerLabel = user?.name || user?.username || user?.email || "Usuario";
 
   const refresh = useCallback(async () => {
@@ -217,15 +261,57 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
       setScenes(sceneData);
       setBackups(backupData);
     } catch (e) {
+      // Si la lectura falla no se vacía la lista: las escenas que ya están en
+      // pantalla se quedan y el usuario recibe un aviso.
       console.error("Error cargando el proyecto:", e);
-      setScenes([]);
-      setBackups([]);
+      setScenes((prev) => prev ?? []);
+      toast.error("No se pudo leer el proyecto guardado en el dispositivo");
     }
   }, [ownerId]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // ── Acciones del tablero ───────────────────────────────────────
+  // Son estables a propósito: al mover el tablero solo cambia su posición y
+  // las tarjetas no necesitan volver a dibujarse (esto quita el retraso).
+  const openScene = useCallback((scene: MapView) => setEditingScene(scene), []);
+  const configureScene = useCallback((scene: MapView) => setDetailsScene(scene), []);
+
+  const requestDeleteScene = useCallback(
+    (scene: MapView) => {
+      setConfirmState({
+        title: "¿Borrar escena?",
+        message: `Se eliminará “${scene.name}” del proyecto con todo lo que hayas pintado. Esta acción no se puede deshacer.`,
+        confirmLabel: "Borrar escena",
+        destructive: true,
+        action: async () => {
+          try {
+            await deleteMap(ownerId, scene._id);
+            toast.success("Escena eliminada");
+            void refresh();
+          } catch (e) {
+            console.error(e);
+            toast.error("No se pudo eliminar la escena");
+          }
+        },
+      });
+    },
+    [ownerId, refresh],
+  );
+
+  const closeStats = useCallback(() => setShowStats(false), []);
+  const closeSettings = useCallback(() => setShowSettings(false), []);
+  const closeBackups = useCallback(() => setShowBackups(false), []);
+  const closeCreating = useCallback(() => setCreating(false), []);
+  const closeDetails = useCallback(() => setDetailsScene(null), []);
+  const closePublishing = useCallback(() => setPublishing(false), []);
+  const handleBackupsChange = useCallback(() => void refresh(), [refresh]);
+
+  // Misma referencia mientras no cambien las escenas: los paneles no se
+  // vuelven a dibujar por un array nuevo en cada render.
+  const list = useMemo(() => scenes ?? [], [scenes]);
 
   if (!ownerId) return null;
 
@@ -246,11 +332,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
         <AnimatePresence>
           {showSettings && (
-            <SettingsSheet
-              owner={ownerLabel}
-              scenes={scenes ?? []}
-              onClose={() => setShowSettings(false)}
-            />
+            <SettingsSheet owner={ownerLabel} scenes={scenes ?? []} onClose={closeSettings} />
           )}
         </AnimatePresence>
 
@@ -283,27 +365,6 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
       </>
     );
   }
-
-  const list = scenes ?? [];
-
-  const requestDeleteScene = (scene: MapView) => {
-    setConfirmState({
-      title: "¿Borrar escena?",
-      message: `Se eliminará “${scene.name}” del proyecto con todo lo que hayas pintado. Esta acción no se puede deshacer.`,
-      confirmLabel: "Borrar escena",
-      destructive: true,
-      action: async () => {
-        try {
-          await deleteMap(ownerId, scene._id);
-          toast.success("Escena eliminada");
-          void refresh();
-        } catch (e) {
-          console.error(e);
-          toast.error("No se pudo eliminar la escena");
-        }
-      },
-    });
-  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -383,46 +444,25 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         >
           {/* El tablero vive en su propio plano: se puede mover a cualquier posición. */}
           <div
-            className="absolute left-0 top-0 w-full p-4 pb-20"
+            ref={planeEl}
+            className="absolute left-0 top-0 w-full px-6 pb-20 pt-4"
             style={{
               transform: `translate(${board.offset.x}px, ${board.offset.y}px)`,
               willChange: "transform",
+              contain: "layout paint",
             }}
           >
-            {scenes === undefined ? (
-              <div className="grid grid-cols-2 gap-3">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
-                ))}
-              </div>
-            ) : list.length === 0 ? (
-              <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Layers className="h-6 w-6" />
-                </div>
-                <p className="mt-3 text-sm font-semibold text-foreground">Todavía no hay escenas</p>
-                <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-muted-foreground">
-                  Pulsa “Crear Escena” para añadir tu primera escena al tablero.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 content-start gap-3">
-                {list.map((s) => (
-                  <SceneCard
-                    key={s._id}
-                    scene={s}
-                    onOpen={() => setEditingScene(s)}
-                    onConfigure={() => setDetailsScene(s)}
-                    onDelete={() => requestDeleteScene(s)}
-                  />
-                ))}
-              </div>
-            )}
+            <SceneBoard
+              scenes={scenes}
+              onOpen={openScene}
+              onConfigure={configureScene}
+              onDelete={requestDeleteScene}
+            />
           </div>
 
           {/* ── Pista de arrastre + recentrar el tablero ── */}
           <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex items-center gap-2">
-            <span className="hidden rounded-xl border border-border/40 bg-card/90 px-3 py-2 text-[11px] font-medium text-muted-foreground shadow-soft backdrop-blur-sm sm:inline-flex">
+            <span className="hidden rounded-xl border border-border/40 bg-card px-3 py-2 text-[11px] font-medium text-muted-foreground shadow-soft sm:inline-flex">
               Arrastra para mover el tablero
             </span>
             {!board.isCentered && (
@@ -459,7 +499,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           <SceneDetailsModal
             ownerId={ownerId}
             mode="create"
-            onClose={() => setCreating(false)}
+            onClose={closeCreating}
             onCreated={(scene) => {
               setCreating(false);
               setEditingScene(scene);
@@ -477,7 +517,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             ownerId={ownerId}
             mode="edit"
             scene={detailsScene}
-            onClose={() => setDetailsScene(null)}
+            onClose={closeDetails}
             onCreated={() => {
               setDetailsScene(null);
               void refresh();
@@ -489,18 +529,14 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
       {/* Panel de estadísticas */}
       <AnimatePresence>
         {showStats && (
-          <StatsSheet scenes={list} backups={backups} onClose={() => setShowStats(false)} />
+          <StatsSheet scenes={list} backups={backups} onClose={closeStats} />
         )}
       </AnimatePresence>
 
       {/* Panel de ajustes del proyecto */}
       <AnimatePresence>
         {showSettings && (
-          <SettingsSheet
-            owner={ownerLabel}
-            scenes={scenes ?? []}
-            onClose={() => setShowSettings(false)}
-          />
+          <SettingsSheet owner={ownerLabel} scenes={list} onClose={closeSettings} />
         )}
       </AnimatePresence>
 
@@ -511,8 +547,8 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             ownerId={ownerId}
             backups={backups}
             requestConfirm={setConfirmState}
-            onChange={() => void refresh()}
-            onClose={() => setShowBackups(false)}
+            onChange={handleBackupsChange}
+            onClose={closeBackups}
           />
         )}
       </AnimatePresence>
@@ -523,7 +559,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           <PublishModal
             ownerId={ownerId}
             scenes={list}
-            onClose={() => setPublishing(false)}
+            onClose={closePublishing}
             onPublished={() => {
               setPublishing(false);
               onBack();
@@ -554,24 +590,85 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// Tarjeta de escena (tablero)
+// Tablero de escenas
+//
+// Está memorizado: al arrastrar el tablero solo cambia su posición, así que
+// las tarjetas no se vuelven a dibujar (esto es lo que quita el retraso).
 // ════════════════════════════════════════════════════════════════════
-function SceneCard({
+const SceneBoard = memo(function SceneBoard({
+  scenes,
+  onOpen,
+  onConfigure,
+  onDelete,
+}: {
+  scenes: MapView[] | undefined;
+  onOpen: (scene: MapView) => void;
+  onConfigure: (scene: MapView) => void;
+  onDelete: (scene: MapView) => void;
+}) {
+  if (scenes === undefined) {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+        ))}
+      </div>
+    );
+  }
+
+  if (scenes.length === 0) {
+    return (
+      <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Layers className="h-6 w-6" />
+        </div>
+        <p className="mt-3 text-sm font-semibold text-foreground">Todavía no hay escenas</p>
+        <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-muted-foreground">
+          Pulsa “Crear Escena” para añadir tu primera escena al tablero.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 content-start gap-3">
+      {scenes.map((scene) => (
+        <SceneCard
+          key={scene._id}
+          scene={scene}
+          onOpen={onOpen}
+          onConfigure={onConfigure}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  );
+});
+
+// ════════════════════════════════════════════════════════════════════
+// Tarjeta de escena (tablero) — muestra nombre, descripción, color y medidas
+// ════════════════════════════════════════════════════════════════════
+const SceneCard = memo(function SceneCard({
   scene,
   onOpen,
   onConfigure,
   onDelete,
 }: {
   scene: MapView;
-  onOpen: () => void;
-  onConfigure: () => void;
-  onDelete: () => void;
+  onOpen: (scene: MapView) => void;
+  onConfigure: (scene: MapView) => void;
+  onDelete: (scene: MapView) => void;
 }) {
   const painted = Object.keys(scene.tiles ?? {}).length;
   return (
     <div className="relative overflow-hidden rounded-xl border border-border/35 bg-card shadow-soft transition-shadow hover:shadow-lift">
       {/* Cuerpo: abre el pizarrón para editar el proyecto de la escena */}
-      <button type="button" onClick={onOpen} className="block w-full text-left">
+      <button
+        type="button"
+        onClick={() => onOpen(scene)}
+        title={scene.description ? `${scene.name} — ${scene.description}` : scene.name}
+        className="block w-full text-left"
+      >
         <div
           className="relative flex h-24 items-center justify-center border-b border-border/40"
           style={{ backgroundColor: scene.background }}
@@ -581,13 +678,21 @@ function SceneCard({
           ) : (
             <Gamepad2 className="h-6 w-6 text-primary/70" />
           )}
-          <span className="absolute left-2 top-2 rounded-full bg-card/85 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
+          <span className="absolute left-2 top-2 rounded-full bg-card px-2 py-0.5 text-[10px] font-semibold text-primary">
             {scene.genre === "rpg" ? "RPG" : "Plataformas"}
           </span>
         </div>
         <div className="px-2.5 py-2">
           <p className="truncate text-[13px] font-semibold text-foreground">{scene.name}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          {/* La descripción de la escena se ve aquí, al aparecer en el tablero. */}
+          {scene.description ? (
+            <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+              {scene.description}
+            </p>
+          ) : (
+            <p className="mt-0.5 text-[11px] italic text-muted-foreground/70">Sin descripción</p>
+          )}
+          <p className="mt-1 text-[10px] font-medium tabular-nums text-muted-foreground/80">
             {scene.width}×{scene.height} · {painted} piezas
           </p>
         </div>
@@ -597,26 +702,26 @@ function SceneCard({
       <div className="absolute right-1.5 top-1.5 flex gap-1">
         <button
           type="button"
-          onClick={onConfigure}
+          onClick={() => onConfigure(scene)}
           aria-label="Configurar detalles del mapa"
-          title="Configurar detalles del mapa"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-muted-foreground shadow-soft backdrop-blur-sm transition-colors hover:bg-primary/10 hover:text-primary"
+          title="Nombre, descripción, tamaño y color"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-soft transition-colors hover:bg-primary/10 hover:text-primary"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
         <button
           type="button"
-          onClick={onDelete}
+          onClick={() => onDelete(scene)}
           aria-label="Borrar escena"
           title="Borrar escena"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-muted-foreground shadow-soft backdrop-blur-sm transition-colors hover:bg-destructive/10 hover:text-destructive"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-soft transition-colors hover:bg-destructive/10 hover:text-destructive"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
   );
-}
+});
 
 // ════════════════════════════════════════════════════════════════════
 // Modal: detalles del mapa (crear Y editar) — nombre, detalle, tipo, tamaño, fondo
@@ -650,8 +755,8 @@ function SceneDetailsModal({
           name: draft.name,
           description: draft.description,
           genre: draft.genre,
-          width: draft.width,
-          height: draft.height,
+          width: draft.side,
+          height: draft.side,
           background: draft.background,
         });
         toast.success("Detalles del mapa actualizados");
@@ -661,8 +766,8 @@ function SceneDetailsModal({
           name: draft.name,
           description: draft.description,
           genre: draft.genre,
-          width: draft.width,
-          height: draft.height,
+          width: draft.side,
+          height: draft.side,
           background: draft.background,
         });
         toast.success("Escena creada — ¡a diseñarla!");
@@ -771,65 +876,93 @@ function SceneDetailsModal({
           </div>
         </div>
 
-        {/* Tamaño del tablero */}
+        {/* Tamaño del tablero — siempre cuadrado (ancho = alto) */}
         <div className="mb-3">
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Tamaño del tablero
+            Tamaño del tablero (cuadrado)
           </label>
           <div className="flex items-center gap-2">
             <input
               type="range"
-              min={10}
-              max={60}
-              value={draft.width}
-              onChange={(e) => setDraft((d) => ({ ...d, width: Number(e.target.value) }))}
+              min={MAP_SIDE_MIN}
+              max={SIZE_SLIDER_MAX}
+              value={draft.side}
+              onChange={(e) => setDraft((d) => ({ ...d, side: Number(e.target.value) }))}
               className="h-1.5 flex-1 accent-[var(--primary)]"
             />
-            <span className="w-16 text-center text-xs font-semibold tabular-nums text-foreground">
-              {draft.width}×{draft.height}
+            <span className="w-20 text-center text-xs font-semibold tabular-nums text-foreground">
+              {draft.side}×{draft.side}
             </span>
           </div>
           <div className="mt-2 flex gap-2">
-            {[
-              { label: "Pequeño 16×12", w: 16, h: 12 },
-              { label: "Mediano 24×16", w: 24, h: 16 },
-              { label: "Grande 40×24", w: 40, h: 24 },
-            ].map((p) => (
+            {SIZE_PRESETS.map((p) => (
               <button
                 key={p.label}
                 type="button"
-                onClick={() => setDraft((d) => ({ ...d, width: p.w, height: p.h }))}
+                onClick={() => setDraft((d) => ({ ...d, side: p.side }))}
                 className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
-                  draft.width === p.w && draft.height === p.h
+                  draft.side === p.side
                     ? "border-primary/50 bg-primary/10 text-primary"
                     : "border-border/40 bg-card text-muted-foreground hover:border-primary/30"
                 }`}
               >
-                {p.label}
+                {p.label} {p.side}×{p.side}
               </button>
             ))}
           </div>
+          <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
+            El tablero es cuadrado: {draft.side} casillas de ancho y {draft.side} de alto.
+          </p>
+          {isEdit && scene && draft.side < Math.max(scene.width, scene.height) && (
+            <p className="mt-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-[11px] leading-snug text-foreground">
+              Vas a reducir el tablero: las piezas que queden fuera del cuadrado no se verán
+              (se conservan por si vuelves a ampliarlo).
+            </p>
+          )}
         </div>
 
-        {/* Fondo */}
+        {/* Color del mapa: preajustes + cualquier color del dispositivo */}
         <div className="mb-2">
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Fondo
+          <label className="mb-1.5 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span>Color del mapa</span>
+            <span className="font-mono text-[10px] normal-case tracking-normal text-foreground">
+              {draft.background.toUpperCase()}
+            </span>
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {BACKGROUNDS.map((b) => (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => setDraft((d) => ({ ...d, background: b.id }))}
                 className={`h-8 w-8 rounded-full border-2 transition-transform ${
-                  draft.background === b.id ? "scale-110 border-primary" : "border-border hover:scale-105"
+                  draft.background.toLowerCase() === b.id
+                    ? "scale-110 border-primary ring-2 ring-primary/30"
+                    : "border-border hover:scale-105"
                 }`}
                 style={{ backgroundColor: b.id }}
                 aria-label={b.label}
                 title={b.label}
               />
             ))}
+            {/* Selector nativo: permite cualquier color, no solo los preajustes */}
+            <label
+              className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+              title="Elegir un color personalizado"
+            >
+              <span
+                className="h-4 w-4 shrink-0 rounded-full border border-border"
+                style={{ backgroundColor: draft.background }}
+              />
+              Personalizado
+              <input
+                type="color"
+                value={toHexColor(draft.background)}
+                onChange={(e) => setDraft((d) => ({ ...d, background: e.target.value }))}
+                className="sr-only"
+                aria-label="Elegir un color personalizado"
+              />
+            </label>
           </div>
         </div>
 

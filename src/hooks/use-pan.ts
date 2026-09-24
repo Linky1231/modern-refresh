@@ -8,12 +8,20 @@
 //   const [el, setEl] = useState<HTMLDivElement | null>(null);
 //   const pan = usePan({ element: el, enabled: tool === "move" });
 //   <div ref={setEl} style={pan.interaction} {...pan.viewportProps} />
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 
 export interface PanOffset {
   x: number;
   y: number;
+}
+
+/** Límites de movimiento: fuera de ellos no se puede dejar el contenido. */
+export interface PanLimits {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
 }
 
 interface UsePanOptions {
@@ -26,6 +34,11 @@ interface UsePanOptions {
   enabled?: boolean;
   /** Posición inicial respecto al origen de la superficie. */
   initial?: PanOffset;
+  /**
+   * Límites calculados al vuelo (p. ej. para que el contenido nunca salga del
+   * todo de la vista). Devolver `null` deja mover sin límite.
+   */
+  limits?: () => PanLimits | null;
 }
 
 /** Arrastre en curso: desde dónde empezó y dónde estaba el contenido. */
@@ -44,13 +57,66 @@ const CLICK_GUARD_MS = 300;
 /** Campos de texto: ahí el gesto pertenece al cursor, no a la superficie. */
 const NO_DRAG = 'a, input, textarea, select, [contenteditable="true"]';
 
-export function usePan({ element, enabled = false, initial = { x: 0, y: 0 } }: UsePanOptions) {
+/** Deja la posición dentro de los límites indicados (si los hay). */
+function clampToLimits(next: PanOffset, getLimits?: () => PanLimits | null): PanOffset {
+  const limits = getLimits?.();
+  if (!limits) return next;
+  return {
+    x: Math.min(limits.maxX, Math.max(limits.minX, next.x)),
+    y: Math.min(limits.maxY, Math.max(limits.minY, next.y)),
+  };
+}
+
+export function usePan({
+  element,
+  enabled = false,
+  initial = { x: 0, y: 0 },
+  limits,
+}: UsePanOptions) {
   const { x: initialX, y: initialY } = initial;
   const [offset, setOffset] = useState<PanOffset>({ x: initialX, y: initialY });
   const [drag, setDrag] = useState<Drag | null>(null);
   const panning = drag !== null;
 
-  const reset = useCallback(() => setOffset({ x: initialX, y: initialY }), [initialX, initialY]);
+  // Se lee en cada gesto, así siempre se usan los límites más recientes.
+  const limitsRef = useRef(limits);
+  useEffect(() => {
+    limitsRef.current = limits;
+  });
+
+  // Posición real (con decimales) y fotograma pendiente. El estado que se pinta
+  // se actualiza como MUCHO una vez por fotograma: la rueda del ratón y el
+  // arrastre pueden disparar decenas de eventos por segundo y no hace falta
+  // volver a dibujar la superficie en cada uno.
+  const realOffset = useRef<PanOffset>({ x: initialX, y: initialY });
+  const frame = useRef<number | null>(null);
+
+  const apply = useCallback((next: PanOffset) => {
+    realOffset.current = clampToLimits(next, limitsRef.current);
+    if (frame.current !== null) return;
+    frame.current = window.requestAnimationFrame(() => {
+      frame.current = null;
+      const { x, y } = realOffset.current;
+      // Píxeles enteros: el contenido se ve nítido y el navegador repinta menos.
+      setOffset({ x: Math.round(x), y: Math.round(y) });
+    });
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (frame.current !== null) window.cancelAnimationFrame(frame.current);
+    },
+    [],
+  );
+
+  const reset = useCallback(() => {
+    if (frame.current !== null) {
+      window.cancelAnimationFrame(frame.current);
+      frame.current = null;
+    }
+    realOffset.current = { x: initialX, y: initialY };
+    setOffset({ x: initialX, y: initialY });
+  }, [initialX, initialY]);
 
   // Rueda del ratón / trackpad: desplaza la superficie en cualquier dirección.
   // El listener es nativo porque React registra "wheel" como pasivo y entonces
@@ -60,11 +126,11 @@ export function usePan({ element, enabled = false, initial = { x: 0, y: 0 } }: U
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey) return; // deja pasar el zoom del navegador
       e.preventDefault();
-      setOffset((prev) => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+      apply({ x: realOffset.current.x - e.deltaX, y: realOffset.current.y - e.deltaY });
     };
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
-  }, [element]);
+  }, [element, apply]);
 
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -86,11 +152,11 @@ export function usePan({ element, enabled = false, initial = { x: 0, y: 0 } }: U
         id: e.pointerId,
         startX: e.clientX,
         startY: e.clientY,
-        originX: offset.x,
-        originY: offset.y,
+        originX: realOffset.current.x,
+        originY: realOffset.current.y,
       });
     },
-    [enabled, offset.x, offset.y, panning],
+    [enabled, panning],
   );
 
   // Mientras hay un arrastre escuchamos en la ventana, así el contenido sigue
@@ -105,7 +171,7 @@ export function usePan({ element, enabled = false, initial = { x: 0, y: 0 } }: U
       const dy = ev.clientY - drag.startY;
       if (!moved && Math.abs(dx) + Math.abs(dy) > DRAG_THRESHOLD) moved = true;
       if (!moved) return;
-      setOffset({ x: drag.originX + dx, y: drag.originY + dy });
+      apply({ x: drag.originX + dx, y: drag.originY + dy });
     };
 
     const stop = () => {
@@ -131,7 +197,7 @@ export function usePan({ element, enabled = false, initial = { x: 0, y: 0 } }: U
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
     };
-  }, [drag]);
+  }, [drag, apply]);
 
   const interaction: CSSProperties = {
     touchAction: "none",

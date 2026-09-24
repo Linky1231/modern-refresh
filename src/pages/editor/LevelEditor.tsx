@@ -557,7 +557,9 @@ export default function LevelEditor({
       {/* ══ Capa actual + acceso a la ventana de recursos ══ */}
       {!preview && (
       <div className="absolute inset-x-0 bottom-2 z-30 flex items-center justify-between px-3">
-        <span className="rounded-lg border border-primary/25 bg-card/90 px-3 py-1.5 text-[11px] font-bold text-primary shadow-soft backdrop-blur-sm">
+        {/* Sin desenfoque de fondo: el lienzo se mueve debajo y desenfocar en
+            cada fotograma cuesta caro. Fondo opaco y listo. */}
+        <span className="rounded-lg border border-primary/25 bg-card px-3 py-1.5 text-[11px] font-bold text-primary shadow-soft">
           Layer1 · {layer === "map" ? "Mapa" : "IU"}
         </span>
         <button
@@ -575,7 +577,7 @@ export default function LevelEditor({
 
       {/* ══ Herramientas ══ */}
       {!preview && (
-        <div className="absolute bottom-16 left-3 z-30 flex items-center gap-1 rounded-xl border border-border/40 bg-card/90 p-1 shadow-soft backdrop-blur-sm">
+        <div className="absolute bottom-16 left-3 z-30 flex items-center gap-1 rounded-xl border border-border/40 bg-card p-1 shadow-soft">
           {(
             [
               { id: "paint" as Tool, label: "Pintar", icon: <Paintbrush className="h-4 w-4" /> },
@@ -615,7 +617,7 @@ export default function LevelEditor({
       )}
 
       {selected && !preview && (
-        <div className="absolute bottom-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-border/40 bg-card/90 px-3 py-1 text-[11px] font-medium text-foreground shadow-soft backdrop-blur-sm">
+        <div className="absolute bottom-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-border/40 bg-card px-3 py-1 text-[11px] font-medium text-foreground shadow-soft">
           {selected.name}
         </div>
       )}

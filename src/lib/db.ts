@@ -180,22 +180,119 @@ function uid(): string {
 }
 
 let memory: LocalDB | null = null;
+// Texto que hay AHORA en el almacenamiento del dispositivo (última lectura o
+// última escritura correcta). Sirve para devolver la memoria a su sitio si un
+// guardado falla por falta de espacio.
+let lastSavedRaw: string | null = null;
+let watchingStorage = false;
+
+/**
+ * Guarda una copia intacta del texto que no se pudo interpretar. Así, si el
+ * almacenamiento del dispositivo se daña, el trabajo del usuario sigue en el
+ * navegador en lugar de desaparecer sin rastro. Solo se conserva la última.
+ */
+function salvageCorruptDB(raw: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const prefix = `${DB_KEY}_salvage_`;
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(prefix)) window.localStorage.removeItem(key);
+    }
+    window.localStorage.setItem(`${prefix}${Date.now()}`, raw);
+  } catch {
+    // Sin espacio para la copia: el aviso de consola queda como referencia.
+  }
+}
+
+// ── Tamaño de los mapas del editor ──────────────────────────────────
+// Los mapas son CUADRADOS: un único lado (ancho === alto). El editor ya no
+// ofrece mapas rectangulares y los antiguos se convierten solos.
+
+/** Lado mínimo de un mapa, en casillas. */
+export const MAP_SIDE_MIN = 10;
+/** Lado máximo de un mapa, en casillas. */
+export const MAP_SIDE_MAX = 60;
+/** Lado con el que se crea un mapa si no se indica otro. */
+export const MAP_SIDE_DEFAULT = 24;
+
+/** Normaliza cualquier medida al lado cuadrado válido (usa la mayor). */
+export function squareSide(width: number, height: number): number {
+  const largest = Math.max(
+    Number.isFinite(width) ? width : 0,
+    Number.isFinite(height) ? height : 0,
+  );
+  if (largest <= 0) return MAP_SIDE_DEFAULT;
+  return Math.min(MAP_SIDE_MAX, Math.max(MAP_SIDE_MIN, Math.round(largest)));
+}
+
+/**
+ * Migración suave: los mapas rectangulares creados antes pasan a ser
+ * cuadrados conservando el lado MAYOR, de forma que ninguna pieza ya pintada
+ * quede fuera del tablero.
+ */
+function migrateSquareMaps(db: LocalDB): boolean {
+  let changed = false;
+  for (const map of db.maps) {
+    const side = squareSide(map.width, map.height);
+    if (map.width !== side || map.height !== side) {
+      map.width = side;
+      map.height = side;
+      changed = true;
+    }
+  }
+  return changed;
+}
 
 function getDB(): LocalDB {
+  if (!watchingStorage) {
+    watchingStorage = true;
+    // Otra pestaña del editor puede guardar mientras esta sigue abierta. Al
+    // enterarnos dejamos de usar la copia en memoria: sin esto, el siguiente
+    // guardado de esta pestaña sobrescribiría lo de la otra y las escenas
+    // «desaparecerían».
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", (event) => {
+        if (event.key === DB_KEY || event.key === null) memory = null;
+      });
+    }
+  }
   if (memory) return memory;
+
   if (typeof window !== "undefined") {
+    let raw: string | null = null;
     try {
-      const raw = window.localStorage.getItem(DB_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<LocalDB>;
-        memory = { ...emptyDB(), ...parsed };
-        return memory;
-      }
+      raw = window.localStorage.getItem(DB_KEY);
     } catch (e) {
       console.error("No se pudo leer la base local:", e);
     }
+    if (raw) {
+      lastSavedRaw = raw;
+      try {
+        const parsed = JSON.parse(raw) as Partial<LocalDB>;
+        memory = { ...emptyDB(), ...parsed };
+      } catch (e) {
+        // La lectura ha fallado: se conserva el texto original antes de
+        // continuar, para que nada del proyecto se pierda sin remedio.
+        console.error("La base local no se pudo leer; se conserva una copia:", e);
+        salvageCorruptDB(raw);
+        memory = emptyDB();
+      }
+    } else {
+      memory = emptyDB();
+    }
+  } else {
+    memory = emptyDB();
   }
-  memory = emptyDB();
+
+  // Los mapas rectangulares antiguos pasan a ser cuadrados (una sola vez).
+  if (migrateSquareMaps(memory)) {
+    try {
+      saveDB();
+    } catch {
+      // Dispositivo lleno: se aplicará en el próximo guardado con éxito.
+    }
+  }
   return memory;
 }
 
@@ -203,9 +300,20 @@ function getDB(): LocalDB {
 function saveDB() {
   const db = getDB();
   if (typeof window === "undefined") return;
+  const raw = JSON.stringify(db);
   try {
-    window.localStorage.setItem(DB_KEY, JSON.stringify(db));
-  } catch (e) {
+    window.localStorage.setItem(DB_KEY, raw);
+    lastSavedRaw = raw;
+  } catch {
+    // El dispositivo está lleno. Se devuelve la memoria a lo que hay guardado
+    // de verdad: así nunca se muestran escenas que desaparecerán al recargar.
+    if (lastSavedRaw) {
+      try {
+        memory = { ...emptyDB(), ...(JSON.parse(lastSavedRaw) as Partial<LocalDB>) };
+      } catch {
+        // Si ni siquiera la copia guardada se puede leer, se mantiene lo que hay.
+      }
+    }
     throw new Error(
       "El almacenamiento local del dispositivo está lleno. Elimina publicaciones con imágenes para liberar espacio.",
     );
@@ -1311,7 +1419,7 @@ export interface MapView {
 function toMapView(row: LocalMapRow): MapView {
   return {
     _id: row.id,
-  name: row.name,
+    name: row.name,
     description: row.description,
     genre: row.genre,
     width: row.width,
@@ -1337,7 +1445,7 @@ export async function getMap(ownerId: string, mapId: string): Promise<MapView | 
   return row ? toMapView(row) : null;
 }
 
-/** Crea un mapa nuevo con nombre, descripción, género y tamaño del lienzo. */
+/** Crea un mapa nuevo con nombre, descripción, género y lado del tablero. */
 export async function createMap(
   ownerId: string,
   input: {
@@ -1351,14 +1459,16 @@ export async function createMap(
 ): Promise<MapView> {
   const db = getDB();
   const now = new Date().toISOString();
+  // El mapa es cuadrado: ancho y alto son el mismo lado.
+  const side = squareSide(input.width, input.height);
   const row: LocalMapRow = {
     id: uid(),
     owner_id: ownerId,
     name: input.name.trim().slice(0, 60) || "Mapa sin título",
     description: (input.description ?? "").trim().slice(0, 300),
     genre: input.genre,
-    width: Math.min(200, Math.max(10, Math.round(input.width))),
-    height: Math.min(200, Math.max(10, Math.round(input.height))),
+    width: side,
+    height: side,
     background: input.background,
     tiles: {},
     created_at: now,
@@ -1382,8 +1492,17 @@ export async function updateMap(
   if (updates.name !== undefined) row.name = updates.name.trim().slice(0, 60) || row.name;
   if (updates.description !== undefined) row.description = updates.description.trim().slice(0, 300);
   if (updates.genre !== undefined) row.genre = updates.genre;
-  if (updates.width !== undefined) row.width = Math.min(200, Math.max(10, Math.round(updates.width)));
-  if (updates.height !== undefined) row.height = Math.min(200, Math.max(10, Math.round(updates.height)));
+  if (updates.width !== undefined || updates.height !== undefined) {
+    // Cuadrado: manda la medida indicada; si llegan las dos, la mayor para no
+    // recortar lo que ya está pintado.
+    const next =
+      updates.width !== undefined && updates.height !== undefined
+        ? Math.max(updates.width, updates.height)
+        : (updates.width ?? updates.height ?? row.width);
+    const side = squareSide(next, next);
+    row.width = side;
+    row.height = side;
+  }
   if (updates.background !== undefined) row.background = updates.background;
   if (updates.tiles !== undefined) row.tiles = updates.tiles;
   row.updated_at = new Date().toISOString();
@@ -1537,7 +1656,32 @@ export async function restoreBackup(ownerId: string, backupId: string): Promise<
   } catch {
     throw new Error("La copia de seguridad está dañada");
   }
-  const restored = scenes.map((s) => ({ ...s, owner_id: ownerId }));
+  // Las escenas de la copia también son cuadradas.
+  const restored = scenes.map((s) => {
+    const side = squareSide(Number(s.width) || 0, Number(s.height) || 0);
+    return { ...s, owner_id: ownerId, width: side, height: side };
+  });
+
+  // Red de seguridad: antes de reemplazar nada se guarda una copia de las
+  // escenas que hay ahora, así una restauración equivocada nunca hace que el
+  // proyecto «desaparezca» sin remedio.
+  const current = db.maps.filter((m) => m.owner_id === ownerId);
+  if (current.length > 0) {
+    const stamp = new Date().toLocaleString("es", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    db.backups.push({
+      id: uid(),
+      owner_id: ownerId,
+      name: `Antes de restaurar · ${stamp}`,
+      payload: JSON.stringify(current),
+      created_at: new Date().toISOString(),
+    });
+  }
+
   db.maps = [...db.maps.filter((m) => m.owner_id !== ownerId), ...restored];
   saveDB();
   return restored.length;
