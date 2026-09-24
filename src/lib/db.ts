@@ -1425,6 +1425,8 @@ export interface BackupView {
   createdAt: number;
   sceneCount: number;
   sizeBytes: number;
+  /** Snapshot JSON de las escenas: permite descargar la copia a un archivo. */
+  payload: string;
 }
 
 function toBackupView(row: LocalBackupRow): BackupView {
@@ -1441,6 +1443,7 @@ function toBackupView(row: LocalBackupRow): BackupView {
     createdAt: new Date(row.created_at).getTime(),
     sceneCount,
     sizeBytes: row.payload.length,
+    payload: row.payload,
   };
 }
 
@@ -1467,6 +1470,42 @@ export async function createBackup(ownerId: string, name?: string): Promise<Back
     owner_id: ownerId,
     name: (name ?? "").trim().slice(0, 60) || `Copia · ${stamp}`,
     payload: JSON.stringify(scenes),
+    created_at: new Date().toISOString(),
+  };
+  db.backups.push(row);
+  saveDB();
+  return toBackupView(row);
+}
+
+/** Importa una copia de seguridad desde el JSON descargado (array de escenas o
+ *  archivo exportado por la app) y la añade a la lista para poder restaurarla. */
+export async function importBackup(
+  ownerId: string,
+  raw: string,
+  name?: string,
+): Promise<BackupView> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("El archivo no es una copia de seguridad válida");
+  }
+  const list = Array.isArray(parsed)
+    ? parsed
+    : (parsed as { scenes?: unknown } | null)?.scenes;
+  if (!Array.isArray(list)) throw new Error("El archivo no contiene escenas");
+  const db = getDB();
+  const stamp = new Date().toLocaleString("es", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const row: LocalBackupRow = {
+    id: uid(),
+    owner_id: ownerId,
+    name: (name ?? "").trim().slice(0, 60) || `Copia importada · ${stamp}`,
+    payload: JSON.stringify(list),
     created_at: new Date().toISOString(),
   };
   db.backups.push(row);

@@ -10,7 +10,7 @@
 //                                  detalle, tipo de juego, tamaño, fondo).
 //   · Papelera                  -> borra la escena (con confirmación en pantalla).
 // Todo se guarda en el dispositivo (localStorage vía @/lib/db).
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type ChangeEvent } from "react";
 import {
   getMaps,
   createMap,
@@ -18,6 +18,7 @@ import {
   deleteMap,
   getBackups,
   createBackup,
+  importBackup,
   deleteBackup,
   restoreBackup,
   createPost,
@@ -50,7 +51,8 @@ import {
   CircleDot,
   Swords,
   Gamepad2,
-  ArchiveRestore,
+  DatabaseBackup,
+  Download,
   AlertTriangle,
   Locate,
   X,
@@ -345,7 +347,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             title="Copia de seguridad"
             className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 active:scale-[0.97]"
           >
-            <ArchiveRestore className="h-5 w-5" />
+            <DatabaseBackup className="h-5 w-5" />
             {backups.length > 0 && (
               <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-primary-foreground">
                 {backups.length}
@@ -941,7 +943,7 @@ function StatsSheet({
     {
       label: "Copias de seguridad",
       value: String(backups.length),
-      icon: <ArchiveRestore className="h-4 w-4" />,
+      icon: <DatabaseBackup className="h-4 w-4" />,
     },
   ];
 
@@ -988,6 +990,7 @@ function BackupsSheet({
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const handleCreate = async () => {
     setBusy("create");
@@ -999,6 +1002,68 @@ function BackupsSheet({
     } catch (e) {
       console.error(e);
       toast.error("No se pudo crear la copia");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // Copia real en archivo: el snapshot se descarga al dispositivo del usuario.
+  const handleDownload = (b: BackupView) => {
+    let scenes: unknown = [];
+    try {
+      scenes = JSON.parse(b.payload);
+    } catch {
+      toast.error("La copia está dañada");
+      return;
+    }
+    const stamp = new Date(b.createdAt).toISOString().slice(0, 10);
+    const slug =
+      b.name
+        .toLowerCase()
+        .replace(/[^\wáéíóúñü-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "copia";
+    const json = JSON.stringify(
+      {
+        app: "asternal",
+        kind: "project-backup",
+        version: 1,
+        name: b.name,
+        createdAt: new Date(b.createdAt).toISOString(),
+        scenes,
+      },
+      null,
+      2,
+    );
+    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `asternal-${slug}-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Copia descargada al dispositivo");
+  };
+
+  // Importa una copia descargada: queda en la lista lista para restaurar.
+  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setBusy("import");
+    try {
+      const created = await importBackup(
+        ownerId,
+        await file.text(),
+        file.name.replace(/\.json$/i, ""),
+      );
+      toast.success(
+        `Copia importada · ${created.sceneCount} ${created.sceneCount === 1 ? "escena" : "escenas"}. Pulsa «Restaurar» para aplicarla.`,
+      );
+      onChange();
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "No se pudo importar la copia");
     } finally {
       setBusy(null);
     }
@@ -1051,7 +1116,7 @@ function BackupsSheet({
     <ModalShell onClose={onClose}>
       <div className="flex shrink-0 items-center gap-2.5 border-b border-border/40 px-5 py-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <ArchiveRestore className="h-4 w-4" />
+          <DatabaseBackup className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
           Copia de seguridad
@@ -1064,12 +1129,12 @@ function BackupsSheet({
         <div className="rounded-2xl border border-border/35 bg-primary/5 p-3">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <ArchiveRestore className="h-4 w-4" />
+              <DatabaseBackup className="h-4 w-4" />
             </span>
             <div className="min-w-0">
               <p className="text-[13px] font-semibold text-foreground">Guardar el estado actual</p>
               <p className="text-[11px] leading-snug text-muted-foreground">
-                Crea una copia del proyecto y restáurala cuando lo necesites.
+                Guarda el estado real del proyecto, descárgalo a tu dispositivo y restáuralo cuando lo necesites.
               </p>
             </div>
           </div>
@@ -1087,17 +1152,39 @@ function BackupsSheet({
             <button
               type="button"
               onClick={handleCreate}
-              disabled={busy === "create"}
+              disabled={busy !== null}
               className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
             >
               {busy === "create" ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
               ) : (
-                <ArchiveRestore className="h-3.5 w-3.5" />
+                <DatabaseBackup className="h-3.5 w-3.5" />
               )}
               Crear copia
             </button>
           </div>
+
+          {/* Importar una copia descargada (archivo JSON real) */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy !== null}
+            className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-border/40 bg-card text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {busy === "import" ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <Upload className="h-3.5 w-3.5 text-primary" />
+            )}
+            Importar una copia desde un archivo
+          </button>
         </div>
 
         {/* Lista organizada de copias */}
@@ -1107,7 +1194,7 @@ function BackupsSheet({
 
         {backups.length === 0 ? (
           <div className="flex flex-col items-center rounded-2xl border border-dashed border-border py-8 text-center">
-            <ArchiveRestore className="h-7 w-7 text-muted-foreground/50" />
+            <DatabaseBackup className="h-7 w-7 text-muted-foreground/50" />
             <p className="mt-2 text-[13px] font-medium text-foreground">Sin copias todavía</p>
             <p className="mt-1 max-w-[220px] text-[11px] text-muted-foreground">
               Crea la primera copia de seguridad para proteger tu proyecto.
@@ -1128,8 +1215,17 @@ function BackupsSheet({
                   <div className="flex shrink-0 gap-1">
                     <button
                       type="button"
+                      onClick={() => handleDownload(b)}
+                      aria-label="Descargar copia"
+                      title="Descargar"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleRestore(b)}
-                      disabled={busy === b._id}
+                      disabled={busy !== null}
                       aria-label="Restaurar copia"
                       title="Restaurar"
                       className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-50"
@@ -1139,7 +1235,7 @@ function BackupsSheet({
                     <button
                       type="button"
                       onClick={() => handleDelete(b)}
-                      disabled={busy === b._id}
+                      disabled={busy !== null}
                       aria-label="Eliminar copia"
                       title="Eliminar"
                       className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
