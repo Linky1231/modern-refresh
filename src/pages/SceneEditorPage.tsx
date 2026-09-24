@@ -1,6 +1,6 @@
 // ▶ Editor de Escenas — apartado PRINCIPAL del editor de juegos (Asternal)
 // Sigue el wireframe del motor: barra superior (volver · estadísticas · ajustes),
-// fila "+ Crear Escena" con el icono de capas (abre Copia de seguridad),
+// fila "+ Crear Escena" con el icono de copia de seguridad (la abre),
 // tablero punteado con las escenas del proyecto y un botón Publicar dentro.
 // El SISTEMA DE COPIAS DE SEGURIDAD (crear, restaurar y eliminar) vive en el
 // icono de capas; Ajustes solo muestra información del proyecto.
@@ -345,7 +345,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             title="Copia de seguridad"
             className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 active:scale-[0.97]"
           >
-            <Layers className="h-5 w-5" />
+            <ArchiveRestore className="h-5 w-5" />
             {backups.length > 0 && (
               <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-primary-foreground">
                 {backups.length}
