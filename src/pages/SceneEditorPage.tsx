@@ -7,8 +7,7 @@
 // Interacciones del tablero:
 //   · Tocar la escena (cuerpo)  -> abre el PIZARRÓN para editar el proyecto.
 //   · Lápiz                     -> configura los detalles del mapa (nombre,
-//                                  detalle, tipo de juego, tamaño cuadrado y
-//                                  color). La descripción se ve en la tarjeta.
+//                                  tipo de juego y tamaño cuadrado).
 //   · Papelera                  -> borra la escena (con confirmación en pantalla).
 // Todo se guarda en el dispositivo (localStorage vía @/lib/db).
 import { useState, useRef, useCallback, useEffect, useMemo, memo, type ChangeEvent } from "react";
@@ -44,14 +43,6 @@ import {
   RotateCcw,
   Pencil,
   Check,
-  Sparkles,
-  Mountain,
-  TreePine,
-  Droplets,
-  Home,
-  Crown,
-  Flag,
-  CircleDot,
   Swords,
   Gamepad2,
   DatabaseBackup,
@@ -64,52 +55,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { usePan } from "@/hooks/use-pan";
 import LevelEditor from "./editor/LevelEditor";
-
-// ── Paletas de piezas por género ───────────────────────────────────
-interface TileDef {
-  id: string;
-  label: string;
-  color: string;
-  icon?: React.ReactNode;
-}
-
-const RPG_TILES: TileDef[] = [
-  { id: "grass", label: "Pasto", color: "#86efac" },
-  { id: "path", label: "Camino", color: "#fde68a" },
-  { id: "water", label: "Agua", color: "#7dd3fc", icon: <Droplets className="h-3.5 w-3.5" /> },
-  { id: "tree", label: "Árbol", color: "#16a34a", icon: <TreePine className="h-3.5 w-3.5" /> },
-  { id: "mountain", label: "Montaña", color: "#a8a29e", icon: <Mountain className="h-3.5 w-3.5" /> },
-  { id: "house", label: "Casa", color: "#f97316", icon: <Home className="h-3.5 w-3.5" /> },
-  { id: "chest", label: "Tesoro", color: "#eab308", icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { id: "boss", label: "Jefe", color: "#dc2626", icon: <Crown className="h-3.5 w-3.5" /> },
-  { id: "spawn", label: "Inicio", color: "#2563eb", icon: <CircleDot className="h-3.5 w-3.5" /> },
-];
-
-const PLATFORMER_TILES: TileDef[] = [
-  { id: "ground", label: "Suelo", color: "#78716c" },
-  { id: "brick", label: "Ladrillo", color: "#ea580c" },
-  { id: "platform", label: "Plataforma", color: "#a3a3a3" },
-  { id: "spike", label: "Pinchos", color: "#ef4444", icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { id: "coin", label: "Moneda", color: "#facc15", icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { id: "goal", label: "Meta", color: "#22c55e", icon: <Flag className="h-3.5 w-3.5" /> },
-  { id: "spawn", label: "Inicio", color: "#2563eb", icon: <CircleDot className="h-3.5 w-3.5" /> },
-];
-
-function tilesForGenre(genre: MapGenre): TileDef[] {
-  return genre === "rpg" ? RPG_TILES : PLATFORMER_TILES;
-}
-
-// Colores de fondo listos para usar; además se puede elegir cualquiera con el
-// selector de color personalizado.
-const BACKGROUNDS = [
-  { id: "#f8fafc", label: "Claro" },
-  { id: "#eef2ff", label: "Azulado" },
-  { id: "#ecfdf5", label: "Verdoso" },
-  { id: "#fefce8", label: "Amarillento" },
-  { id: "#fee2e2", label: "Rojizo" },
-  { id: "#f5f3ff", label: "Lila" },
-  { id: "#1e293b", label: "Noche" },
-];
 
 const GENRES: Array<{ id: MapGenre; label: string; desc: string; icon: React.ReactNode }> = [
   {
@@ -129,10 +74,14 @@ const GENRES: Array<{ id: MapGenre; label: string; desc: string; icon: React.Rea
 // ── Tipos internos ──────────────────────────────────────────────────
 interface SceneDraft {
   name: string;
-  description: string;
   genre: MapGenre;
   /** Lado del tablero: los mapas son CUADRADOS (ancho === alto). */
   side: number;
+  /**
+   * Detalle y color del mapa: ya no se editan en este modal, pero se conservan
+   * para no perder lo que tuvieran las escenas anteriores al guardarlas.
+   */
+  description: string;
   background: string;
 }
 
@@ -167,14 +116,6 @@ const SIZE_PRESETS = [
  * (60×60 = 3600 casillas) hace lento el editor de niveles.
  */
 const SIZE_SLIDER_MAX = 48;
-
-/** Convierte cualquier color guardado en un #rrggbb válido para el selector. */
-function toHexColor(value: string): string {
-  const v = value.trim();
-  if (/^#[0-9a-f]{6}$/i.test(v)) return v;
-  if (/^#[0-9a-f]{3}$/i.test(v)) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
-  return "#f8fafc";
-}
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("es", { day: "numeric", month: "short" });
@@ -684,14 +625,12 @@ const SceneCard = memo(function SceneCard({
         </div>
         <div className="px-2.5 py-2">
           <p className="truncate text-[13px] font-semibold text-foreground">{scene.name}</p>
-          {/* La descripción de la escena se ve aquí, al aparecer en el tablero. */}
+          {/* Detalle de la escena (solo si la escena ya traía uno guardado). */}
           {scene.description ? (
             <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
               {scene.description}
             </p>
-          ) : (
-            <p className="mt-0.5 text-[11px] italic text-muted-foreground/70">Sin descripción</p>
-          )}
+          ) : null}
           <p className="mt-1 text-[10px] font-medium tabular-nums text-muted-foreground/80">
             {scene.width}×{scene.height} · {painted} piezas
           </p>
@@ -704,7 +643,7 @@ const SceneCard = memo(function SceneCard({
           type="button"
           onClick={() => onConfigure(scene)}
           aria-label="Configurar detalles del mapa"
-          title="Nombre, descripción, tamaño y color"
+          title="Nombre, tipo de juego y tamaño"
           className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-soft transition-colors hover:bg-primary/10 hover:text-primary"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -724,7 +663,7 @@ const SceneCard = memo(function SceneCard({
 });
 
 // ════════════════════════════════════════════════════════════════════
-// Modal: detalles del mapa (crear Y editar) — nombre, detalle, tipo, tamaño, fondo
+// Modal: detalles del mapa (crear Y editar) — nombre, tipo de juego y tamaño
 // ════════════════════════════════════════════════════════════════════
 function SceneDetailsModal({
   ownerId,
@@ -742,7 +681,6 @@ function SceneDetailsModal({
   const isEdit = mode === "edit" && !!scene;
   const [draft, setDraft] = useState<SceneDraft>(scene ? draftFromScene(scene) : DEFAULT_DRAFT);
   const [saving, setSaving] = useState(false);
-  const genreTiles = tilesForGenre(draft.genre);
 
   const canSave = draft.name.trim().length > 0;
 
@@ -827,22 +765,6 @@ function SceneDetailsModal({
           />
         </div>
 
-        {/* Detalle */}
-        <div className="mb-3">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Detalle de la escena
-          </label>
-          <Textarea
-            value={draft.description}
-            onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value.slice(0, 300) }))}
-            maxLength={300}
-            rows={3}
-            placeholder="¿Qué ocurre en esta escena?"
-            className="min-h-[72px] rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
-          />
-          <p className="mt-1 text-right text-[11px] text-muted-foreground">{draft.description.length}/300</p>
-        </div>
-
         {/* Género */}
         <div className="mb-3">
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -919,70 +841,6 @@ function SceneDetailsModal({
               (se conservan por si vuelves a ampliarlo).
             </p>
           )}
-        </div>
-
-        {/* Color del mapa: preajustes + cualquier color del dispositivo */}
-        <div className="mb-2">
-          <label className="mb-1.5 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>Color del mapa</span>
-            <span className="font-mono text-[10px] normal-case tracking-normal text-foreground">
-              {draft.background.toUpperCase()}
-            </span>
-          </label>
-          <div className="flex flex-wrap items-center gap-2">
-            {BACKGROUNDS.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => setDraft((d) => ({ ...d, background: b.id }))}
-                className={`h-8 w-8 rounded-full border-2 transition-transform ${
-                  draft.background.toLowerCase() === b.id
-                    ? "scale-110 border-primary ring-2 ring-primary/30"
-                    : "border-border hover:scale-105"
-                }`}
-                style={{ backgroundColor: b.id }}
-                aria-label={b.label}
-                title={b.label}
-              />
-            ))}
-            {/* Selector nativo: permite cualquier color, no solo los preajustes */}
-            <label
-              className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-              title="Elegir un color personalizado"
-            >
-              <span
-                className="h-4 w-4 shrink-0 rounded-full border border-border"
-                style={{ backgroundColor: draft.background }}
-              />
-              Personalizado
-              <input
-                type="color"
-                value={toHexColor(draft.background)}
-                onChange={(e) => setDraft((d) => ({ ...d, background: e.target.value }))}
-                className="sr-only"
-                aria-label="Elegir un color personalizado"
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* Piezas del género elegido */}
-        <div className="mt-3 rounded-xl border border-border/40 bg-muted/50 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Piezas disponibles ({genreTiles.length})
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {genreTiles.map((t) => (
-              <span
-                key={t.id}
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium text-foreground"
-                style={{ backgroundColor: `${t.color}33` }}
-              >
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: t.color }} />
-                {t.label}
-              </span>
-            ))}
-          </div>
         </div>
       </div>
     </ModalShell>
