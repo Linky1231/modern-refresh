@@ -880,7 +880,7 @@ function ConfirmDialog({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/45 p-4"
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-md"
       onClick={onCancel}
     >
       <motion.div

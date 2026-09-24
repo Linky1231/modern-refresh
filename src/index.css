@@ -184,6 +184,16 @@
   }
 }
 
+/* ── Overlays del editor: difuminan el fondo ───────────────────
+   Los modales y diálogos del editor (ajustes, copias de seguridad,
+   publicar, confirmaciones) se abren encima del tablero: sin desenfocar,
+   el fondo compite con el panel y el texto se lee mal. Se aplica solo
+   dentro del editor (`.editor-surface`), no al resto de la app. */
+.editor-surface .fixed.inset-0 {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
 /* ── Caret & selection (forms + rich-text editor) ───────────── */
 input,
 textarea,
