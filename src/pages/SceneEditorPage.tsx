@@ -161,6 +161,16 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+/** Las copias muestran fecha Y hora: pueden crearse varias el mismo día. */
+function formatDateTime(ts: number) {
+  return new Date(ts).toLocaleString("es", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 interface ConfirmState {
   title: string;
   message: string;
@@ -1125,19 +1135,12 @@ function BackupsSheet({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Sección: copias de seguridad (el campo y su botón viven dentro) */}
+        {/* Sección: crear / importar copias */}
         <div className="rounded-2xl border border-border/35 bg-primary/5 p-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <DatabaseBackup className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">Guardar el estado actual</p>
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                Guarda el estado real del proyecto, descárgalo a tu dispositivo y restáuralo cuando lo necesites.
-              </p>
-            </div>
-          </div>
+          <p className="text-[13px] font-semibold text-foreground">Guardar el estado actual</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            Crea una copia, descárgala a tu dispositivo y restáurala cuando quieras.
+          </p>
 
           {/* Crear copia */}
           <div className="mt-3 flex gap-2">
@@ -1158,7 +1161,7 @@ function BackupsSheet({
               {busy === "create" ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
               ) : (
-                <DatabaseBackup className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5" />
               )}
               Crear copia
             </button>
@@ -1169,7 +1172,7 @@ function BackupsSheet({
             ref={fileRef}
             type="file"
             accept="application/json,.json"
-            className="hidden"
+            className="sr-only"
             onChange={handleImport}
           />
           <button
@@ -1183,7 +1186,7 @@ function BackupsSheet({
             ) : (
               <Upload className="h-3.5 w-3.5 text-primary" />
             )}
-            Importar una copia desde un archivo
+            Importar desde un archivo
           </button>
         </div>
 
@@ -1208,7 +1211,7 @@ function BackupsSheet({
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-semibold text-foreground">{b.name}</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {formatDate(b.createdAt)} · {b.sceneCount}{" "}
+                      {formatDateTime(b.createdAt)} · {b.sceneCount}{" "}
                       {b.sceneCount === 1 ? "escena" : "escenas"} · {formatSize(b.sizeBytes)}
                     </p>
                   </div>
