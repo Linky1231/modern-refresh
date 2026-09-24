@@ -1,8 +1,9 @@
 // ▶ Editor de Escenas — apartado PRINCIPAL del editor de juegos (Asternal)
 // Sigue el wireframe del motor: barra superior (volver · estadísticas · ajustes),
-// botón "+ Crear Escena", tablero punteado con las escenas del proyecto y un
-// botón Publicar dentro del tablero. Incluye un SISTEMA DE COPIAS DE SEGURIDAD
-// (crear, restaurar y eliminar) dentro de Ajustes.
+// fila "+ Crear Escena" con el icono de capas (menú de Copia de seguridad),
+// tablero punteado con las escenas del proyecto y un botón Publicar dentro.
+// El SISTEMA DE COPIAS DE SEGURIDAD (crear, restaurar y eliminar) vive en el
+// icono de capas; Ajustes solo muestra información del proyecto.
 // Interacciones del tablero:
 //   · Tocar la escena (cuerpo)  -> abre el PIZARRÓN para editar el proyecto.
 //   · Lápiz                     -> configura los detalles del mapa (nombre,
@@ -26,11 +27,18 @@ import {
 } from "@/lib/db";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Plus,
   Layers,
+  Hand,
   BarChart3,
   Settings,
   Upload,
@@ -187,12 +195,14 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   const [creating, setCreating] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showBackups, setShowBackups] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
 
   // El tablero de escenas se puede arrastrar libremente a cualquier posición.
   const [boardEl, setBoardEl] = useState<HTMLDivElement | null>(null);
   const board = usePan({ element: boardEl, enabled: true });
+  const ownerLabel = user?.name || user?.username || user?.email || "Usuario";
 
   const refresh = useCallback(async () => {
     if (!ownerId) return;
@@ -231,10 +241,8 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         <AnimatePresence>
           {showSettings && (
             <SettingsSheet
-              ownerId={ownerId}
-              backups={backups}
-              requestConfirm={setConfirmState}
-              onChange={() => void refresh()}
+              owner={ownerLabel}
+              scenes={scenes ?? []}
               onClose={() => setShowSettings(false)}
             />
           )}
@@ -325,7 +333,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           <button
             type="button"
             onClick={() => setShowSettings(true)}
-            aria-label="Ajustes y copias de seguridad"
+            aria-label="Ajustes del proyecto"
             title="Ajustes"
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
           >
@@ -335,9 +343,32 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
         {/* ── Crear escena ── */}
         <div className="mt-3 flex shrink-0 items-center gap-2 rounded-2xl border border-border/35 bg-card p-1.5 shadow-soft">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Layers className="h-5 w-5" />
-          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Opciones del proyecto"
+                title="Copia de seguridad"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 active:scale-[0.97]"
+              >
+                <Layers className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-60">
+              <DropdownMenuItem
+                onSelect={() => setShowBackups(true)}
+                className="gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium"
+              >
+                <ArchiveRestore className="h-4 w-4 text-primary" />
+                <span className="flex-1">Copia de seguridad</span>
+                {backups.length > 0 && (
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                    {backups.length}
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             onClick={() => setCreating(true)}
@@ -467,15 +498,26 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         )}
       </AnimatePresence>
 
-      {/* Panel de ajustes con el sistema de copias de seguridad */}
+      {/* Panel de ajustes del proyecto */}
       <AnimatePresence>
         {showSettings && (
           <SettingsSheet
+            owner={ownerLabel}
+            scenes={scenes ?? []}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Copias de seguridad (se abren desde el icono de capas) */}
+      <AnimatePresence>
+        {showBackups && (
+          <BackupsSheet
             ownerId={ownerId}
             backups={backups}
             requestConfirm={setConfirmState}
             onChange={() => void refresh()}
-            onClose={() => setShowSettings(false)}
+            onClose={() => setShowBackups(false)}
           />
         )}
       </AnimatePresence>
@@ -946,9 +988,9 @@ function StatsSheet({
 }
 
 // ════════════════════════════════════════════════════════════════════
-// Panel: ajustes + SISTEMA DE COPIAS DE SEGURIDAD
+// Panel: copia de seguridad (crear · restaurar · eliminar)
 // ════════════════════════════════════════════════════════════════════
-function SettingsSheet({
+function BackupsSheet({
   ownerId,
   backups,
   requestConfirm,
@@ -1026,10 +1068,10 @@ function SettingsSheet({
     <ModalShell onClose={onClose}>
       <div className="flex shrink-0 items-center gap-2.5 border-b border-border/40 px-5 py-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Settings className="h-4 w-4" />
+          <ArchiveRestore className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-          Ajustes del proyecto
+          Copia de seguridad
         </span>
         <CloseButton onClick={onClose} />
       </div>
@@ -1042,9 +1084,9 @@ function SettingsSheet({
               <ArchiveRestore className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">Copias de seguridad</p>
+              <p className="text-[13px] font-semibold text-foreground">Guardar el estado actual</p>
               <p className="text-[11px] leading-snug text-muted-foreground">
-                Guarda el estado del proyecto y restáuralo cuando lo necesites.
+                Crea una copia del proyecto y restáurala cuando lo necesites.
               </p>
             </div>
           </div>
@@ -1127,6 +1169,82 @@ function SettingsSheet({
             ))}
           </ul>
         )}
+      </div>
+    </ModalShell>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Panel: ajustes del proyecto (sin copias de seguridad)
+// ════════════════════════════════════════════════════════════════════
+function SettingsSheet({
+  owner,
+  scenes,
+  onClose,
+}: {
+  owner: string;
+  scenes: MapView[];
+  onClose: () => void;
+}) {
+  const lastEdit = scenes.reduce((max, s) => Math.max(max, s.updatedAt), 0);
+  const bytes = new TextEncoder().encode(JSON.stringify(scenes)).length;
+
+  const rows = [
+    { label: "Propietario", value: owner },
+    { label: "Escenas", value: String(scenes.length) },
+    { label: "Última edición", value: lastEdit ? formatDate(lastEdit) : "—" },
+    { label: "Datos en el dispositivo", value: formatSize(bytes) },
+  ];
+
+  return (
+    <ModalShell onClose={onClose}>
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-border/40 px-5 py-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Settings className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+          Ajustes del proyecto
+        </span>
+        <CloseButton onClick={onClose} />
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
+          <p className="text-[13px] font-semibold text-foreground">Proyecto</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            Los datos del proyecto se guardan en este dispositivo.
+          </p>
+          <dl className="mt-3 flex flex-col gap-2">
+            {rows.map((r) => (
+              <div key={r.label} className="flex items-center justify-between gap-3">
+                <dt className="text-[12px] text-muted-foreground">{r.label}</dt>
+                <dd className="truncate text-[12px] font-semibold text-foreground">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Mover el tablero
+        </p>
+        <ul className="flex flex-col gap-2">
+          <li className="flex items-center gap-2.5 rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Hand className="h-4 w-4" />
+            </span>
+            <p className="text-[12px] leading-snug text-muted-foreground">
+              Arrastra una zona libre del tablero para desplazarlo en cualquier dirección.
+            </p>
+          </li>
+          <li className="flex items-center gap-2.5 rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Locate className="h-4 w-4" />
+            </span>
+            <p className="text-[12px] leading-snug text-muted-foreground">
+              Pulsa «Centrar» para devolver el tablero a su posición inicial.
+            </p>
+          </li>
+        </ul>
       </div>
     </ModalShell>
   );

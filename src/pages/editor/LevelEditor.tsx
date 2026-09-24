@@ -475,7 +475,7 @@ export default function LevelEditor({
           <button
             type="button"
             onClick={onOpenSettings}
-            aria-label="Ajustes y copias de seguridad"
+            aria-label="Ajustes del proyecto"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card shadow-soft transition-transform active:scale-95"
           >
             <img src="/logo.png" alt="Asternal" className="h-6 w-6 rounded-full object-contain" />
@@ -1083,7 +1083,7 @@ export default function LevelEditor({
               />
               <MenuRow
                 icon={<Settings className="h-4 w-4" />}
-                label="Ajustes y copias de seguridad"
+                label="Ajustes del proyecto"
                 onClick={() => {
                   setShowMenu(false);
                   onOpenSettings();
