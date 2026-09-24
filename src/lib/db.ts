@@ -152,6 +152,8 @@ interface LocalDB {
   backups: LocalBackupRow[];
   /** Recursos (texturas) creados en el editor de niveles */
   assets: LocalAssetRow[];
+  /** Ficha del juego (título, descripción e icono): una por usuario */
+  projects: LocalProjectRow[];
 }
 
 function emptyDB(): LocalDB {
@@ -169,6 +171,7 @@ function emptyDB(): LocalDB {
     maps: [],
     backups: [],
     assets: [],
+    projects: [],
   };
 }
 
@@ -1520,6 +1523,82 @@ export async function deleteMap(ownerId: string, mapId: string): Promise<boolean
     return true;
   }
   return false;
+}
+
+// ========================================
+// FICHA DEL JUEGO — título, descripción e icono (local)
+// ▶ [LOVABLE CLOUD] Al migrar, mover a una tabla `projects`.
+// ========================================
+
+/** Título que se usa mientras el usuario no escriba uno propio. */
+export const PROJECT_TITLE_DEFAULT = "Mi proyecto de Asternal";
+/** Largo máximo del título del juego. */
+export const PROJECT_TITLE_MAX = 60;
+/** Largo máximo de la descripción del juego. */
+export const PROJECT_DESCRIPTION_MAX = 300;
+
+/** Fila local de la ficha del juego (una por usuario). */
+export interface LocalProjectRow {
+  owner_id: string;
+  title: string;
+  description: string;
+  /** Icono del juego: data URL de una imagen o un emoji; null si no hay. */
+  icon: string | null;
+  updated_at: string;
+}
+
+/** Vista de la ficha del juego para la UI. */
+export interface ProjectView {
+  title: string;
+  description: string;
+  icon: string | null;
+  updatedAt: number;
+}
+
+function toProjectView(row: LocalProjectRow | undefined): ProjectView {
+  return {
+    // Sin rellenar nada: el formulario muestra lo que el usuario escribió y la
+    // cabecera decide si usa el título por defecto.
+    title: row?.title ?? "",
+    description: row?.description ?? "",
+    icon: row?.icon ?? null,
+    updatedAt: row?.updated_at ? new Date(row.updated_at).getTime() : 0,
+  };
+}
+
+/** Devuelve la ficha del juego (título, descripción e icono). */
+export async function getProject(ownerId: string): Promise<ProjectView> {
+  const row = getDB().projects.find((p) => p.owner_id === ownerId);
+  return toProjectView(row);
+}
+
+/** Guarda los campos indicados de la ficha del juego. */
+export async function saveProject(
+  ownerId: string,
+  updates: Partial<Pick<LocalProjectRow, "title" | "description" | "icon">>,
+): Promise<ProjectView> {
+  const db = getDB();
+  let row = db.projects.find((p) => p.owner_id === ownerId);
+  if (!row) {
+    row = {
+      owner_id: ownerId,
+      title: PROJECT_TITLE_DEFAULT,
+      description: "",
+      icon: null,
+      updated_at: new Date().toISOString(),
+    };
+    db.projects.push(row);
+  }
+  if (updates.title !== undefined) {
+    row.title = updates.title.trim().slice(0, PROJECT_TITLE_MAX) || PROJECT_TITLE_DEFAULT;
+  }
+  if (updates.description !== undefined) {
+    row.description = updates.description.trim().slice(0, PROJECT_DESCRIPTION_MAX);
+  }
+  if (updates.icon !== undefined) row.icon = updates.icon;
+  row.updated_at = new Date().toISOString();
+  saveDB();
+  return toProjectView(row);
 }
 
 // ========================================

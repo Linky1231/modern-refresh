@@ -22,11 +22,17 @@ import {
   deleteBackup,
   restoreBackup,
   createPost,
+  getProject,
+  saveProject,
   MAP_SIDE_DEFAULT,
   MAP_SIDE_MIN,
+  PROJECT_TITLE_DEFAULT,
+  PROJECT_TITLE_MAX,
+  PROJECT_DESCRIPTION_MAX,
   type MapView,
   type MapGenre,
   type BackupView,
+  type ProjectView,
 } from "@/lib/db";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
@@ -49,6 +55,8 @@ import {
   Download,
   AlertTriangle,
   Locate,
+  ImagePlus,
+  Palette,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -117,6 +125,48 @@ const SIZE_PRESETS = [
  */
 const SIZE_SLIDER_MAX = 48;
 
+// ── Icono del juego (galería de la app + imágenes del dispositivo) ──
+/** Galería de iconos listos para usar: se guardan como emoji. */
+const PROJECT_ICON_GALLERY = ["🗺️", "⚔️", "🏰", "🐉", "🌋", "🚀", "🌲", "⭐"];
+
+/** Un icono es una imagen si se guardó como data URL. */
+function isImageIcon(icon: string | null): icon is string {
+  return !!icon && icon.startsWith("data:");
+}
+
+/**
+ * Convierte la imagen elegida en el dispositivo en un icono pequeño (máximo
+ * 192 px). Así el juego se identifica con la imagen que quieras sin llenar el
+ * almacenamiento del dispositivo.
+ */
+async function imageFileToIcon(file: File): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen"));
+    reader.readAsDataURL(file);
+  });
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("La imagen no se pudo abrir"));
+    el.src = dataUrl;
+  });
+  const max = 192;
+  const scale = Math.min(1, max / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(image, 0, 0, width, height);
+  // WebP pesa mucho menos; si el navegador no lo sabe exportar, se usa PNG.
+  const webp = canvas.toDataURL("image/webp", 0.9);
+  return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/png");
+}
+
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("es", { day: "numeric", month: "short" });
 }
@@ -162,6 +212,13 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
   const [scenes, setScenes] = useState<MapView[] | undefined>(undefined);
   const [backups, setBackups] = useState<BackupView[]>([]);
+  // Ficha del juego: título, descripción e icono (se editan en Ajustes).
+  const [project, setProject] = useState<ProjectView>({
+    title: "",
+    description: "",
+    icon: null,
+    updatedAt: 0,
+  });
   const [editingScene, setEditingScene] = useState<MapView | null>(null);
   const [detailsScene, setDetailsScene] = useState<MapView | null>(null);
   const [creating, setCreating] = useState(false);
@@ -198,9 +255,14 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   const refresh = useCallback(async () => {
     if (!ownerId) return;
     try {
-      const [sceneData, backupData] = await Promise.all([getMaps(ownerId), getBackups(ownerId)]);
+      const [sceneData, backupData, projectData] = await Promise.all([
+        getMaps(ownerId),
+        getBackups(ownerId),
+        getProject(ownerId),
+      ]);
       setScenes(sceneData);
       setBackups(backupData);
+      setProject(projectData);
     } catch (e) {
       // Si la lectura falla no se vacía la lista: las escenas que ya están en
       // pantalla se quedan y el usuario recibe un aviso.
@@ -253,6 +315,8 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
   // Misma referencia mientras no cambien las escenas: los paneles no se
   // vuelven a dibujar por un array nuevo en cada render.
   const list = useMemo(() => scenes ?? [], [scenes]);
+  const projectTitle = project.title.trim() || PROJECT_TITLE_DEFAULT;
+  const handleProjectSaved = useCallback((saved: ProjectView) => setProject(saved), []);
 
   if (!ownerId) return null;
 
@@ -273,7 +337,14 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
 
         <AnimatePresence>
           {showSettings && (
-            <SettingsSheet owner={ownerLabel} scenes={scenes ?? []} onClose={closeSettings} />
+            <SettingsSheet
+              ownerId={ownerId}
+              owner={ownerLabel}
+              scenes={scenes ?? []}
+              project={project}
+              onSaved={handleProjectSaved}
+              onClose={closeSettings}
+            />
           )}
         </AnimatePresence>
 
@@ -326,9 +397,23 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             <ArrowLeft className="h-[18px] w-[18px]" />
           </button>
           <div className="h-6 w-px bg-border" />
-          <span className="min-w-0 flex-1 truncate pl-1 text-[13px] font-semibold tracking-tight text-foreground">
-            Editor de escenas
-          </span>
+          {project.icon && (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/40 bg-muted text-lg leading-none">
+              {isImageIcon(project.icon) ? (
+                <img src={project.icon} alt="" className="h-full w-full object-cover" />
+              ) : (
+                project.icon
+              )}
+            </span>
+          )}
+          <div className="min-w-0 flex-1 pl-1">
+            <p className="truncate text-[13px] font-semibold tracking-tight text-foreground">
+              {projectTitle}
+            </p>
+            <p className="truncate text-[10px] font-medium text-muted-foreground">
+              Editor de escenas · {list.length} {list.length === 1 ? "escena" : "escenas"}
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => setShowStats(true)}
@@ -477,7 +562,14 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
       {/* Panel de ajustes del proyecto */}
       <AnimatePresence>
         {showSettings && (
-          <SettingsSheet owner={ownerLabel} scenes={list} onClose={closeSettings} />
+          <SettingsSheet
+            ownerId={ownerId}
+            owner={ownerLabel}
+            scenes={list}
+            project={project}
+            onSaved={handleProjectSaved}
+            onClose={closeSettings}
+          />
         )}
       </AnimatePresence>
 
@@ -1251,16 +1343,67 @@ function BackupsSheet({
 // Panel: ajustes del proyecto (sin copias de seguridad)
 // ════════════════════════════════════════════════════════════════════
 function SettingsSheet({
+  ownerId,
   owner,
   scenes,
+  project,
+  onSaved,
   onClose,
 }: {
+  ownerId: string;
   owner: string;
   scenes: MapView[];
+  project: ProjectView;
+  onSaved: (project: ProjectView) => void;
   onClose: () => void;
 }) {
+  // El formulario arranca con lo guardado y solo se guarda al pulsar el botón.
+  const [title, setTitle] = useState(project.title);
+  const [description, setDescription] = useState(project.description);
+  const [icon, setIcon] = useState<string | null>(project.icon);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const lastEdit = scenes.reduce((max, s) => Math.max(max, s.updatedAt), 0);
   const bytes = new TextEncoder().encode(JSON.stringify(scenes)).length;
+  const dirty =
+    title !== project.title || description !== project.description || icon !== project.icon;
+
+  const handlePickFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Se limpia el campo para poder volver a elegir la misma imagen.
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Elige un archivo de imagen");
+      return;
+    }
+    try {
+      setIcon(await imageFileToIcon(file));
+      setGalleryOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "No se pudo usar esa imagen");
+    }
+  };
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const saved = await saveProject(ownerId, { title, description, icon });
+      setTitle(saved.title);
+      setDescription(saved.description);
+      setIcon(saved.icon);
+      onSaved(saved);
+      toast.success("Ficha del juego actualizada");
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "No se pudieron guardar los cambios");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const rows = [
     { label: "Propietario", value: owner },
@@ -1282,7 +1425,133 @@ function SettingsSheet({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {/* ── Ficha del juego: título, descripción e icono ── */}
         <div className="rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
+          <p className="text-[13px] font-semibold text-foreground">Mi juego</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            El nombre, la descripción y el icono con los que se presenta tu juego.
+          </p>
+
+          <label className="mb-1 mt-3 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Título del juego
+          </label>
+          <Input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={PROJECT_TITLE_MAX}
+            placeholder={PROJECT_TITLE_DEFAULT}
+            className="h-10 rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
+          />
+
+          <label className="mb-1 mt-3 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Descripción del juego
+          </label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value.slice(0, PROJECT_DESCRIPTION_MAX))}
+            maxLength={PROJECT_DESCRIPTION_MAX}
+            rows={3}
+            placeholder="¿De qué va tu juego?"
+            className="min-h-[72px] rounded-xl border-border/40 bg-background text-sm text-foreground placeholder:text-muted-foreground"
+          />
+          <p className="mt-1 text-right text-[11px] text-muted-foreground">
+            {description.length}/{PROJECT_DESCRIPTION_MAX}
+          </p>
+
+          <p className="mb-1.5 mt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Icono del juego
+          </p>
+          <div className="flex items-center gap-3">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border/40 bg-muted text-2xl leading-none">
+              {isImageIcon(icon) ? (
+                <img src={icon} alt="" className="h-full w-full object-cover" />
+              ) : icon ? (
+                icon
+              ) : (
+                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+              )}
+            </span>
+            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setGalleryOpen((v) => !v)}
+                className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-semibold transition-colors ${
+                  galleryOpen
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border/40 bg-muted text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                }`}
+              >
+                <Palette className="h-3.5 w-3.5" />
+                Galería
+              </button>
+              <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-border/40 bg-muted px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground">
+                <Upload className="h-3.5 w-3.5" />
+                Del dispositivo
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePickFile}
+                  className="sr-only"
+                  aria-label="Elegir una imagen del dispositivo"
+                />
+              </label>
+              {icon && (
+                <button
+                  type="button"
+                  onClick={() => setIcon(null)}
+                  className="flex h-9 items-center gap-1.5 rounded-xl border border-border/40 bg-muted px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
+
+          {galleryOpen && (
+            <div className="mt-2 rounded-2xl border border-border/35 bg-muted/40 p-2">
+              <div className="flex flex-wrap gap-2">
+                {PROJECT_ICON_GALLERY.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => {
+                      setIcon(g);
+                      setGalleryOpen(false);
+                    }}
+                    aria-label={`Usar ${g} como icono`}
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl border bg-card text-xl leading-none transition-transform hover:scale-105 ${
+                      icon === g ? "border-primary ring-2 ring-primary/25" : "border-border/40"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 px-0.5 text-[10px] leading-snug text-muted-foreground">
+                Elige uno de la galería o sube una imagen tuya con «Del dispositivo».
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!dirty || saving}
+            className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-[12px] font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+          >
+            {saving ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+            ) : (
+              <Check className="h-3.5 w-3.5" />
+            )}
+            {dirty ? "Guardar cambios" : "Todo guardado"}
+          </button>
+        </div>
+
+        {/* ── Información del proyecto ── */}
+        <div className="mt-3 rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
           <p className="text-[13px] font-semibold text-foreground">Proyecto</p>
           <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
             Los datos del proyecto se guardan en este dispositivo.
