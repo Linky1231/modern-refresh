@@ -170,8 +170,10 @@ export function setPixel(
 }
 
 // ── Pinceles ──────────────────────────────────────────────────────
+// El lienzo se dibuja con pinceles de tamaño y forma variables: cada
+// trazo interpola los puntos intermedios para no dejar huecos.
 
-/** Forma del pincel: redondo (trazo suave) o cuadrado (bloque). */
+/** Forma del pincel: redondo (trazo suave) o cuadrado (en bloque). */
 export type BrushShape = "round" | "square";
 
 /** Tamaños de pincel ofrecidos por el estudio (en píxeles del lienzo). */
