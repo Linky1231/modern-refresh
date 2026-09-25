@@ -635,7 +635,7 @@ const SceneBoard = memo(function SceneBoard({
     return (
       <div className="grid grid-cols-2 gap-3">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+          <div key={i} className="aspect-square animate-pulse rounded-2xl bg-muted" />
         ))}
       </div>
     );
@@ -686,36 +686,38 @@ const SceneCard = memo(function SceneCard({
 }) {
   const painted = Object.keys(scene.tiles ?? {}).length;
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border/35 bg-card shadow-soft transition-shadow hover:shadow-lift">
+    // La escena se dibuja como un mapa CUADRADO (ancho === alto) con esquinas redondeadas.
+    <div className="group relative aspect-square overflow-hidden rounded-2xl border border-border/35 shadow-soft transition-shadow hover:shadow-lift">
       {/* Cuerpo: abre el pizarrón para editar el proyecto de la escena */}
       <button
         type="button"
         onClick={() => onOpen(scene)}
         title={scene.description ? `${scene.name} — ${scene.description}` : scene.name}
-        className="block w-full text-left"
+        className="relative block h-full w-full text-left"
       >
-        <div
-          className="relative flex h-24 items-center justify-center border-b border-border/40"
-          style={{ backgroundColor: scene.background }}
-        >
+        {/* Relleno del mapa (el recorte redondeado lo aporta la tarjeta) */}
+        <div className="absolute inset-0" style={{ backgroundColor: scene.background }} />
+        {/* Icono del tipo de juego, centrado sobre el mapa */}
+        <span className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-card/85 text-primary shadow-soft">
           {scene.genre === "rpg" ? (
-            <Swords className="h-6 w-6 text-primary/70" />
+            <Swords className="h-5 w-5" />
           ) : (
-            <Gamepad2 className="h-6 w-6 text-primary/70" />
+            <Gamepad2 className="h-5 w-5" />
           )}
-          <span className="absolute left-2 top-2 rounded-full bg-card px-2 py-0.5 text-[10px] font-semibold text-primary">
-            {scene.genre === "rpg" ? "RPG" : "Plataformas"}
-          </span>
-        </div>
-        <div className="px-2.5 py-2">
-          <p className="truncate text-[13px] font-semibold text-foreground">{scene.name}</p>
+        </span>
+        <span className="absolute left-2 top-2 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-semibold text-primary shadow-soft">
+          {scene.genre === "rpg" ? "RPG" : "Plataformas"}
+        </span>
+        {/* Pie: nombre, detalle y medidas sobre un degradado para asegurar contraste */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/45 to-transparent px-2.5 pb-2 pt-7">
+          <p className="truncate text-[13px] font-semibold text-white">{scene.name}</p>
           {/* Detalle de la escena (solo si la escena ya traía uno guardado). */}
           {scene.description ? (
-            <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+            <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-white/75">
               {scene.description}
             </p>
           ) : null}
-          <p className="mt-1 text-[10px] font-medium tabular-nums text-muted-foreground/80">
+          <p className="mt-1 text-[10px] font-medium tabular-nums text-white/65">
             {scene.width}×{scene.height} · {painted} piezas
           </p>
         </div>
