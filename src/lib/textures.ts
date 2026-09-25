@@ -169,6 +169,87 @@ export function setPixel(
   return next;
 }
 
+// ── Pinceles ──────────────────────────────────────────────────────
+
+/** Forma del pincel: redondo (trazo suave) o cuadrado (bloque). */
+export type BrushShape = "round" | "square";
+
+/** Tamaños de pincel ofrecidos por el estudio (en píxeles del lienzo). */
+export const BRUSH_SIZES = [1, 2, 3, 4, 6, 8];
+
+/** Pincel máximo razonable para un lienzo de `size` píxeles. */
+export function maxBrushFor(size: number): number {
+  return Math.max(1, Math.min(BRUSH_SIZES[BRUSH_SIZES.length - 1], Math.floor(size / 4)));
+}
+
+/** Casillas que cubre un pincel centrado en (cx, cy). */
+function brushCells(
+  cx: number,
+  cy: number,
+  brush: number,
+  shape: BrushShape,
+): Array<[number, number]> {
+  if (brush <= 1) return [[cx, cy]];
+  const offset = Math.floor((brush - 1) / 2);
+  const radius = brush / 2;
+  // El límite deja fuera las esquinas para que el trazo salga redondeado.
+  const limit = radius - 0.25;
+  const cells: Array<[number, number]> = [];
+  for (let dy = 0; dy < brush; dy++) {
+    for (let dx = 0; dx < brush; dx++) {
+      if (shape === "round") {
+        const px = dx + 0.5 - radius;
+        const py = dy + 0.5 - radius;
+        if (px * px + py * py > limit * limit) continue;
+      }
+      cells.push([cx - offset + dx, cy - offset + dy]);
+    }
+  }
+  return cells;
+}
+
+/**
+ * Casilla rectangular que ocupa un pincel en (cx, cy): se usa para el
+ * cursor de previsualización del lienzo.
+ */
+export function brushBounds(
+  cx: number,
+  cy: number,
+  brush: number,
+): { x: number; y: number; w: number; h: number } {
+  const size = Math.max(1, brush);
+  const offset = Math.floor((size - 1) / 2);
+  return { x: cx - offset, y: cy - offset, w: size, h: size };
+}
+
+/**
+ * Pinta un trazo de pincel de `from` a `to`. Interpola las casillas
+ * intermedias para que un arrastre rápido no deje huecos, y aplica la
+ * forma y el tamaño del pincel en cada paso. `-1` borra.
+ */
+export function paintStroke(
+  rows: PixelRows,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  colorIndex: number,
+  options: { brush: number; shape: BrushShape },
+): PixelRows {
+  const size = rows.length;
+  const grid = rows.map((r) => r.split(""));
+  const ch = indexToChar(colorIndex);
+  const steps = Math.max(Math.abs(to.x - from.x), Math.abs(to.y - from.y), 1);
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const cx = Math.round(from.x + (to.x - from.x) * t);
+    const cy = Math.round(from.y + (to.y - from.y) * t);
+    for (const [x, y] of brushCells(cx, cy, options.brush, options.shape)) {
+      if (x < 0 || y < 0 || x >= size || y >= size) continue;
+      grid[y][x] = ch;
+    }
+  }
+  return grid.map((r) => r.join(""));
+}
+
 /** Genera una rejilla a partir de una función (x, y) -> índice de paleta (-1 = vacío). */
 export function pixelsFrom(size: number, fn: (x: number, y: number) => number): PixelRows {
   const out: PixelRows = [];

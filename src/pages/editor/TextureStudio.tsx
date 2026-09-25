@@ -1,21 +1,27 @@
 // ═══════════════════════════════════════════════════════════════════
-// ESTUDIO DE TEXTURAS — lienzo de dibujo de un recurso
+// ESTUDIO DE TEXTURAS — espacio de dibujo de un recurso
 //
 // Se abre al crear un recurso nuevo ("+") o al editar la textura de un
-// recurso guardado. Incluye lápiz, borrador, bote, paleta, deshacer y
-// el menú de tres puntos con:
+// recurso guardado. El lienzo es un espacio de dibujo libre: el pincel
+// tiene tamaño y forma (redondo/cuadrado), pinta trazos continuos y se
+// combina con la goma, el bote de relleno y el cuentagotas.
+//
+// El menú de tres puntos ofrece:
 //   · «Aplicar al asset original» -> guarda una copia con los cambios y
 //     deja el recurso original intacto.
 //   · «Guardar nuevo recurso»     -> guarda el lienzo como recurso nuevo.
+//   · «Vaciar lienzo»             -> deja el lienzo en blanco.
 // ═══════════════════════════════════════════════════════════════════
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
-  Pencil,
+  Paintbrush,
   Eraser,
   PaintBucket,
+  Pipette,
   Undo2,
+  Redo2,
   Grid3x3,
   MoreVertical,
   Check,
@@ -23,23 +29,30 @@ import {
   FilePlus2,
   Save,
   Trash2,
+  Circle,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createAsset, duplicateAsset, updateAsset, type AssetCategory, type AssetView } from "@/lib/db";
 import {
+  BRUSH_SIZES,
   DEFAULT_PALETTE,
   TEXTURE_SIZES,
+  brushBounds,
+  charToIndex,
   emptyPixels,
   floodFill,
   isPixelsEmpty,
+  maxBrushFor,
   normalizePixels,
+  paintStroke,
   pixelsToDataUrl,
-  setPixel,
+  type BrushShape,
   type PixelRows,
 } from "@/lib/textures";
 import { CATEGORY_LABEL } from "./levelAssets";
 
-type Tool = "pencil" | "eraser" | "bucket";
+type Tool = "brush" | "eraser" | "bucket" | "picker";
 
 /** Textura de partida para un recurso nuevo (p. ej. un recurso del motor). */
 export interface SeedTexture {
@@ -69,6 +82,13 @@ const CHECKER: React.CSSProperties = {
   backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0",
 };
 
+const TOOLS: Array<{ id: Tool; label: string; hint: string; icon: React.ReactNode }> = [
+  { id: "brush", label: "Pincel", hint: "Pinta trazos con el color activo", icon: <Paintbrush className="h-4 w-4" /> },
+  { id: "eraser", label: "Goma", hint: "Borra píxeles con el tamaño del pincel", icon: <Eraser className="h-4 w-4" /> },
+  { id: "bucket", label: "Relleno", hint: "Rellena la zona contigua del mismo color", icon: <PaintBucket className="h-4 w-4" /> },
+  { id: "picker", label: "Cuentagotas", hint: "Toma el color de un píxel del lienzo", icon: <Pipette className="h-4 w-4" /> },
+];
+
 export default function TextureStudio({
   ownerId,
   category,
@@ -87,23 +107,39 @@ export default function TextureStudio({
   const [pixels, setPixels] = useState<PixelRows>(() =>
     base?.pixels?.length ? normalizePixels(base.pixels, initialSize) : emptyPixels(initialSize),
   );
-  const [tool, setTool] = useState<Tool>("pencil");
+  const [tool, setTool] = useState<Tool>("brush");
   const [colorIndex, setColorIndex] = useState(9);
-  const [showGrid, setShowGrid] = useState(true);
+  const [brush, setBrush] = useState(2);
+  const [brushShape, setBrushShape] = useState<BrushShape>("round");
+  const [showGrid, setShowGrid] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
 
+  const canvasRef = useRef<HTMLDivElement | null>(null);
   const painting = useRef(false);
+  const lastCell = useRef<{ x: number; y: number } | null>(null);
+  const pixelsRef = useRef(pixels);
   const history = useRef<PixelRows[]>([]);
+  const future = useRef<PixelRows[]>([]);
   const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   const activeColor = palette[colorIndex] ?? "#ffffff";
   const preview = useMemo(() => pixelsToDataUrl(pixels, palette), [pixels, palette]);
+  const maxBrush = maxBrushFor(size);
+  const brushSizes = useMemo(() => BRUSH_SIZES.filter((b) => b <= maxBrush), [maxBrush]);
+  const activeBrush = Math.min(brush, maxBrush);
+
+  useEffect(() => {
+    pixelsRef.current = pixels;
+  }, [pixels]);
 
   useEffect(() => {
     const stop = () => {
       painting.current = false;
+      lastCell.current = null;
     };
     window.addEventListener("pointerup", stop);
     window.addEventListener("pointercancel", stop);
@@ -113,45 +149,133 @@ export default function TextureStudio({
     };
   }, []);
 
+  // ── Historial (deshacer / rehacer) ──────────────────────────────
   const pushHistory = useCallback(() => {
-    history.current = [...history.current.slice(-19), pixels];
+    history.current = [...history.current.slice(-29), pixelsRef.current];
+    future.current = [];
     setCanUndo(true);
-  }, [pixels]);
+    setCanRedo(false);
+  }, []);
 
   const undo = useCallback(() => {
     const prev = history.current.pop();
-    if (!prev) return;
+    if (prev === undefined) return;
+    future.current = [pixelsRef.current, ...future.current].slice(0, 30);
     setPixels(prev);
-    setCanUndo(history.current.length > 0);
     setDirty(true);
+    setCanUndo(history.current.length > 0);
+    setCanRedo(true);
   }, []);
 
-  const paintAt = useCallback(
-    (x: number, y: number) => {
-      setDirty(true);
-      setPixels((prev) => {
-        if (tool === "bucket") return floodFill(prev, palette, x, y, colorIndex);
-        return setPixel(prev, x, y, tool === "eraser" ? -1 : colorIndex);
-      });
+  const redo = useCallback(() => {
+    const next = future.current.shift();
+    if (next === undefined) return;
+    history.current = [...history.current.slice(-29), pixelsRef.current];
+    setPixels(next);
+    setDirty(true);
+    setCanUndo(true);
+    setCanRedo(future.current.length > 0);
+  }, []);
+
+  // ── Dibujo ──────────────────────────────────────────────────────
+  /** Píxel del lienzo bajo el puntero, ajustado a los límites. */
+  const cellFromEvent = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const el = canvasRef.current;
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return null;
+      const x = Math.floor(((e.clientX - rect.left) / rect.width) * size);
+      const y = Math.floor(((e.clientY - rect.top) / rect.height) * size);
+      return {
+        x: Math.min(Math.max(x, 0), size - 1),
+        y: Math.min(Math.max(y, 0), size - 1),
+      };
     },
-    [tool, colorIndex, palette],
+    [size],
   );
 
-  const handlePointerDown = (x: number, y: number) => {
+  const strokeColor = tool === "eraser" ? -1 : colorIndex;
+  const strokeOptions = useMemo(
+    () => ({ brush: activeBrush, shape: brushShape }),
+    [activeBrush, brushShape],
+  );
+
+  const handleDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const cell = cellFromEvent(e);
+    if (!cell) return;
+    e.preventDefault();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // El puntero ya se liberó: se sigue dibujando sin captura.
+    }
+    setCursor(cell);
+
+    // Cuentagotas: toma el color del píxel y vuelve al pincel.
+    if (tool === "picker") {
+      const idx = charToIndex(pixelsRef.current[cell.y]?.[cell.x] ?? ".");
+      if (idx >= 0) {
+        setColorIndex(idx);
+        setTool("brush");
+      }
+      return;
+    }
+
     pushHistory();
+    setDirty(true);
+
+    // Relleno: una sola pasada, sin trazo continuo.
+    if (tool === "bucket") {
+      setPixels((prev) => floodFill(prev, palette, cell.x, cell.y, colorIndex));
+      painting.current = false;
+      lastCell.current = null;
+      return;
+    }
+
+    // Pincel y goma: el trazo arranca aquí y continúa al arrastrar.
     painting.current = true;
-    paintAt(x, y);
+    lastCell.current = cell;
+    setPixels((prev) => paintStroke(prev, cell, cell, strokeColor, strokeOptions));
   };
 
-  const handlePointerEnter = (x: number, y: number) => {
-    if (!painting.current || tool === "bucket") return;
-    paintAt(x, y);
+  const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const cell = cellFromEvent(e);
+    if (!cell) return;
+    setCursor(cell);
+    if (!painting.current) return;
+    if (tool === "bucket" || tool === "picker") return;
+    const from = lastCell.current ?? cell;
+    if (from.x === cell.x && from.y === cell.y) return;
+    lastCell.current = cell;
+    setPixels((prev) => paintStroke(prev, from, cell, strokeColor, strokeOptions));
   };
 
+  const handleUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    painting.current = false;
+    lastCell.current = null;
+    if (e.pointerType !== "mouse") setCursor(null);
+  };
+
+  const handleLeave = () => {
+    if (!painting.current) setCursor(null);
+  };
+
+  /** Huella del pincel que se dibuja como cursor sobre el lienzo. */
+  const cursorBox = useMemo(() => {
+    if (!cursor) return null;
+    const footprint = tool === "brush" || tool === "eraser" ? activeBrush : 1;
+    return brushBounds(cursor.x, cursor.y, footprint);
+  }, [cursor, tool, activeBrush]);
+
+  // ── Paleta y tamaño ─────────────────────────────────────────────
   const changeSize = (next: number) => {
+    if (next === size) return;
     pushHistory();
     setSize(next);
     setPixels((prev) => normalizePixels(prev, next));
+    setBrush((b) => Math.min(b, maxBrushFor(next)));
     setDirty(true);
   };
 
@@ -255,7 +379,7 @@ export default function TextureStudio({
     }
   };
 
-  const cellSize = `calc(100% / ${size})`;
+  const cellPct = 100 / size;
 
   return (
     <motion.div
@@ -390,21 +514,16 @@ export default function TextureStudio({
         </button>
       </header>
 
-      {/* ── Herramientas ── */}
+      {/* ── Herramientas del lienzo ── */}
       <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border/40 bg-card px-3 py-2">
-        {(
-          [
-            { id: "pencil" as Tool, label: "Lápiz", icon: <Pencil className="h-4 w-4" /> },
-            { id: "eraser" as Tool, label: "Borrador", icon: <Eraser className="h-4 w-4" /> },
-            { id: "bucket" as Tool, label: "Relleno", icon: <PaintBucket className="h-4 w-4" /> },
-          ]
-        ).map((t) => (
+        {TOOLS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTool(t.id)}
-            title={t.label}
+            title={`${t.label} · ${t.hint}`}
             aria-label={t.label}
+            aria-pressed={tool === t.id}
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
               tool === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
             }`}
@@ -427,9 +546,20 @@ export default function TextureStudio({
         </button>
         <button
           type="button"
+          onClick={redo}
+          disabled={!canRedo}
+          title="Rehacer"
+          aria-label="Rehacer"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted disabled:opacity-35"
+        >
+          <Redo2 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
           onClick={() => setShowGrid((v) => !v)}
-          title="Cuadrícula"
-          aria-label="Cuadrícula"
+          title="Cuadrícula de referencia"
+          aria-label="Cuadrícula de referencia"
+          aria-pressed={showGrid}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
             showGrid ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
           }`}
@@ -439,13 +569,18 @@ export default function TextureStudio({
 
         <span className="mx-1 h-6 w-px shrink-0 bg-border" />
 
+        <span className="shrink-0 text-[10px] font-bold tracking-wide text-muted-foreground/80 uppercase">
+          Lienzo
+        </span>
         <div className="flex shrink-0 items-center gap-1.5">
           {TEXTURE_SIZES.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => changeSize(s)}
-              className={`h-8 min-w-8 rounded-lg px-2 text-[11px] font-bold tabular-nums transition-colors ${
+              title={`Lienzo de ${s}×${s} píxeles`}
+              aria-pressed={size === s}
+              className={`h-8 min-w-8 shrink-0 rounded-lg px-2 text-[11px] font-bold tabular-nums transition-colors ${
                 size === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
               }`}
             >
@@ -455,46 +590,127 @@ export default function TextureStudio({
         </div>
       </div>
 
-      {/* ── Lienzo + paleta ── */}
+      {/* ── Lienzo + ajustes de dibujo ── */}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 sm:flex-row sm:items-start">
-        <div className="mx-auto w-full max-w-[420px] shrink-0 sm:mx-0">
+        <div className="mx-auto w-full max-w-[460px] shrink-0 sm:mx-0">
           <div
-            className="relative aspect-square w-full touch-none overflow-hidden rounded-2xl border border-border/40 select-none"
+            ref={canvasRef}
+            onPointerDown={handleDown}
+            onPointerMove={handleMove}
+            onPointerUp={handleUp}
+            onPointerCancel={handleUp}
+            onPointerLeave={handleLeave}
+            onContextMenu={(e) => e.preventDefault()}
+            className="relative aspect-square w-full cursor-crosshair touch-none overflow-hidden rounded-2xl border border-border/40 select-none"
             style={CHECKER}
           >
-            <div
-              className="absolute inset-0 grid"
-              style={{
-                gridTemplateColumns: `repeat(${size}, ${cellSize})`,
-                gridTemplateRows: `repeat(${size}, ${cellSize})`,
-              }}
-            >
-              {Array.from({ length: size * size }, (_, i) => {
-                const x = i % size;
-                const y = Math.floor(i / size);
-                const ch = pixels[y]?.[x] ?? ".";
-                const color = ch === "." ? "transparent" : palette[parseInt(ch, 36)] || "transparent";
-                return (
-                  <div
-                    key={`${x},${y}`}
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      handlePointerDown(x, y);
-                    }}
-                    onPointerEnter={() => handlePointerEnter(x, y)}
-                    className={showGrid ? "border-[0.5px] border-border/20" : ""}
-                    style={{ backgroundColor: color }}
-                  />
-                );
-              })}
-            </div>
+            {preview ? (
+              <img
+                src={preview}
+                alt="Lienzo de la textura"
+                draggable={false}
+                className="pointer-events-none absolute inset-0 h-full w-full [image-rendering:pixelated]"
+              />
+            ) : null}
+
+            {showGrid && (
+              <div
+                className="pointer-events-none absolute inset-0 opacity-50"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)",
+                  backgroundSize: `${cellPct}% ${cellPct}%`,
+                }}
+              />
+            )}
+
+            {cursorBox && (
+              <div
+                className={`pointer-events-none absolute border border-primary bg-primary/15 ${
+                  brushShape === "round" && (tool === "brush" || tool === "eraser")
+                    ? "rounded-full"
+                    : "rounded-[2px]"
+                }`}
+                style={{
+                  left: `${cursorBox.x * cellPct}%`,
+                  top: `${cursorBox.y * cellPct}%`,
+                  width: `${cursorBox.w * cellPct}%`,
+                  height: `${cursorBox.h * cellPct}%`,
+                }}
+              />
+            )}
           </div>
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Arrastra el dedo o el ratón para dibujar la textura.
+            Arrastra para pintar · cambia el tamaño y la forma del pincel en el panel.
           </p>
         </div>
 
         <div className="w-full min-w-0 space-y-3">
+          {/* Pincel */}
+          <div className="rounded-2xl border border-border/40 bg-muted/40 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                Pincel
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                {activeBrush} px · {brushShape === "round" ? "redondo" : "cuadrado"}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {brushSizes.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setBrush(b)}
+                  title={`Pincel de ${b} px`}
+                  aria-label={`Pincel de ${b} píxeles`}
+                  aria-pressed={activeBrush === b}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                    activeBrush === b
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <span
+                    className={`bg-current ${brushShape === "round" ? "rounded-full" : "rounded-[1px]"}`}
+                    style={{ width: 2 + b * 2, height: 2 + b * 2 }}
+                  />
+                </button>
+              ))}
+
+              <span className="mx-0.5 h-6 w-px bg-border" />
+
+              <button
+                type="button"
+                onClick={() => setBrushShape("round")}
+                title="Pincel redondo"
+                aria-label="Pincel redondo"
+                aria-pressed={brushShape === "round"}
+                className={`flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-semibold transition-colors ${
+                  brushShape === "round"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Circle className="h-3.5 w-3.5" /> Redondo
+              </button>
+              <button
+                type="button"
+                onClick={() => setBrushShape("square")}
+                title="Pincel cuadrado"
+                aria-label="Pincel cuadrado"
+                aria-pressed={brushShape === "square"}
+                className={`flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-semibold transition-colors ${
+                  brushShape === "square"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Square className="h-3.5 w-3.5" /> Cuadrado
+              </button>
+            </div>
+          </div>
+
           {/* Paleta */}
           <div className="rounded-2xl border border-border/40 bg-muted/40 p-3">
             <div className="mb-2 flex items-center justify-between">
