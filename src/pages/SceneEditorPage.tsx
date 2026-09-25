@@ -41,7 +41,6 @@ import {
   ArrowLeft,
   Plus,
   Layers,
-  Hand,
   BarChart3,
   Settings,
   Upload,
@@ -1022,6 +1021,8 @@ function StatsSheet({
   const totalPieces = scenes.reduce((acc, s) => acc + Object.keys(s.tiles ?? {}).length, 0);
   const rpg = scenes.filter((s) => s.genre === "rpg").length;
   const platformer = scenes.length - rpg;
+  const lastEdit = scenes.reduce((max, s) => Math.max(max, s.updatedAt), 0);
+  const bytes = new TextEncoder().encode(JSON.stringify(scenes)).length;
 
   const rows = [
     { label: "Escenas", value: String(scenes.length), icon: <Layers className="h-4 w-4" /> },
@@ -1037,8 +1038,6 @@ function StatsSheet({
   ];
 
   // Datos del proyecto: se movieron desde Ajustes a Estadísticas.
-  const lastEdit = scenes.reduce((max, s) => Math.max(max, s.updatedAt), 0);
-  const bytes = new TextEncoder().encode(JSON.stringify(scenes)).length;
   const projectRows = [
     { label: "Propietario", value: owner },
     { label: "Última edición", value: lastEdit ? formatDate(lastEdit) : "—" },
@@ -1366,15 +1365,11 @@ function BackupsSheet({
 // ════════════════════════════════════════════════════════════════════
 function SettingsSheet({
   ownerId,
-  owner,
-  scenes,
   project,
   onSaved,
   onClose,
 }: {
   ownerId: string;
-  owner: string;
-  scenes: MapView[];
   project: ProjectView;
   onSaved: (project: ProjectView) => void;
   onClose: () => void;
@@ -1383,11 +1378,8 @@ function SettingsSheet({
   const [title, setTitle] = useState(project.title);
   const [description, setDescription] = useState(project.description);
   const [icon, setIcon] = useState<string | null>(project.icon);
-  const [galleryOpen, setGalleryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const lastEdit = scenes.reduce((max, s) => Math.max(max, s.updatedAt), 0);
-  const bytes = new TextEncoder().encode(JSON.stringify(scenes)).length;
   const dirty =
     title !== project.title || description !== project.description || icon !== project.icon;
 
@@ -1402,7 +1394,6 @@ function SettingsSheet({
     }
     try {
       setIcon(await imageFileToIcon(file));
-      setGalleryOpen(false);
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "No se pudo usar esa imagen");
@@ -1427,12 +1418,7 @@ function SettingsSheet({
     }
   };
 
-  const rows = [
-    { label: "Propietario", value: owner },
-    { label: "Escenas", value: String(scenes.length) },
-    { label: "Última edición", value: lastEdit ? formatDate(lastEdit) : "—" },
-    { label: "Datos en el dispositivo", value: formatSize(bytes) },
-  ];
+
 
   return (
     <ModalShell onClose={onClose}>
@@ -1495,21 +1481,9 @@ function SettingsSheet({
               )}
             </span>
             <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setGalleryOpen((v) => !v)}
-                className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-semibold transition-colors ${
-                  galleryOpen
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-border/40 bg-muted text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                }`}
-              >
-                <Palette className="h-3.5 w-3.5" />
-                Galería
-              </button>
               <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-border/40 bg-muted px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground">
                 <Upload className="h-3.5 w-3.5" />
-                Del dispositivo
+                Subir imagen
                 <input
                   type="file"
                   accept="image/*"
@@ -1531,31 +1505,9 @@ function SettingsSheet({
             </div>
           </div>
 
-          {galleryOpen && (
-            <div className="mt-2 rounded-2xl border border-border/35 bg-muted/40 p-2">
-              <div className="flex flex-wrap gap-2">
-                {PROJECT_ICON_GALLERY.map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => {
-                      setIcon(g);
-                      setGalleryOpen(false);
-                    }}
-                    aria-label={`Usar ${g} como icono`}
-                    className={`flex h-11 w-11 items-center justify-center rounded-xl border bg-card text-xl leading-none transition-transform hover:scale-105 ${
-                      icon === g ? "border-primary ring-2 ring-primary/25" : "border-border/40"
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1.5 px-0.5 text-[10px] leading-snug text-muted-foreground">
-                Elige uno de la galería o sube una imagen tuya con «Del dispositivo».
-              </p>
-            </div>
-          )}
+          <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+            Sube una imagen desde tu dispositivo para usarla como icono del juego.
+          </p>
 
           <button
             type="button"
@@ -1572,43 +1524,7 @@ function SettingsSheet({
           </button>
         </div>
 
-        {/* ── Información del proyecto ── */}
-        <div className="mt-3 rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
-          <p className="text-[13px] font-semibold text-foreground">Proyecto</p>
-          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-            Los datos del proyecto se guardan en este dispositivo.
-          </p>
-          <dl className="mt-3 flex flex-col gap-2">
-            {rows.map((r) => (
-              <div key={r.label} className="flex items-center justify-between gap-3">
-                <dt className="text-[12px] text-muted-foreground">{r.label}</dt>
-                <dd className="truncate text-[12px] font-semibold text-foreground">{r.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
 
-        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Mover el tablero
-        </p>
-        <ul className="flex flex-col gap-2">
-          <li className="flex items-center gap-2.5 rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Hand className="h-4 w-4" />
-            </span>
-            <p className="text-[12px] leading-snug text-muted-foreground">
-              Arrastra una zona libre del tablero para desplazarlo en cualquier dirección.
-            </p>
-          </li>
-          <li className="flex items-center gap-2.5 rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Locate className="h-4 w-4" />
-            </span>
-            <p className="text-[12px] leading-snug text-muted-foreground">
-              Pulsa «Centrar» para devolver el tablero a su posición inicial.
-            </p>
-          </li>
-        </ul>
       </div>
     </ModalShell>
   );
@@ -1738,7 +1654,7 @@ function ModalShell({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md"
       onClick={onClose}
     >
       <motion.div
