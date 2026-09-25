@@ -173,8 +173,11 @@ export function setPixel(
 // El lienzo se dibuja con pinceles de tamaño y forma variables: cada
 // trazo interpola los puntos intermedios para no dejar huecos.
 
-/** Forma del pincel: redondo (trazo suave) o cuadrado (en bloque). */
-export type BrushShape = "round" | "square";
+/**
+ * Forma del pincel: redondo (trazo limpio), cuadrado (en bloque) o
+ * suave (el borde va tramado, como un pincel de tinta).
+ */
+export type BrushShape = "round" | "square" | "soft";
 
 /** Tamaños de pincel ofrecidos por el estudio (en píxeles del lienzo). */
 export const BRUSH_SIZES = [1, 2, 3, 4, 6, 8];
@@ -182,6 +185,12 @@ export const BRUSH_SIZES = [1, 2, 3, 4, 6, 8];
 /** Pincel máximo razonable para un lienzo de `size` píxeles. */
 export function maxBrushFor(size: number): number {
   return Math.max(1, Math.min(BRUSH_SIZES[BRUSH_SIZES.length - 1], Math.floor(size / 4)));
+}
+
+/** Ruido estable por píxel: el tramado del borde suave no parpadea. */
+function hash2(x: number, y: number): number {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return n - Math.floor(n);
 }
 
 /** Casillas que cubre un pincel centrado en (cx, cy). */
@@ -199,12 +208,17 @@ function brushCells(
   const cells: Array<[number, number]> = [];
   for (let dy = 0; dy < brush; dy++) {
     for (let dx = 0; dx < brush; dx++) {
-      if (shape === "round") {
+      const x = cx - offset + dx;
+      const y = cy - offset + dy;
+      if (shape !== "square") {
         const px = dx + 0.5 - radius;
         const py = dy + 0.5 - radius;
-        if (px * px + py * py > limit * limit) continue;
+        const d2 = px * px + py * py;
+        if (d2 > limit * limit) continue;
+        // El pincel suave deja el núcleo sólido y difumina el borde.
+        if (shape === "soft" && d2 > 0.45 * limit * limit && hash2(x, y) > 0.45) continue;
       }
-      cells.push([cx - offset + dx, cy - offset + dy]);
+      cells.push([x, y]);
     }
   }
   return cells;
