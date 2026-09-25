@@ -1,13 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════
 // EDITOR DE NIVELES — Asternal
 //
-// Lienzo cuadriculado del nivel + ventana inferior de recursos que se
-// puede abrir y cerrar. Cada apartado (Bloque · Deco · Actor · Útil ·
-// Ítem · Arma) muestra los recursos del usuario (editables) y los del
+// Lienzo cuadriculado del nivel + ventana inferior de recursos compacta que
+// se puede abrir, cerrar y ampliar. Cada apartado (Bloque · Deco · Actor ·
+// Útil · Ítem · Arma) muestra los recursos del usuario (editables) y los del
 // motor. Desde aquí se crea la textura de un recurso con el estudio de
 // dibujo y esa textura se coloca y se ajusta en el nivel.
 //
-// Capas: "mapa" (mundo) e "IU" (interfaz). Guardado local vía @/lib/db.
+// Capas: "mapa" (mundo) e "interfaz". Guardado local vía @/lib/db.
 // ═══════════════════════════════════════════════════════════════════
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,7 @@ import {
   ArrowLeftRight,
   Box,
   Check,
+  ChevronUp,
   Eraser,
   FlipHorizontal2,
   FlipVertical2,
@@ -113,6 +114,8 @@ export default function LevelEditor({
   const [category, setCategory] = useState<AssetCategory>("bloque");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(true);
+  // La ventana de recursos arranca compacta (más lienzo) y se puede ampliar.
+  const [sheetTall, setSheetTall] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -418,7 +421,9 @@ export default function LevelEditor({
                         handleDown(x, y);
                       }}
                       onPointerEnter={() => handleEnter(x, y)}
-                      className="relative border-[0.5px] border-border/40"
+                      className={`relative border-[0.5px] border-border/40 ${
+                        adjustCell === key ? "z-10 ring-2 ring-primary ring-inset" : ""
+                      }`}
                       style={{ touchAction: "none" }}
                     >
                       {url && (
@@ -460,15 +465,16 @@ export default function LevelEditor({
         </div>
       </div>
 
-      {/* ══ Barra superior flotante ══ */}
+      {/* ══ Barra superior: volver, capa activa (Mapa | Interfaz) y menú ══ */}
       {!preview && (
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-2">
-        <div className="pointer-events-auto flex items-center gap-2">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-2 p-2">
+        <div className="pointer-events-auto flex items-center gap-1.5">
           <button
             type="button"
             onClick={onBack}
             aria-label="Volver a las escenas"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
+            title="Volver a las escenas"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -476,32 +482,44 @@ export default function LevelEditor({
             type="button"
             onClick={onOpenSettings}
             aria-label="Ajustes del proyecto"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card shadow-soft transition-transform active:scale-95"
+            title="Ajustes del proyecto"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/40 bg-card shadow-soft transition-transform active:scale-95"
           >
-            <img src="/logo.png" alt="Asternal" className="h-6 w-6 rounded-full object-contain" />
+            <img src="/logo.png" alt="Asternal" className="h-5 w-5 rounded-full object-contain" />
           </button>
         </div>
 
-        <div className="pointer-events-auto flex items-center overflow-hidden rounded-xl border border-border/40 bg-card shadow-soft">
-          <button
-            type="button"
-            onClick={() => setLayer("map")}
-            className={`px-3 py-2 text-xs font-bold transition-colors ${
-              layer === "map" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Mapa
-          </button>
-          <button
-            type="button"
-            onClick={() => setLayer("ui")}
-            className={`flex items-center gap-1 px-3 py-2 text-xs font-bold transition-colors ${
-              layer === "ui" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            IU
-            <ArrowLeftRight className="h-3 w-3" />
-          </button>
+        {/* Modo actual: la capa que se está editando (el panel de ajustes vive
+            en las acciones de la derecha). */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          <span className="hidden text-[10px] font-bold tracking-wide text-muted-foreground/80 uppercase sm:inline">
+            Capa
+          </span>
+          <div className="flex items-center overflow-hidden rounded-xl border border-border/40 bg-card shadow-soft">
+            <button
+              type="button"
+              onClick={() => setLayer("map")}
+              aria-label="Editar la capa del mapa"
+              aria-pressed={layer === "map"}
+              className={`px-3 py-1.5 text-[12px] font-bold transition-colors ${
+                layer === "map" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Mapa
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayer("ui")}
+              aria-label="Editar la capa de interfaces"
+              aria-pressed={layer === "ui"}
+              className={`flex items-center gap-1 px-3 py-1.5 text-[12px] font-bold transition-colors ${
+                layer === "ui" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Interfaz
+              <ArrowLeftRight className="h-3 w-3" />
+            </button>
+          </div>
         </div>
 
         <div className="pointer-events-auto flex items-center gap-1.5">
@@ -512,23 +530,17 @@ export default function LevelEditor({
               setSheetOpen(true);
             }}
             aria-label="Buscar recursos"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
+            title="Buscar recursos"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
           >
             <Search className="h-4 w-4" />
           </button>
           <button
             type="button"
-            onClick={() => setShowNotes(true)}
-            aria-label="Notas del nivel"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
-          >
-            <MessageSquare className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
             onClick={() => setShowMenu(true)}
             aria-label="Menú del editor"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
+            title="Menú del editor"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/40 bg-card text-foreground shadow-soft transition-transform active:scale-95"
           >
             <Menu className="h-4 w-4" />
           </button>
@@ -536,157 +548,240 @@ export default function LevelEditor({
       </div>
       )}
 
-      {/* ══ Botones flotantes (derecha) ══ */}
+      {/* ══ Acciones del lienzo: guardar/probar (primario) y ajustes/datos (secundario) ══ */}
       {!preview && (
-        <div className="absolute right-2 top-28 z-20 flex flex-col gap-2">
-          <FloatingAction label="Ajustes" onClick={onOpenSettings}>
-            <Settings className="h-4 w-4" />
-          </FloatingAction>
-          <FloatingAction label="Datos" onClick={() => setShowData(true)}>
-            <Hash className="h-4 w-4" />
-          </FloatingAction>
-          <FloatingAction label="Guardar" onClick={() => void handleSave()} highlight={dirty}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          </FloatingAction>
-          <FloatingAction label="Correr" onClick={() => setPreview(true)}>
-            <Play className="h-4 w-4" />
-          </FloatingAction>
+        <div className="absolute top-14 right-2 z-20 flex w-40 flex-col gap-1 rounded-2xl border border-border/40 bg-card/95 p-1.5 shadow-soft">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            title={dirty ? "Guardar los cambios del nivel" : "El nivel está guardado"}
+            aria-label="Guardar nivel"
+            className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-[11px] font-bold transition-colors ${
+              dirty
+                ? "bg-primary text-primary-foreground shadow-soft"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                Guardando…
+              </>
+            ) : dirty ? (
+              <>
+                <Save className="h-3.5 w-3.5 shrink-0" />
+                Cambios sin guardar
+              </>
+            ) : (
+              <>
+                <Check className="h-3.5 w-3.5 shrink-0" />
+                Guardado
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreview(true)}
+            title="Probar el nivel (vista previa sin controles)"
+            aria-label="Probar el nivel"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border/40 bg-card text-[11px] font-bold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+          >
+            <Play className="h-3.5 w-3.5 shrink-0 text-primary" />
+            Probar
+          </button>
+          {/* Funciones secundarias, agrupadas y separadas del guardado */}
+          <div className="mt-0.5 grid grid-cols-2 gap-1 border-t border-border/40 pt-1.5">
+            <EditorIconButton label="Ajustes del proyecto" onClick={onOpenSettings} className="h-8 w-full">
+              <Settings className="h-4 w-4" />
+            </EditorIconButton>
+            <EditorIconButton label="Datos del nivel" onClick={() => setShowData(true)} className="h-8 w-full">
+              <Hash className="h-4 w-4" />
+            </EditorIconButton>
+          </div>
         </div>
       )}
 
-      {/* ══ Capa actual + acceso a la ventana de recursos ══ */}
+      {/* ══ Barra inferior: herramientas · recurso activo · FPS · recursos ══ */}
       {!preview && (
-      <div className="absolute inset-x-0 bottom-2 z-30 flex items-center justify-between px-3">
-        {/* Sin desenfoque de fondo: el lienzo se mueve debajo y desenfocar en
-            cada fotograma cuesta caro. Fondo opaco y listo. */}
-        <span className="rounded-lg border border-primary/25 bg-card px-3 py-1.5 text-[11px] font-bold text-primary shadow-soft">
-          Layer1 · {layer === "map" ? "Mapa" : "IU"}
-        </span>
-        <button
-          type="button"
-          onClick={() => setSheetOpen((v) => !v)}
-          aria-label="Abrir o cerrar la ventana de recursos"
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl border shadow-soft transition-all active:scale-95 ${
-            sheetOpen ? "border-primary bg-primary text-primary-foreground" : "border-border/40 bg-card text-foreground"
-          }`}
-        >
-          <Box className="h-5 w-5" />
-        </button>
-      </div>
-      )}
-
-      {/* ══ Herramientas ══ */}
-      {!preview && (
-        <div className="absolute bottom-16 left-3 z-30 flex items-center gap-1 rounded-xl border border-border/40 bg-card p-1 shadow-soft">
-          {(
-            [
-              { id: "paint" as Tool, label: "Pintar", icon: <Paintbrush className="h-4 w-4" /> },
-              { id: "erase" as Tool, label: "Borrar", icon: <Eraser className="h-4 w-4" /> },
-              { id: "adjust" as Tool, label: "Ajustar", icon: <Wrench className="h-4 w-4" /> },
-              { id: "move" as Tool, label: "Mover el mapa", icon: <Hand className="h-4 w-4" /> },
-            ]
-          ).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTool(t.id)}
-              title={t.label}
-              aria-label={t.label}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                tool === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {t.icon}
-            </button>
-          ))}
-          {!pan.isCentered && (
-            <>
-              <span className="mx-0.5 h-5 w-px bg-border/60" />
+        <div className="absolute inset-x-2 bottom-2 z-30 flex items-center gap-2">
+          {/* Herramientas de construcción (lo primero después del lienzo). */}
+          <div className="flex shrink-0 items-center gap-0.5 rounded-2xl border border-border/40 bg-card/95 p-1 shadow-soft">
+            {(
+              [
+                { id: "paint" as Tool, label: "Pintar", icon: <Paintbrush className="h-4 w-4" /> },
+                { id: "erase" as Tool, label: "Borrar", icon: <Eraser className="h-4 w-4" /> },
+                { id: "adjust" as Tool, label: "Ajustar", icon: <Wrench className="h-4 w-4" /> },
+                { id: "move" as Tool, label: "Mover", icon: <Hand className="h-4 w-4" /> },
+              ]
+            ).map((t) => (
               <button
+                key={t.id}
                 type="button"
-                onClick={pan.reset}
-                title="Centrar el mapa"
-                aria-label="Centrar el mapa"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={() => setTool(t.id)}
+                title={t.id === "move" ? "Mover el mapa" : `Herramienta ${t.label}`}
+                aria-label={t.id === "move" ? "Mover el mapa" : `Herramienta ${t.label}`}
+                aria-pressed={tool === t.id}
+                className={`flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[11px] font-bold transition-colors ${
+                  tool === t.id
+                    ? "bg-primary text-primary-foreground shadow-soft"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
               >
-                <Locate className="h-4 w-4" />
+                {t.icon}
+                <span className="hidden sm:inline">{t.label}</span>
               </button>
-            </>
+            ))}
+            {!pan.isCentered && (
+              <>
+                <span className="mx-1 h-6 w-px bg-border/60" />
+                <EditorIconButton label="Centrar el mapa" onClick={pan.reset}>
+                  <Locate className="h-4 w-4" />
+                </EditorIconButton>
+              </>
+            )}
+          </div>
+
+          {/* Recurso que se va a pintar: distinto de la herramienta y de la capa. */}
+          {selected && activeId && (
+            <div className="pointer-events-none hidden min-w-0 items-center gap-2 rounded-2xl border border-primary/30 bg-card/95 px-2.5 py-1.5 shadow-soft sm:flex">
+              <span className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">
+                Recurso
+              </span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/40 bg-muted">
+                {textureMap.get(activeId) && (
+                  <img
+                    src={textureMap.get(activeId)}
+                    alt=""
+                    className="h-full w-full object-contain [image-rendering:pixelated]"
+                  />
+                )}
+              </span>
+              <span className="max-w-[9rem] truncate text-[11px] font-bold text-foreground">
+                {selected.name}
+              </span>
+            </div>
           )}
+
+          <div className="min-w-0 flex-1" />
+
+          <span className="pointer-events-none hidden text-[10px] font-semibold text-muted-foreground/70 tabular-nums lg:inline">
+            FPS {fps}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setSheetOpen((v) => !v)}
+            aria-label="Abrir o cerrar la ventana de recursos"
+            title="Recursos"
+            aria-pressed={sheetOpen}
+            className={`flex h-10 shrink-0 items-center gap-1.5 rounded-2xl border px-3 shadow-soft transition-colors active:scale-95 ${
+              sheetOpen
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border/40 bg-card text-foreground"
+            }`}
+          >
+            <Box className="h-4 w-4" />
+            <span className="hidden text-[11px] font-bold sm:inline">Recursos</span>
+          </button>
         </div>
       )}
 
-      {selected && !preview && (
-        <div className="absolute bottom-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-border/40 bg-card px-3 py-1 text-[11px] font-medium text-foreground shadow-soft">
-          {selected.name}
-        </div>
-      )}
-
-      {/* ══ Vista previa (Correr) ══ */}
+      {/* ══ Vista previa (Probar) ══ */}
       {preview && (
         <div className="absolute inset-x-0 top-0 z-40 flex items-center justify-between gap-2 p-2">
           <span className="rounded-lg border border-border/40 bg-card/95 px-3 py-1.5 text-[11px] font-bold text-foreground shadow-soft">
             Vista previa
           </span>
-          <button
-            type="button"
-            onClick={() => setPreview(false)}
-            className="flex items-center gap-1.5 rounded-full bg-destructive px-3 py-2 text-[11px] font-bold text-destructive-foreground shadow-soft transition-transform active:scale-95"
-          >
-            <Square className="h-3.5 w-3.5" />
-            Detener
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="pointer-events-none text-[10px] font-semibold text-muted-foreground/80 tabular-nums">
+              FPS {fps}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPreview(false)}
+              className="flex items-center gap-1.5 rounded-full bg-destructive px-3 py-2 text-[11px] font-bold text-destructive-foreground shadow-soft transition-transform active:scale-95"
+            >
+              <Square className="h-3.5 w-3.5" />
+              Detener
+            </button>
+          </div>
         </div>
       )}
-
-      <span className="pointer-events-none absolute bottom-16 right-3 z-20 text-right text-[10px] leading-tight font-semibold text-muted-foreground/80 tabular-nums">
-        FPS: {fps}
-      </span>
       </div>
 
-      {/* ══ Ventana inferior de recursos (se puede abrir y cerrar) ══ */}
+      {/* ══ Ventana inferior de recursos: compacta por defecto y ampliable ══ */}
       <motion.div
         initial={false}
-        animate={{ height: preview ? 0 : sheetOpen ? "46%" : 46 }}
+        animate={{ height: preview ? 0 : sheetOpen ? (sheetTall ? "66%" : "34%") : 44 }}
         transition={{ type: "spring", stiffness: 320, damping: 34 }}
         className="relative z-40 shrink-0 overflow-hidden rounded-t-3xl border-t border-border/40 bg-card shadow-lift"
       >
-        <button
-          type="button"
-          onClick={() => setSheetOpen((v) => !v)}
-          aria-label="Abrir o cerrar la ventana de recursos"
-          className="flex w-full items-center justify-center py-2"
-        >
-          <span className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
-        </button>
+        <div className="flex h-10 items-center gap-2 px-3">
+          <button
+            type="button"
+            onClick={() => setSheetOpen((v) => !v)}
+            aria-label="Abrir o cerrar la ventana de recursos"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          >
+            <span className="text-[11px] font-bold tracking-wide text-foreground uppercase">
+              Recursos
+            </span>
+            <span className="truncate text-[11px] font-medium text-muted-foreground">
+              {sheetOpen
+                ? `· ${CATEGORY_LABEL[category]}`
+                : `· ${assets.length} guardados · pulsa para abrir`}
+            </span>
+          </button>
+          {sheetOpen && (
+            <button
+              type="button"
+              onClick={() => setSheetTall((v) => !v)}
+              aria-label={sheetTall ? "Reducir la ventana de recursos" : "Ampliar la ventana de recursos"}
+              title={sheetTall ? "Reducir la ventana" : "Ampliar la ventana"}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border/40 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ChevronUp className={`h-4 w-4 transition-transform ${sheetTall ? "rotate-180" : ""}`} />
+            </button>
+          )}
+        </div>
 
         {sheetOpen ? (
-          <div className="flex h-[calc(100%-28px)] flex-col">
-            <div className="flex shrink-0 items-center gap-4 overflow-x-auto px-4">
-              {ASSET_CATEGORIES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setCategory(c.id)}
-                  className={`relative shrink-0 pb-2 text-sm transition-colors ${
-                    category === c.id
-                      ? "font-bold text-foreground"
-                      : "font-medium text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {c.label}
-                  {category === c.id && (
-                    <motion.span
-                      layoutId="levelAssetTab"
-                      className="absolute inset-x-0 -bottom-0.5 h-[2px] rounded-full bg-primary"
-                    />
-                  )}
-                </button>
-              ))}
+          <div className="flex h-[calc(100%-2.5rem)] flex-col">
+            {/* Apartados de recursos: jerarquía clara entre el activo y el resto. */}
+            <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border/40 px-3 pb-2">
+              {ASSET_CATEGORIES.map((c) => {
+                const owned = assets.filter((a) => a.category === c.id).length;
+                const isActive = category === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCategory(c.id)}
+                    aria-pressed={isActive}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+                      isActive
+                        ? "border-primary/40 bg-primary/10 font-bold text-primary"
+                        : "border-transparent font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {c.label}
+                    {owned > 0 && (
+                      <span
+                        className={`rounded-full px-1 text-[9px] font-bold tabular-nums ${
+                          isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {owned}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {searchOpen && (
-              <div className="mx-4 mt-2 flex shrink-0 items-center gap-2 rounded-xl border border-border/40 bg-muted/60 px-3 py-2">
+              <div className="mx-3 mt-2 flex shrink-0 items-center gap-2 rounded-xl border border-border/40 bg-muted/60 px-3 py-2">
                 <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <input
                   autoFocus
@@ -709,16 +804,23 @@ export default function LevelEditor({
               </div>
             )}
 
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+            <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+              {/* Tarjetas idénticas: misma caja cuadrada y misma tira de nombre. */}
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
                 {/* Crear recurso -> abre el lienzo de dibujo */}
                 <button
                   type="button"
                   onClick={openNewResource}
                   aria-label={`Crear un recurso de ${CATEGORY_LABEL[category]}`}
-                  className="relative flex aspect-square items-center justify-center rounded-xl border border-dashed border-primary/40 bg-primary-soft transition-colors hover:bg-primary/10 active:scale-95"
+                  title={`Crear un recurso de ${CATEGORY_LABEL[category]}`}
+                  className="flex aspect-square flex-col overflow-hidden rounded-xl border border-dashed border-primary/40 bg-primary-soft text-primary transition-colors hover:bg-primary/10 active:scale-95"
                 >
-                  <Plus className="h-6 w-6 text-primary" strokeWidth={2.6} />
+                  <span className="flex min-h-0 flex-1 items-center justify-center">
+                    <Plus className="h-6 w-6" strokeWidth={2.6} />
+                  </span>
+                  <span className="flex h-6 shrink-0 items-center justify-center border-t border-primary/20 text-[9px] font-bold tracking-wide uppercase">
+                    Crear
+                  </span>
                 </button>
 
                 {/* Recursos del usuario */}
@@ -750,15 +852,13 @@ export default function LevelEditor({
               <p className="mt-3 text-center text-[11px] text-muted-foreground">
                 {userAssetsForCategory.length === 0 && !query
                   ? `Aún no tienes recursos de ${CATEGORY_LABEL[category]}. Pulsa “+” para dibujar su textura.`
-                  : `${userAssetsForCategory.length} recurso(s) tuyos · toca el engranaje para editarlos`}
+                  : userAssetsForCategory.length === 1
+                    ? "1 recurso tuyo · toca el engranaje para editarlo"
+                    : `${userAssetsForCategory.length} recursos tuyos · toca el engranaje para editarlos`}
               </p>
             </div>
           </div>
-        ) : (
-          <p className="px-4 pb-3 text-[11px] text-muted-foreground">
-            Recursos · {assets.length} guardados · pulsa para abrir la ventana
-          </p>
-        )}
+        ) : null}
       </motion.div>
 
       {/* ══ Diálogos ══ */}
@@ -949,7 +1049,7 @@ export default function LevelEditor({
                 { label: "Tipo de juego", value: GENRE_LABEL[scene.genre] ?? scene.genre },
                 { label: "Tamaño", value: `${width} × ${height}` },
                 { label: "Casillas del mapa", value: String(placedMap) },
-                { label: "Casillas de IU", value: String(placedUi) },
+                { label: "Casillas de interfaz", value: String(placedUi) },
                 { label: "Recursos colocados", value: String(usedResources) },
                 { label: "Recursos guardados", value: String(assetStats.total) },
                 { label: "Píxeles pintados", value: paintedPixels.toLocaleString("es") },
@@ -994,7 +1094,7 @@ export default function LevelEditor({
               </p>
               <p className="leading-relaxed">
                 Usa la ventana inferior para elegir un recurso, pintarlo en la casilla que quieras y
-                ajustarlo con la herramienta de llave. Todo se guarda en tu dispositivo.
+                ajustarlo con la herramienta Ajustar. Todo se guarda en tu dispositivo.
               </p>
             </div>
             <button
@@ -1059,7 +1159,7 @@ export default function LevelEditor({
               />
               <MenuRow
                 icon={<Play className="h-4 w-4" />}
-                label="Correr nivel"
+                label="Probar nivel"
                 hint="Vista previa sin controles"
                 onClick={() => {
                   setShowMenu(false);
@@ -1067,9 +1167,28 @@ export default function LevelEditor({
                 }}
               />
               <MenuRow
+                icon={<Search className="h-4 w-4" />}
+                label="Buscar recurso"
+                hint={`${assets.length} recursos guardados`}
+                onClick={() => {
+                  setShowMenu(false);
+                  setSheetOpen(true);
+                  setSearchOpen(true);
+                }}
+              />
+              <MenuRow
+                icon={<MessageSquare className="h-4 w-4" />}
+                label="Notas del nivel"
+                hint={description ? "Editar las notas guardadas" : "Añadir notas al nivel"}
+                onClick={() => {
+                  setShowMenu(false);
+                  setShowNotes(true);
+                }}
+              />
+              <MenuRow
                 icon={<Layers className="h-4 w-4" />}
                 label="Ver capas"
-                hint={`Mapa (${placedMap}) · IU (${placedUi})`}
+                hint={`Mapa (${placedMap}) · Interfaz (${placedUi})`}
                 onClick={() => {
                   setShowMenu(false);
                   setShowData(true);
@@ -1114,40 +1233,34 @@ export default function LevelEditor({
 // Piezas de UI del editor
 // ════════════════════════════════════════════════════════════════════
 
-function FloatingAction({
+// Botón compacto de icono: mantiene la función y evita rótulos flotantes extra.
+function EditorIconButton({
   label,
   children,
   onClick,
-  highlight,
+  className = "h-8 w-8",
 }: {
   label: string;
   children: React.ReactNode;
   onClick: () => void;
-  highlight?: boolean;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-14 flex-col items-center gap-1"
+      title={label}
       aria-label={label}
+      className={`flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 ${className}`}
     >
-      <span
-        className={`flex h-10 w-10 items-center justify-center rounded-xl border shadow-soft transition-transform active:scale-95 ${
-          highlight
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-border/40 bg-card text-foreground"
-        }`}
-      >
-        {children}
-      </span>
-      <span className="rounded border border-border/40 bg-card/90 px-1.5 py-0.5 text-[9px] font-bold text-foreground">
-        {label}
-      </span>
+      {children}
     </button>
   );
 }
 
+// Tarjeta de recurso: caja cuadrada + tira de nombre idéntica en todas, así
+// los recursos siempre se ven del mismo tamaño y se identifican de un vistazo.
+// El botón de engranaje del usuario queda dentro de la tira (no tapa la imagen).
 function AssetTile({
   name,
   url,
@@ -1163,8 +1276,8 @@ function AssetTile({
 }) {
   return (
     <div
-      className={`relative aspect-square rounded-xl border bg-muted/70 transition-colors ${
-        selected ? "border-primary ring-2 ring-primary/25" : "border-border/40 hover:border-primary/40"
+      className={`relative flex aspect-square flex-col overflow-hidden rounded-xl border bg-muted/60 transition-colors ${
+        selected ? "border-primary ring-2 ring-primary/30" : "border-border/40 hover:border-primary/40"
       }`}
     >
       <button
@@ -1172,25 +1285,44 @@ function AssetTile({
         onClick={onSelect}
         title={name}
         aria-label={name}
-        className="absolute inset-0 flex items-center justify-center p-2"
+        className="flex min-h-0 flex-1 items-center justify-center p-1.5"
       >
         {url ? (
-          <img src={url} alt="" className="max-h-full max-w-full [image-rendering:pixelated]" />
+          <img
+            src={url}
+            alt=""
+            className="h-full w-full object-contain [image-rendering:pixelated]"
+          />
         ) : (
           <Square className="h-4 w-4 text-muted-foreground" />
         )}
       </button>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onMenu();
-        }}
-        aria-label={`Opciones de ${name}`}
-        className="absolute right-0.5 bottom-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow transition-transform active:scale-90"
-      >
-        <Settings className="h-3 w-3" />
-      </button>
+      <div className="flex h-6 shrink-0 items-center gap-0.5 border-t border-border/40 bg-card/85 pl-1.5 pr-0.5">
+        <span className="min-w-0 flex-1 truncate text-[9px] font-semibold text-muted-foreground">
+          {name}
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMenu();
+          }}
+          title={`Opciones de ${name}`}
+          aria-label={`Opciones de ${name}`}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors ${
+            selected
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-primary"
+          }`}
+        >
+          <Settings className="h-3 w-3" />
+        </button>
+      </div>
+      {selected && (
+        <span className="pointer-events-none absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+          <Check className="h-3 w-3" />
+        </span>
+      )}
     </div>
   );
 }

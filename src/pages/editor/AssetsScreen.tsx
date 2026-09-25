@@ -135,7 +135,11 @@ export default function AssetsScreen() {
       setAssets((prev) => [...prev, ...created]);
       setSelectedIds(new Set(created.map((a) => a.id)));
       setUploading(false);
-      toast.success(`${created.length} recurso(s) listo(s)`);
+      toast.success(
+        created.length === 1
+          ? "1 recurso listo"
+          : `${created.length} recursos listos`,
+      );
     },
     [],
   );
