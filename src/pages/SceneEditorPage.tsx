@@ -56,7 +56,6 @@ import {
   AlertTriangle,
   Locate,
   ImagePlus,
-  Palette,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -125,10 +124,7 @@ const SIZE_PRESETS = [
  */
 const SIZE_SLIDER_MAX = 48;
 
-// ── Icono del juego (galería de la app + imágenes del dispositivo) ──
-/** Galería de iconos listos para usar: se guardan como emoji. */
-const PROJECT_ICON_GALLERY = ["🗺️", "⚔️", "🏰", "🐉", "🌋", "🚀", "🌲", "⭐"];
-
+// ── Icono del juego (imagen elegida del dispositivo) ──
 /** Un icono es una imagen si se guardó como data URL. */
 function isImageIcon(icon: string | null): icon is string {
   return !!icon && icon.startsWith("data:");
@@ -339,8 +335,6 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
           {showSettings && (
             <SettingsSheet
               ownerId={ownerId}
-              owner={ownerLabel}
-              scenes={scenes ?? []}
               project={project}
               onSaved={handleProjectSaved}
               onClose={closeSettings}
@@ -353,6 +347,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
             <StatsSheet
               scenes={scenes ?? []}
               backups={backups}
+              owner={ownerLabel}
               onClose={() => setShowStats(false)}
             />
           )}
@@ -555,7 +550,7 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
       {/* Panel de estadísticas */}
       <AnimatePresence>
         {showStats && (
-          <StatsSheet scenes={list} backups={backups} onClose={closeStats} />
+          <StatsSheet scenes={list} backups={backups} owner={ownerLabel} onClose={closeStats} />
         )}
       </AnimatePresence>
 
@@ -564,8 +559,6 @@ export default function SceneEditorPage({ onBack }: { onBack: () => void }) {
         {showSettings && (
           <SettingsSheet
             ownerId={ownerId}
-            owner={ownerLabel}
-            scenes={list}
             project={project}
             onSaved={handleProjectSaved}
             onClose={closeSettings}
@@ -1016,10 +1009,13 @@ function ConfirmDialog({
 function StatsSheet({
   scenes,
   backups,
+  owner,
   onClose,
 }: {
   scenes: MapView[];
   backups: BackupView[];
+  /** Nombre del propietario del proyecto (datos que antes vivían en Ajustes). */
+  owner: string;
   onClose: () => void;
 }) {
   const totalCells = scenes.reduce((acc, s) => acc + s.width * s.height, 0);
@@ -1040,13 +1036,23 @@ function StatsSheet({
     },
   ];
 
+  // Datos del proyecto: se movieron desde Ajustes a Estadísticas.
+  const lastEdit = scenes.reduce((max, s) => Math.max(max, s.updatedAt), 0);
+  const bytes = new TextEncoder().encode(JSON.stringify(scenes)).length;
+  const projectRows = [
+    { label: "Propietario", value: owner },
+    { label: "Última edición", value: lastEdit ? formatDate(lastEdit) : "—" },
+    { label: "Datos en el dispositivo", value: formatSize(bytes) },
+  ];
+
   return (
     <ModalShell onClose={onClose}>
       <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-5 py-3">
         <span className="text-sm font-semibold text-foreground">Estadísticas del proyecto</span>
         <CloseButton onClick={onClose} />
       </div>
-      <div className="flex-1 overflow-y-auto p-4">          <div className="overflow-hidden rounded-2xl border border-border/35">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="overflow-hidden rounded-2xl border border-border/35">
           {rows.map((r, i) => (
             <div
               key={r.label}
@@ -1059,6 +1065,22 @@ function StatsSheet({
               <span className="text-sm font-bold tabular-nums text-foreground">{r.value}</span>
             </div>
           ))}
+        </div>
+
+        {/* ── Proyecto: datos del proyecto (antes en Ajustes) ── */}
+        <div className="mt-3 rounded-2xl border border-border/35 bg-card p-3 shadow-soft">
+          <p className="text-[13px] font-semibold text-foreground">Proyecto</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            Los datos del proyecto se guardan en este dispositivo.
+          </p>
+          <dl className="mt-3 flex flex-col gap-2">
+            {projectRows.map((r) => (
+              <div key={r.label} className="flex items-center justify-between gap-3">
+                <dt className="text-[12px] text-muted-foreground">{r.label}</dt>
+                <dd className="truncate text-[12px] font-semibold text-foreground">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
     </ModalShell>
